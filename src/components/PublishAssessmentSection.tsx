@@ -59,6 +59,7 @@ export interface PublishAssessmentFormState {
   startTime: string;
   endDate: string;
   endTime: string;
+  editingPublishId?: string | null;
 }
 
 export interface PublishAssessmentSectionProps {
@@ -69,6 +70,8 @@ export interface PublishAssessmentSectionProps {
   formState?: PublishAssessmentFormState;
   onFormStateChange?: (state: PublishAssessmentFormState) => void;
   onResetFormState?: () => void;
+  editingPublishId?: string | null;
+  onCancelEdit?: () => void;
 }
 
 // -------------------------------------------------------------
@@ -1516,7 +1519,12 @@ export function PublishAssessmentSection({
   formState,
   onFormStateChange,
   onResetFormState,
+  editingPublishId,
+  onCancelEdit,
 }: PublishAssessmentSectionProps) {
+  const currentEditId = editingPublishId || formState?.editingPublishId || null;
+  const isEditMode = Boolean(currentEditId);
+
   const [publishName, setPublishName] = useState(formState?.publishName ?? '');
   const [publishMode, setPublishMode] = useState<'Selected Questions' | 'Random Questions'>(
     formState?.publishMode ?? 'Selected Questions'
@@ -1557,6 +1565,24 @@ export function PublishAssessmentSection({
   const [publishFeedback, setPublishFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // When formState or editingPublishId changes (e.g. from clicking Edit), update all local states
+  useEffect(() => {
+    if (formState) {
+      setPublishName(formState.publishName ?? '');
+      setPublishMode(formState.publishMode ?? 'Selected Questions');
+      if (formState.targets && formState.targets.length > 0) {
+        setTargets(formState.targets);
+      }
+      setSelectedQuestionsForPublish(formState.selectedQuestionsForPublish ?? []);
+      setShuffleQuestions(formState.shuffleQuestions ?? false);
+      setRandomCount(formState.randomCount ?? 5);
+      setStartDate(formState.startDate ?? new Date().toISOString().split('T')[0]);
+      setStartTime(formState.startTime ?? '00:00');
+      setEndDate(formState.endDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+      setEndTime(formState.endTime ?? '23:59');
+    }
+  }, [formState?.editingPublishId, formState?.publishName]);
+
   // Sync state back to parent container so it is preserved across page navigation
   useEffect(() => {
     if (onFormStateChange) {
@@ -1571,6 +1597,7 @@ export function PublishAssessmentSection({
         startTime,
         endDate,
         endTime,
+        editingPublishId: currentEditId,
       });
     }
   }, [
@@ -1584,6 +1611,7 @@ export function PublishAssessmentSection({
     startTime,
     endDate,
     endTime,
+    currentEditId,
     onFormStateChange,
   ]);
 
@@ -1763,8 +1791,11 @@ export function PublishAssessmentSection({
         )
       );
 
-      const res = await fetch('/api/publish', {
-        method: 'POST',
+      const url = isEditMode ? `/api/publish/${currentEditId}` : '/api/publish';
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers,
         body: JSON.stringify({
           publishName: publishName.trim(),
@@ -1790,33 +1821,44 @@ export function PublishAssessmentSection({
 
       const data = await res.json();
       if (res.ok) {
-        setPublishFeedback(`Successfully published to ${data.assignedStudentCount ?? data.totalAssignedStudents} students!`);
-        setPublishName('');
-        setSelectedQuestionsForPublish([]);
-        setTargets([
-          {
-            id: `target-${Date.now()}`,
-            selectedSchoolIds: ['ALL'],
-            selectedClasses: ['ALL'],
-            availableClasses: [],
-            isLoadingClasses: false,
-            selectedSections: [],
-            availableSections: [],
-            isLoadingSections: false,
-            selectedStudentIds: [],
-            availableStudents: [],
-            isLoadingStudents: false,
-          },
-        ]);
-        if (onResetFormState) {
-          onResetFormState();
+        if (isEditMode) {
+          setPublishFeedback(`Successfully updated assessment '${publishName}'!`);
+          if (onResetFormState) {
+            onResetFormState();
+          }
+          await onPublishSuccess();
+          if (onCancelEdit) {
+            onCancelEdit();
+          }
+        } else {
+          setPublishFeedback(`Successfully published to ${data.assignedStudentCount ?? data.totalAssignedStudents} students!`);
+          setPublishName('');
+          setSelectedQuestionsForPublish([]);
+          setTargets([
+            {
+              id: `target-${Date.now()}`,
+              selectedSchoolIds: ['ALL'],
+              selectedClasses: ['ALL'],
+              availableClasses: [],
+              isLoadingClasses: false,
+              selectedSections: [],
+              availableSections: [],
+              isLoadingSections: false,
+              selectedStudentIds: [],
+              availableStudents: [],
+              isLoadingStudents: false,
+            },
+          ]);
+          if (onResetFormState) {
+            onResetFormState();
+          }
+          await onPublishSuccess();
         }
-        await onPublishSuccess();
       } else {
-        setPublishFeedback(data.error || 'Failed to publish test');
+        setPublishFeedback(data.error || (isEditMode ? 'Failed to update assessment' : 'Failed to publish test'));
       }
     } catch (err: any) {
-      setPublishFeedback(err.message || 'Network error publishing test');
+      setPublishFeedback(err.message || (isEditMode ? 'Network error updating assessment' : 'Network error publishing test'));
     } finally {
       setIsSubmitting(false);
     }
@@ -1826,10 +1868,23 @@ export function PublishAssessmentSection({
     <div className="space-y-8 max-w-5xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Assessment Dispatch</span>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Publish Assessment</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">
+            {isEditMode ? 'Assessment Management' : 'Assessment Dispatch'}
+          </span>
+          {isEditMode && (
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide">
+              Edit Mode
+            </span>
+          )}
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">
+          {isEditMode ? 'Edit Assessment' : 'Publish Assessment'}
+        </h2>
         <p className="text-sm text-slate-400">
-          Configure publication options: choose between <strong>Selected Questions</strong> or <strong>Random Questions</strong>, define student targets, and schedule availability.
+          {isEditMode
+            ? `Editing published assessment '${publishName}'. Modify target configurations, questions, or dates and click "Update Assessment" to save changes.`
+            : `Configure publication options: choose between Selected Questions or Random Questions, define student targets, and schedule availability.`}
         </p>
       </div>
 
@@ -2147,14 +2202,32 @@ export function PublishAssessmentSection({
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting || schools.length === 0}
-          className="w-full py-3.5 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-base disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <Send className="w-5 h-5" />
-          {isSubmitting ? 'Validating & Publishing Assessment...' : 'Publish Test to Target'}
-        </button>
+        <div className="flex items-center gap-3">
+          {isEditMode && onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="py-3.5 px-6 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-sm cursor-pointer border border-slate-700"
+            >
+              Cancel Edit
+            </button>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting || schools.length === 0}
+            className="flex-1 py-3.5 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-base disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Send className="w-5 h-5" />
+            {isSubmitting
+              ? isEditMode
+                ? 'Updating Assessment...'
+                : 'Validating & Publishing Assessment...'
+              : isEditMode
+              ? 'Update Assessment'
+              : 'Publish Test to Target'}
+          </button>
+        </div>
       </form>
 
       {/* Interactive Preview Modal */}

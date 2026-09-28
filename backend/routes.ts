@@ -982,6 +982,107 @@ async function validatePublishTargets(rawTargets: any[]) {
   };
 }
 
+// Helper to verify whether a student matches the targets of a published test
+export function isStudentTargetedByPublishedTest(
+  student: any,
+  pubTest: any,
+  totalSchoolsCount?: number
+): boolean {
+  if (!pubTest || !student) return false;
+
+  const targetList = Array.isArray(pubTest.targets) && pubTest.targets.length > 0
+    ? pubTest.targets
+    : pubTest.target
+    ? [pubTest.target]
+    : [];
+
+  if (targetList.length === 0) return false;
+
+  const studentSchoolId = student.schoolId ? String(student.schoolId).trim() : '';
+  const studentSchoolName = student.schoolName ? String(student.schoolName).trim().toLowerCase() : '';
+  const studentClass = student.className ? String(student.className).trim().toLowerCase() : '';
+  const studentSection = student.section ? String(student.section).trim().toUpperCase() : '';
+  const studentKeys = [
+    student.uniqueStudentId ? String(student.uniqueStudentId).trim() : '',
+    student.username ? String(student.username).trim() : '',
+    student._id ? String(student._id).trim() : '',
+    student.id ? String(student.id).trim() : '',
+  ].filter(Boolean);
+
+  for (const t of targetList) {
+    // 1. School check
+    const isAllSchools =
+      t.isAllSchools === true ||
+      (Array.isArray(t.schoolIds) &&
+        (t.schoolIds.includes('ALL') ||
+         t.schoolIds.includes('ALL_SCHOOLS') ||
+         (totalSchoolsCount && totalSchoolsCount > 1 && t.schoolIds.length >= totalSchoolsCount))) ||
+      (Array.isArray(t.schoolNames) && t.schoolNames.some((n: string) => n.toLowerCase() === 'all schools'));
+
+    const matchSchool =
+      isAllSchools ||
+      (!t.schoolIds && !t.schoolId) ||
+      (Array.isArray(t.schoolIds) && t.schoolIds.length === 0) ||
+      (Array.isArray(t.schoolIds) && t.schoolIds.map(String).includes(studentSchoolId)) ||
+      (t.schoolId && String(t.schoolId) === studentSchoolId) ||
+      (Array.isArray(t.schoolNames) && t.schoolNames.some((n: string) => n.trim().toLowerCase() === studentSchoolName)) ||
+      (t.schoolName && t.schoolName.trim().toLowerCase() === studentSchoolName);
+
+    if (!matchSchool) continue;
+
+    // 2. Class check
+    const isAllClasses =
+      !t.classes ||
+      t.classes.length === 0 ||
+      (Array.isArray(t.classes) &&
+        (t.classes.includes('ALL') ||
+         t.classes.includes('All Classes') ||
+         t.classes.some((c: string) => c.toLowerCase() === 'all classes')));
+
+    const matchClass =
+      isAllClasses ||
+      (Array.isArray(t.classes) && t.classes.some((c: string) => c.trim().toLowerCase() === studentClass)) ||
+      (t.className && t.className.trim().toLowerCase() === studentClass);
+
+    if (!matchClass) continue;
+
+    // 3. Section check
+    const isAllSections =
+      !t.sections ||
+      t.sections.length === 0 ||
+      (Array.isArray(t.sections) &&
+        (t.sections.includes('ALL') ||
+         t.sections.includes('All Sections') ||
+         t.sections.some((s: string) => s.toLowerCase() === 'all sections')));
+
+    const matchSection =
+      isAllSections ||
+      (Array.isArray(t.sections) && t.sections.some((s: string) => s.trim().toUpperCase() === studentSection)) ||
+      (t.section && t.section.trim().toUpperCase() === studentSection);
+
+    if (!matchSection) continue;
+
+    // 4. Student check
+    const isAllStudents =
+      !t.studentIds ||
+      t.studentIds.length === 0 ||
+      (Array.isArray(t.studentIds) &&
+        (t.studentIds.includes('ALL') || t.studentIds.length === 0));
+
+    const matchStudent =
+      isAllStudents ||
+      (Array.isArray(t.studentIds) &&
+        t.studentIds.some((sId: string) => studentKeys.includes(String(sId).trim())));
+
+    if (!matchStudent) continue;
+
+    // All criteria matched for this target!
+    return true;
+  }
+
+  return false;
+}
+
 // Target Configuration Validation Endpoint
 router.post('/publish/validate-targets', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
   try {
@@ -1330,6 +1431,9 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       randomCount: randomCount ? Number(randomCount) : undefined,
       shuffle: Boolean(shuffle),
       createdBy: req.user!.username,
+      status: 'ACTIVE',
+      isPaused: false,
+      publishedAt: new Date(),
     });
 
     const publishedTestId = newPublish._id.toString();
@@ -1421,6 +1525,9 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       assignedQuestionsCount: publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount || 0),
       completedCount: 0,
       incompleteCount: 0,
+      status: 'ACTIVE',
+      isPaused: false,
+      publishedAt: new Date(),
       studentsStatus: candidateStudents.map((s) => ({
         studentId: s.uniqueStudentId!,
         studentName: s.studentName!,
@@ -1452,6 +1559,362 @@ router.get('/published-tests', authenticate, requireRole('super_admin'), async (
   }
 });
 
+// Get a Specific Published Test for Edit Mode
+router.get('/published-tests/:publishId', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { publishId } = req.params;
+    const pubTest = await PublishedTestModel.findById(publishId);
+    if (!pubTest) {
+      return res.status(404).json({ error: 'Published test not found' });
+    }
+    const history = await PublishHistoryModel.findOne({ publishId });
+    return res.json({
+      ...formatDoc(pubTest),
+      historyId: history?._id?.toString(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch published test', details: err.message });
+  }
+});
+
+// Update / Edit an Existing Published Assessment
+const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
+  try {
+    const { publishId } = req.params;
+    const {
+      publishName,
+      publishMode,
+      target,
+      targets,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+      selectedQuestionIds,
+      randomCount,
+      shuffle,
+    } = req.body;
+
+    const pubTest = await PublishedTestModel.findById(publishId);
+    if (!pubTest) {
+      return res.status(404).json({ error: 'Assessment not found for update' });
+    }
+
+    const historyDoc = await PublishHistoryModel.findOne({ publishId });
+
+    const targetList = Array.isArray(targets) && targets.length > 0 ? targets : target ? [target] : [];
+
+    if (!publishName || !publishMode || targetList.length === 0 || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Publish Name, Mode, at least one Target Configuration, and Dates are mandatory.' });
+    }
+
+    if (publishMode === 'Selected Questions' && (!selectedQuestionIds || selectedQuestionIds.length === 0)) {
+      return res.status(400).json({ error: 'Please select at least 1 question for Selected Questions mode.' });
+    }
+
+    // Validate duplicate & overlapping targets across the assessment
+    const validation = await validatePublishTargets(targetList);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const allTargetSchoolIds = Array.from(
+      new Set(validation.normalizedTargets!.flatMap((t) => t.schoolIds))
+    );
+    const schools = await SchoolModel.find({ _id: { $in: allTargetSchoolIds } });
+    const schoolMap = new Map<string, any>(schools.map((s: any) => [s._id.toString(), s]));
+
+    // Deduplicate candidate students across all targets
+    const uniqueStudentsMap = new Map<string, any>();
+    for (const studentList of validation.targetStudentsMap!) {
+      for (const student of studentList) {
+        const key = String(student.uniqueStudentId || student._id).trim();
+        if (!uniqueStudentsMap.has(key)) {
+          uniqueStudentsMap.set(key, student);
+        }
+      }
+    }
+
+    const candidateStudents = Array.from(uniqueStudentsMap.values());
+    if (candidateStudents.length === 0) {
+      return res.status(400).json({ error: 'No students found matching the selected target criteria.' });
+    }
+
+    const allTargetSchoolNames = allTargetSchoolIds.map((id) => schoolMap.get(id)?.name || id);
+    const combinedSchoolNames = allTargetSchoolNames.join(', ');
+    const allTargetClasses = Array.from(
+      new Set(
+        validation.normalizedTargets!.flatMap((t) =>
+          t.classes.length > 0 ? t.classes : ['All Classes']
+        )
+      )
+    );
+    const allTargetSections = Array.from(new Set(validation.normalizedTargets!.flatMap((t) => t.sections)));
+    const allTargetStudentIds = Array.from(
+      new Set(validation.normalizedTargets!.flatMap((t) => t.studentIds || []))
+    );
+
+    const targetsRecord = validation.normalizedTargets!.map((nt) => {
+      const sNames = nt.schoolIds.map((id) => schoolMap.get(id)?.name || id);
+      return {
+        schoolIds: nt.schoolIds,
+        schoolNames: sNames,
+        classes: nt.classes.length > 0 ? nt.classes : ['All Classes'],
+        sections: nt.sections,
+        studentIds: nt.studentIds || [],
+      };
+    });
+
+    // Update published test document with latest update timestamp
+    const serverNow = new Date();
+    pubTest.publishName = publishName.trim();
+    pubTest.publishMode = publishMode;
+    pubTest.target = {
+      schoolId: allTargetSchoolIds[0] || '',
+      schoolIds: allTargetSchoolIds,
+      schoolName: combinedSchoolNames,
+      schoolNames: allTargetSchoolNames,
+      classes: allTargetClasses,
+      sections: allTargetSections,
+      studentIds: allTargetStudentIds,
+    };
+    pubTest.targets = targetsRecord;
+    pubTest.startDate = startDate;
+    pubTest.startTime = startTime || '00:00';
+    pubTest.endDate = endDate;
+    pubTest.endTime = endTime || '23:59';
+    pubTest.questionIds = selectedQuestionIds || [];
+    pubTest.randomCount = randomCount ? Number(randomCount) : undefined;
+    pubTest.shuffle = Boolean(shuffle);
+    pubTest.publishedAt = serverNow;
+    pubTest.updatedAt = serverNow;
+    await pubTest.save();
+
+    // Update existing student assignments publishName
+    await StudentTestAssignmentModel.updateMany(
+      { publishedTestId: publishId },
+      { $set: { publishName: publishName.trim() } }
+    );
+
+    // Build lookup set of targeted students
+    const targetStudentIdSet = new Set<string>();
+    for (const student of candidateStudents) {
+      if (student.uniqueStudentId) targetStudentIdSet.add(String(student.uniqueStudentId).trim());
+      if (student.username) targetStudentIdSet.add(String(student.username).trim());
+      if (student._id) targetStudentIdSet.add(String(student._id).trim());
+      if (student.id) targetStudentIdSet.add(String(student.id).trim());
+    }
+
+    // Existing live assignments
+    const existingAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+
+    // Revoke/remove assignments for students who are NO LONGER targeted AND have not started
+    // Note: Preserve historical attempt records (COMPLETED, INCOMPLETE, LOCKED_INCOMPLETE, IN_PROGRESS) safely!
+    const assignmentsToDelete: string[] = [];
+    for (const a of existingAssignments) {
+      if (!targetStudentIdSet.has(a.studentId)) {
+        if (a.status === 'NOT_STARTED') {
+          assignmentsToDelete.push(a._id.toString());
+        }
+      }
+    }
+
+    if (assignmentsToDelete.length > 0) {
+      await StudentTestAssignmentModel.deleteMany({ _id: { $in: assignmentsToDelete } });
+    }
+
+    // Remaining live assignments after revocation
+    const remainingAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const remainingAssignMap = new Map<string, any>();
+    for (const a of remainingAssignments) {
+      remainingAssignMap.set(a.studentId, a);
+    }
+
+    // Prepare questions for newly assigned students or update NOT_STARTED students
+    const allQuestionsDocs = await QuestionModel.find();
+    const allQuestions: Question[] = formatDocs(allQuestionsDocs);
+    const selectedQuestionsDocs = allQuestions.filter((q) => (selectedQuestionIds || []).includes(q.id));
+    const pastAssignmentsDocs = publishMode === 'Random Questions' ? await StudentTestAssignmentModel.find() : [];
+    const pastAssignments = formatDocs(pastAssignmentsDocs);
+
+    // For any candidate student who does not have an assignment yet, create one safely
+    const newAssignmentsToAdd: any[] = [];
+    for (const student of candidateStudents) {
+      const sId = (student.uniqueStudentId || student.username || student._id?.toString()).trim();
+      const stSchool = schoolMap.get(student.schoolId);
+
+      if (!remainingAssignMap.has(sId)) {
+        let studentQuestionList = [...selectedQuestionsDocs];
+        if (publishMode === 'Selected Questions') {
+          if (shuffle) {
+            studentQuestionList.sort(() => 0.5 - Math.random());
+          }
+        } else {
+          const insights = computeStudentInsights(sId, pastAssignments);
+          studentQuestionList = selectRandomQuestionsForRuleEngine(
+            Number(randomCount) || 5,
+            allQuestions,
+            insights
+          );
+        }
+
+        const questionLogs: QuestionAttemptLog[] = studentQuestionList.map((q) => ({
+          questionId: q.id,
+          groupName: q.groupName,
+          difficulty: q.difficulty,
+          content: q.content,
+          points: q.points != null ? Number(q.points) : null,
+          studentAnswer: null,
+          correctAnswer: q.correctAnswer ?? null,
+          isCorrect: false,
+          timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+          timeTakenSeconds: 0,
+          earnedPoints: 0,
+          options: q.options || [],
+          metadata: q.metadata || {},
+        }));
+
+        newAssignmentsToAdd.push({
+          publishedTestId: publishId,
+          publishName: publishName.trim(),
+          studentId: sId,
+          studentName: student.studentName || '',
+          schoolId: student.schoolId,
+          schoolName: stSchool ? stSchool.name : (student.schoolName || ''),
+          className: student.className || '',
+          section: student.section || '',
+          status: 'NOT_STARTED',
+          totalQuestions: questionLogs.length,
+          correctCount: 0,
+          wrongCount: 0,
+          totalPointsEarned: 0,
+          scoreOutOf100: 0,
+          totalTimeTakenSeconds: 0,
+          questions: questionLogs,
+        });
+      } else {
+        // Student already exists: if status is NOT_STARTED, update school/class/section details & questions if needed
+        const existing = remainingAssignMap.get(sId);
+        if (existing.status === 'NOT_STARTED') {
+          existing.schoolId = student.schoolId;
+          existing.schoolName = stSchool ? stSchool.name : (student.schoolName || existing.schoolName);
+          existing.className = student.className || existing.className;
+          existing.section = student.section || existing.section;
+
+          if (publishMode === 'Selected Questions') {
+            let updatedList = [...selectedQuestionsDocs];
+            if (shuffle) {
+              updatedList.sort(() => 0.5 - Math.random());
+            }
+            const questionLogs: QuestionAttemptLog[] = updatedList.map((q) => ({
+              questionId: q.id,
+              groupName: q.groupName,
+              difficulty: q.difficulty,
+              content: q.content,
+              points: q.points != null ? Number(q.points) : null,
+              studentAnswer: null,
+              correctAnswer: q.correctAnswer ?? null,
+              isCorrect: false,
+              timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+              timeTakenSeconds: 0,
+              earnedPoints: 0,
+              options: q.options || [],
+              metadata: q.metadata || {},
+            }));
+            existing.questions = questionLogs;
+            existing.totalQuestions = questionLogs.length;
+          }
+          await existing.save();
+        }
+      }
+    }
+
+    if (newAssignmentsToAdd.length > 0) {
+      await StudentTestAssignmentModel.insertMany(newAssignmentsToAdd);
+    }
+
+    // Refresh all live assignments for this published test
+    const allCurrentAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const currentCompleted = allCurrentAssignments.filter((a) => a.status === 'COMPLETED').length;
+    const currentIncomplete = allCurrentAssignments.filter((a) => a.status === 'INCOMPLETE' || a.status === 'LOCKED_INCOMPLETE').length;
+
+    // Update PublishHistory record with latest update timestamp and updated recipient list
+    if (historyDoc) {
+      historyDoc.publishedAt = serverNow;
+      historyDoc.updatedAt = serverNow;
+      historyDoc.publishName = publishName.trim();
+      historyDoc.publishMode = publishMode;
+      historyDoc.startDate = startDate;
+      historyDoc.startTime = startTime || '00:00';
+      historyDoc.endDate = endDate;
+      historyDoc.endTime = endTime || '23:59';
+      historyDoc.schoolId = allTargetSchoolIds[0] || '';
+      historyDoc.schoolName = combinedSchoolNames;
+      historyDoc.schoolIds = allTargetSchoolIds;
+      historyDoc.schoolNames = allTargetSchoolNames;
+      historyDoc.classes = allTargetClasses.length > 0 ? allTargetClasses : ['All Classes'];
+      historyDoc.sections = allTargetSections.length > 0 ? allTargetSections : ['All Sections'];
+      historyDoc.targets = targetsRecord;
+      historyDoc.totalRecipients = allCurrentAssignments.length;
+      historyDoc.assignedQuestionsCount = publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount || 0);
+      historyDoc.completedCount = currentCompleted;
+      historyDoc.incompleteCount = currentIncomplete;
+
+      // Update studentsStatus:
+      // Remove stale NOT_STARTED entries for students who are no longer targeted.
+      // Keep students who are in allCurrentAssignments or who have a completed/incomplete attempt.
+      const prevStatusMap = new Map<string, any>(
+        (historyDoc.studentsStatus || []).map((s: any) => [s.studentId || s.uniqueStudentId, s])
+      );
+
+      const liveAssignMap = new Map<string, any>(allCurrentAssignments.map((a) => [a.studentId, a]));
+      const updatedStudentsStatus: any[] = [];
+
+      for (const a of allCurrentAssignments) {
+        const prev = prevStatusMap.get(a.studentId);
+        updatedStudentsStatus.push({
+          studentId: a.studentId,
+          uniqueStudentId: a.studentId,
+          studentName: a.studentName || prev?.studentName || '',
+          schoolId: a.schoolId || prev?.schoolId || '',
+          schoolName: a.schoolName || prev?.schoolName || '',
+          className: a.className || prev?.className || '',
+          section: a.section || prev?.section || '',
+          status: a.status,
+          scoreOutOf100: a.scoreOutOf100 || 0,
+          exitType: a.exitType || null,
+          completionDate: prev?.completionDate,
+          completionTime: prev?.completionTime,
+        });
+      }
+
+      // Also preserve any previous historical attempts (status !== 'NOT_STARTED') for students not currently in live assignments
+      for (const [sId, prev] of prevStatusMap.entries()) {
+        if (!liveAssignMap.has(sId) && prev.status && prev.status !== 'NOT_STARTED') {
+          updatedStudentsStatus.push(prev);
+        }
+      }
+
+      historyDoc.studentsStatus = updatedStudentsStatus;
+      await historyDoc.save();
+    }
+
+    return res.json({
+      success: true,
+      message: `Assessment '${publishName}' updated successfully. Total assigned: ${allCurrentAssignments.length} students.`,
+      publishedTest: formatDoc(pubTest),
+      totalAssignedStudents: allCurrentAssignments.length,
+      publishedAt: serverNow,
+      updatedAt: serverNow,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update assessment', details: err.message });
+  }
+};
+
+router.put('/publish/:publishId', authenticate, requireRole('super_admin'), handleUpdatePublishedAssessment);
+router.put('/published-tests/:publishId', authenticate, requireRole('super_admin'), handleUpdatePublishedAssessment);
+
 // ==========================================
 // 6. STUDENT ASSESSMENT PORTAL & EXECUTION
 // ==========================================
@@ -1473,6 +1936,10 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
     for (const pt of publishedTests) {
       pubMap.set(pt._id.toString(), pt);
     }
+
+    const studentUser = await UserModel.findOne({
+      $or: [{ uniqueStudentId: studentId }, { username: studentId }].filter(Boolean),
+    }).lean();
 
     // Determine current date-time string in client timezone if provided, else server time
     const clientDateTimeHeader = req.headers['x-client-now'] as string;
@@ -1498,9 +1965,25 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
     }
 
-    const result = assignments.map((a) => {
+    const result: any[] = [];
+    const staleAssignmentsToDelete: string[] = [];
+
+    for (const a of assignments) {
       const pubId = a.publishedTestId?.toString ? a.publishedTestId.toString() : String(a.publishedTestId);
       const pub = pubMap.get(pubId);
+      if (!pub) {
+        continue;
+      }
+
+      // If test has NOT_STARTED, ensure student is still targeted under updated target configuration
+      if (a.status === 'NOT_STARTED' && studentUser) {
+        const isTargeted = isStudentTargetedByPublishedTest(studentUser, pub);
+        if (!isTargeted) {
+          staleAssignmentsToDelete.push(a._id.toString());
+          continue;
+        }
+      }
+
       const doc = formatDoc(a);
 
       let isUpcoming = false;
@@ -1520,9 +2003,10 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         }
       }
 
-      const canStart = a.status === 'NOT_STARTED' && !isUpcoming && !isExpired;
+      const isPaused = pub?.isPaused === true || pub?.status === 'PAUSED';
+      const canStart = a.status === 'NOT_STARTED' && !isUpcoming && !isExpired && !isPaused;
 
-      return {
+      result.push({
         ...doc,
         assignmentId: a._id.toString(),
         id: a._id.toString(),
@@ -1534,9 +2018,14 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         endTime: pub?.endTime || '23:59',
         isUpcoming,
         isExpired,
+        isPaused,
         canStart,
-      };
-    });
+      });
+    }
+
+    if (staleAssignmentsToDelete.length > 0) {
+      await StudentTestAssignmentModel.deleteMany({ _id: { $in: staleAssignmentsToDelete } });
+    }
 
     return res.json(result);
   } catch (err: any) {
@@ -1557,6 +2046,26 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     const assignment = await StudentTestAssignmentModel.findById(assignmentId);
     if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
     if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+
+    // Block start if assessment is paused by admin or not found
+    const pubTest = await PublishedTestModel.findById(assignment.publishedTestId);
+    if (!pubTest) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+    if (pubTest?.isPaused || pubTest?.status === 'PAUSED') {
+      return res.status(403).json({ error: 'This assessment is temporarily paused. Please check back later.' });
+    }
+
+    // Verify student is still targeted under updated target configuration
+    if (assignment.status === 'NOT_STARTED') {
+      const studentUser = await UserModel.findOne({
+        $or: [{ uniqueStudentId: studentId }, { username: studentId }].filter(Boolean),
+      }).lean();
+      if (studentUser && !isStudentTargetedByPublishedTest(studentUser, pubTest)) {
+        await StudentTestAssignmentModel.deleteOne({ _id: assignment._id });
+        return res.status(403).json({ error: 'You are no longer assigned to this assessment.' });
+      }
+    }
 
     // Strict One-Time Attempt Enforcement:
     // Only NOT_STARTED can be started.
@@ -1783,6 +2292,12 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
     if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
     if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
 
+    // Block answers if assessment is temporarily paused
+    const pubTest = await PublishedTestModel.findById(assignment.publishedTestId);
+    if (pubTest?.isPaused || pubTest?.status === 'PAUSED') {
+      return res.status(403).json({ error: 'This assessment is temporarily paused. Answers cannot be submitted while paused.' });
+    }
+
     if (assignment.status === 'COMPLETED' || assignment.status === 'LOCKED_INCOMPLETE') {
       return res.status(400).json({ error: 'Assessment is no longer accepting answers' });
     }
@@ -1843,6 +2358,12 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
     const assignment = await StudentTestAssignmentModel.findById(assignmentId);
     if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
     if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+
+    // Block submit if assessment is temporarily paused
+    const pubTest = await PublishedTestModel.findById(assignment.publishedTestId);
+    if (pubTest?.isPaused || pubTest?.status === 'PAUSED') {
+      return res.status(403).json({ error: 'This assessment is temporarily paused. Submissions cannot be made while paused.' });
+    }
 
     if (assignment.status === 'COMPLETED') {
       return res.json({
@@ -1994,7 +2515,7 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
     const publishIds = history.map((h) => h.publishId).filter(Boolean);
     const pubTests = await PublishedTestModel.find(
       { _id: { $in: publishIds } },
-      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1 }
+      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1, status: 1, isPaused: 1 }
     ).lean();
     const pubTestMap = new Map<string, any>(pubTests.map((pt: any) => [pt._id.toString(), pt]));
 
@@ -2040,6 +2561,7 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
       }
 
       const pub = pubTestMap.get(h.publishId);
+      const effectivePublishTime = h.publishedAt || h.updatedAt || h.createdAt || pub?.publishedAt || pub?.updatedAt || pub?.createdAt;
       return {
         ...h,
         schoolCounts,
@@ -2047,7 +2569,11 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
         startTime: h.startTime || pub?.startTime || h.time,
         endDate: h.endDate || pub?.endDate || '',
         endTime: h.endTime || pub?.endTime || '',
-        createdAt: h.createdAt || pub?.createdAt,
+        publishedAt: effectivePublishTime,
+        updatedAt: h.updatedAt || pub?.updatedAt || effectivePublishTime,
+        createdAt: effectivePublishTime,
+        status: h.status || pub?.status || 'ACTIVE',
+        isPaused: h.isPaused ?? pub?.isPaused ?? false,
       };
     });
 
@@ -2201,13 +2727,18 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
     }
     const schoolCounts = Array.from(schoolCountsMap.entries()).map(([schoolName, count]) => ({ schoolName, count }));
 
+    const effectivePublishTime = history.publishedAt || history.updatedAt || history.createdAt || pubTest?.publishedAt || pubTest?.updatedAt || pubTest?.createdAt;
     return res.json({
       ...history,
       startDate: history.startDate || pubTest?.startDate || history.date,
       startTime: history.startTime || pubTest?.startTime || history.time,
       endDate: history.endDate || pubTest?.endDate || '',
       endTime: history.endTime || pubTest?.endTime || '',
-      createdAt: history.createdAt || pubTest?.createdAt,
+      publishedAt: effectivePublishTime,
+      updatedAt: history.updatedAt || pubTest?.updatedAt || effectivePublishTime,
+      createdAt: effectivePublishTime,
+      status: history.status || pubTest?.status || 'ACTIVE',
+      isPaused: history.isPaused ?? pubTest?.isPaused ?? false,
       targets: resolvedTargets,
       schoolCounts,
       studentsStatus,
@@ -2218,6 +2749,107 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
     return res.status(500).json({ error: 'Failed to fetch publish history detail', details: err.message });
   }
 });
+
+// Pause an Assessment (Super Admin Only)
+router.post('/publish-history/:publishId/pause', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { publishId } = req.params;
+    const pubTest = await PublishedTestModel.findById(publishId);
+    const history = await PublishHistoryModel.findOne({ publishId });
+
+    if (!pubTest && !history) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+
+    if (pubTest) {
+      pubTest.status = 'PAUSED';
+      pubTest.isPaused = true;
+      await pubTest.save();
+    }
+    if (history) {
+      history.status = 'PAUSED';
+      history.isPaused = true;
+      await history.save();
+    }
+
+    return res.json({
+      success: true,
+      status: 'PAUSED',
+      isPaused: true,
+      message: `Assessment '${history?.publishName || pubTest?.publishName || publishId}' is now temporarily paused.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to pause assessment', details: err.message });
+  }
+});
+
+// Resume an Assessment (Super Admin Only)
+router.post('/publish-history/:publishId/resume', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { publishId } = req.params;
+    const pubTest = await PublishedTestModel.findById(publishId);
+    const history = await PublishHistoryModel.findOne({ publishId });
+
+    if (!pubTest && !history) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+
+    if (pubTest) {
+      pubTest.status = 'ACTIVE';
+      pubTest.isPaused = false;
+      await pubTest.save();
+    }
+    if (history) {
+      history.status = 'ACTIVE';
+      history.isPaused = false;
+      await history.save();
+    }
+
+    return res.json({
+      success: true,
+      status: 'ACTIVE',
+      isPaused: false,
+      message: `Assessment '${history?.publishName || pubTest?.publishName || publishId}' has been resumed.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to resume assessment', details: err.message });
+  }
+});
+
+// Delete an Assessment (Super Admin Only)
+const handleDeletePublishedAssessment = async (req: Request, res: Response) => {
+  try {
+    const { publishId } = req.params;
+    const pubTest = await PublishedTestModel.findById(publishId);
+    const history = await PublishHistoryModel.findOne({ publishId });
+
+    if (!pubTest && !history) {
+      return res.status(404).json({ error: 'Published assessment not found for deletion' });
+    }
+
+    const assessmentName = history?.publishName || pubTest?.publishName || publishId;
+
+    // Delete associated student assignments strictly for this published test only
+    const deletedAssignments = await StudentTestAssignmentModel.deleteMany({ publishedTestId: publishId });
+
+    // Delete publish history record
+    await PublishHistoryModel.deleteOne({ publishId });
+
+    // Delete published test record
+    await PublishedTestModel.deleteOne({ _id: publishId });
+
+    return res.json({
+      success: true,
+      message: `Assessment '${assessmentName}' and all associated student assignments deleted successfully.`,
+      deletedAssignmentsCount: deletedAssignments.deletedCount,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete assessment', details: err.message });
+  }
+};
+
+router.delete('/publish-history/:publishId', authenticate, requireRole('super_admin'), handleDeletePublishedAssessment);
+router.delete('/published-tests/:publishId', authenticate, requireRole('super_admin'), handleDeletePublishedAssessment);
 
 // ==========================================
 // 8. REPORTS & STUDENT TEST TIMELINE

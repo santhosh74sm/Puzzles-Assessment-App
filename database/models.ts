@@ -221,6 +221,9 @@ export interface IPublishedTestDocument extends Document {
   questionIds: string[];
   randomCount?: number;
   createdBy?: string;
+  status?: 'ACTIVE' | 'PAUSED';
+  isPaused?: boolean;
+  publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -229,6 +232,9 @@ export const PublishedTestSchema = new Schema<IPublishedTestDocument>(
   {
     publishName: { type: String, required: true, index: true },
     publishMode: { type: String, required: true, enum: ['Selected Questions', 'Random Questions'] },
+    status: { type: String, enum: ['ACTIVE', 'PAUSED'], default: 'ACTIVE', index: true },
+    isPaused: { type: Boolean, default: false, index: true },
+    publishedAt: { type: Date },
     target: {
       schoolId: { type: String, default: '', index: true },
       schoolIds: { type: [String], default: [] },
@@ -402,6 +408,9 @@ export interface IPublishHistoryDocument extends Document {
   completedCount: number;
   incompleteCount: number;
   studentsStatus: any[];
+  status?: 'ACTIVE' | 'PAUSED';
+  isPaused?: boolean;
+  publishedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -410,6 +419,9 @@ export const PublishHistorySchema = new Schema<IPublishHistoryDocument>(
   {
     publishId: { type: String, required: true, unique: true, index: true },
     publishName: { type: String, required: true },
+    status: { type: String, enum: ['ACTIVE', 'PAUSED'], default: 'ACTIVE', index: true },
+    isPaused: { type: Boolean, default: false, index: true },
+    publishedAt: { type: Date },
     date: { type: String, required: true },
     time: { type: String, required: true },
     startDate: { type: String, required: false },

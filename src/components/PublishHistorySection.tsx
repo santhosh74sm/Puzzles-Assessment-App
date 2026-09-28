@@ -14,6 +14,11 @@ import {
   Check,
   X,
   Target,
+  Edit,
+  Pause,
+  Play,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface PublishHistorySectionProps {
@@ -22,6 +27,8 @@ interface PublishHistorySectionProps {
   historyList: any[];
   selectedHistoryDetail: any | null;
   onSelectHistory: (publishId: string) => Promise<void>;
+  onEditAssessment?: (publishId: string) => void;
+  onRefreshHistory?: () => Promise<void>;
 }
 
 // -------------------------------------------------------------
@@ -1195,7 +1202,7 @@ function HistoricalAuditDrillDown({
     );
   }, [drillDownTab, filteredCompleted, filteredIncomplete, studentsFinal]);
 
-  const publishDateTimeDisplay = formatPublishDateTime(detail?.createdAt);
+  const publishDateTimeDisplay = formatPublishDateTime(detail?.publishedAt || detail?.updatedAt || detail?.createdAt);
   const availabilityWindowDisplay = formatAvailabilityWindow(
     detail?.startDate || detail?.date,
     detail?.startTime || detail?.time,
@@ -1228,8 +1235,8 @@ function HistoricalAuditDrillDown({
         </button>
       </div>
 
-      {/* Published & Test Availability Window */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono">
+      {/* Published & Test Availability Window & Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono">
         <div className="space-y-1">
           <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
             Published:
@@ -1247,6 +1254,25 @@ function HistoricalAuditDrillDown({
           <div className="text-white font-semibold flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
             <span>{availabilityWindowDisplay}</span>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
+            Assessment Status:
+          </span>
+          <div className="flex items-center gap-1.5 pt-0.5">
+            {detail.status === 'PAUSED' || detail.isPaused ? (
+              <span className="px-2.5 py-0.5 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-800 text-[11px] uppercase tracking-wide inline-flex items-center gap-1">
+                <Pause className="w-3 h-3" />
+                PAUSED
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 text-[11px] uppercase tracking-wide inline-flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                ACTIVE
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -1602,10 +1628,108 @@ export function PublishHistorySection({
   historyList,
   selectedHistoryDetail,
   onSelectHistory,
+  onEditAssessment,
+  onRefreshHistory,
 }: PublishHistorySectionProps) {
   const [historySearch, setHistorySearch] = useState('');
   // All assessment cards must be CLOSED by default when visiting/returning to Publish History
   const [selectedPublishId, setSelectedPublishId] = useState<string | null>(null);
+
+  // Management action states
+  const [pauseTarget, setPauseTarget] = useState<any | null>(null);
+  const [resumeTarget, setResumeTarget] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const handleConfirmPause = async () => {
+    if (!pauseTarget) return;
+    setIsActionLoading(true);
+    try {
+      const res = await fetch(`/api/publish-history/${pauseTarget.publishId}/pause`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to pause assessment');
+      }
+      setActionFeedback({ type: 'success', message: `Assessment '${pauseTarget.publishName}' is now temporarily paused.` });
+      setPauseTarget(null);
+      if (onRefreshHistory) {
+        await onRefreshHistory();
+      }
+      if (selectedPublishId === pauseTarget.publishId) {
+        await onSelectHistory(pauseTarget.publishId);
+      }
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', message: err.message || 'Failed to pause assessment' });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleConfirmResume = async () => {
+    if (!resumeTarget) return;
+    setIsActionLoading(true);
+    try {
+      const res = await fetch(`/api/publish-history/${resumeTarget.publishId}/resume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to resume assessment');
+      }
+      setActionFeedback({ type: 'success', message: `Assessment '${resumeTarget.publishName}' has been resumed.` });
+      setResumeTarget(null);
+      if (onRefreshHistory) {
+        await onRefreshHistory();
+      }
+      if (selectedPublishId === resumeTarget.publishId) {
+        await onSelectHistory(resumeTarget.publishId);
+      }
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', message: err.message || 'Failed to resume assessment' });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsActionLoading(true);
+    try {
+      const res = await fetch(`/api/publish-history/${deleteTarget.publishId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete assessment');
+      }
+      setActionFeedback({ type: 'success', message: `Assessment '${deleteTarget.publishName}' deleted successfully.` });
+      if (selectedPublishId === deleteTarget.publishId) {
+        setSelectedPublishId(null);
+      }
+      setDeleteTarget(null);
+      if (onRefreshHistory) {
+        await onRefreshHistory();
+      }
+    } catch (err: any) {
+      setActionFeedback({ type: 'error', message: err.message || 'Failed to delete assessment' });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   const filteredHistory = historyList.filter((hist) => {
     if (!historySearch) return true;
@@ -1676,6 +1800,32 @@ export function PublishHistorySection({
         </p>
       </div>
 
+      {/* Action feedback banner */}
+      {actionFeedback && (
+        <div
+          className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between gap-3 ${
+            actionFeedback.type === 'success'
+              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
+              : 'bg-rose-950/90 border border-rose-500/70 text-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {actionFeedback.type === 'success' ? (
+              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            )}
+            <span>{actionFeedback.message}</span>
+          </div>
+          <button
+            onClick={() => setActionFeedback(null)}
+            className="text-xs underline opacity-80 hover:opacity-100 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Filter / Search bar */}
       <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -1702,6 +1852,7 @@ export function PublishHistorySection({
         {filteredHistory.length > 0 ? (
           filteredHistory.map((hist) => {
             const isSelected = selectedPublishId === hist.publishId;
+            const isPaused = hist.status === 'PAUSED' || hist.isPaused === true;
             const incompleteCount = (hist.totalRecipients || 0) - (hist.completedCount || 0);
             const schoolSummaries = getSchoolSummaries(hist);
 
@@ -1724,18 +1875,21 @@ export function PublishHistorySection({
                       <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
                         {hist.publishMode}
                       </span>
+                      {isPaused && (
+                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide flex items-center gap-1">
+                          <Pause className="w-3 h-3" />
+                          Status: PAUSED
+                        </span>
+                      )}
                       <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
                         <Calendar className="w-3 h-3 text-slate-500" />
-                        Published: {formatPublishDateTime(hist.createdAt)}
+                        Published: {formatPublishDateTime(hist.publishedAt || hist.updatedAt || hist.createdAt)}
                       </span>
                     </div>
 
                     <h4 className="font-bold text-base text-white">{hist.publishName}</h4>
 
-                    {/* ======================================================== */}
-                    {/* CHANGE 1: SCHOOL-WISE ASSIGNED STUDENT COUNTS ONLY       */}
-                    {/* (No Class, No Section, No Student Names in this summary) */}
-                    {/* ======================================================== */}
+                    {/* School-wise assigned student counts */}
                     <div className="space-y-0.5 pt-0.5">
                       {schoolSummaries.map((sc, scIdx) => (
                         <div key={scIdx} className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
@@ -1756,6 +1910,53 @@ export function PublishHistorySection({
                         {incompleteCount > 0 ? incompleteCount : 0} Incomplete
                       </span>
                     </div>
+
+                    {/* Action Area: Edit, Pause / Resume, Delete */}
+                    <div
+                      className="flex items-center gap-1.5 pl-3 border-l border-slate-800"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        title="Edit Assessment"
+                        onClick={() => onEditAssessment && onEditAssessment(hist.publishId)}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        title={isPaused ? 'Resume Assessment' : 'Pause Assessment'}
+                        onClick={() => {
+                          if (isPaused) {
+                            setResumeTarget(hist);
+                          } else {
+                            setPauseTarget(hist);
+                          }
+                        }}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
+                          isPaused
+                            ? 'bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border-amber-800'
+                            : 'bg-slate-800 hover:bg-amber-600 hover:text-white text-slate-300 border-slate-700'
+                        }`}
+                      >
+                        {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                        <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        title="Delete Assessment"
+                        onClick={() => setDeleteTarget(hist)}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 hover:border-rose-600 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+
                     <ChevronDown
                       className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
                         isSelected ? 'rotate-180 text-indigo-400' : ''
@@ -1791,6 +1992,128 @@ export function PublishHistorySection({
           </div>
         )}
       </div>
+
+      {/* 1. Pause Confirmation Modal */}
+      {pauseTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+              <Pause className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-white">Pause Assessment</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Are you sure you want to pause{' '}
+                <strong className="text-white font-semibold">{pauseTarget.publishName}</strong>?
+              </p>
+              <div className="text-xs text-amber-300/90 bg-amber-950/60 p-3 rounded-xl border border-amber-800/80 leading-relaxed text-left space-y-1">
+                <p>&bull; Assessment status will become <strong>PAUSED</strong>.</p>
+                <p>&bull; Students will see <em>"Temporarily Paused"</em> and will not be able to start or continue.</p>
+                <p>&bull; Existing completed and incomplete attempts, answers, and scores will be strictly preserved.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isActionLoading}
+                onClick={() => setPauseTarget(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isActionLoading}
+                onClick={handleConfirmPause}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-600/30 cursor-pointer transition-all disabled:opacity-50"
+              >
+                {isActionLoading ? 'Pausing...' : 'Pause Assessment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Resume Confirmation Modal */}
+      {resumeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+              <Play className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-white">Resume Assessment</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Resume assessment{' '}
+                <strong className="text-white font-semibold">{resumeTarget.publishName}</strong>?
+              </p>
+              <div className="text-xs text-emerald-300/90 bg-emerald-950/60 p-3 rounded-xl border border-emerald-800/80 leading-relaxed text-left space-y-1">
+                <p>&bull; Assessment will become <strong>ACTIVE</strong> again.</p>
+                <p>&bull; Students can access, start, or continue taking the assessment according to configured availability window rules.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isActionLoading}
+                onClick={() => setResumeTarget(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isActionLoading}
+                onClick={handleConfirmResume}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 cursor-pointer transition-all disabled:opacity-50"
+              >
+                {isActionLoading ? 'Resuming...' : 'Resume Assessment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-rose-500/50 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-white">Delete Published Assessment</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Are you sure you want to permanently delete{' '}
+                <strong className="text-rose-300 font-semibold">{deleteTarget.publishName}</strong>?
+              </p>
+              <div className="text-xs text-rose-300/90 bg-rose-950/60 p-3 rounded-xl border border-rose-800/80 leading-relaxed text-left space-y-1">
+                <p>&bull; Deletes only this published assessment record and its associated student assignments.</p>
+                <p>&bull; Unrelated assessments, schools, students, and question banks will not be deleted.</p>
+                <p className="text-rose-400 font-semibold">&bull; This operation is permanent and cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isActionLoading}
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isActionLoading}
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 cursor-pointer transition-all disabled:opacity-50"
+              >
+                {isActionLoading ? 'Deleting...' : 'Delete Assessment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

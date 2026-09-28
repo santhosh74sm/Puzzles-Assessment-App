@@ -39,6 +39,7 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
 
   // Preserve in-progress Publish Assessment state across sidebar page navigation
   const [publishFormState, setPublishFormState] = useState<PublishAssessmentFormState | undefined>(undefined);
+  const [editingPublishId, setEditingPublishId] = useState<string | null>(null);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -92,6 +93,71 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     } catch (e) {
       console.error('Failed to load history detail', e);
     }
+  };
+
+  const handleEditAssessment = async (publishId: string) => {
+    try {
+      const res = await fetch(`/api/published-tests/${publishId}`, { headers });
+      if (!res.ok) {
+        throw new Error('Failed to load assessment data for editing');
+      }
+      const data = await res.json();
+
+      let rawTargets = data.targets;
+      if (!Array.isArray(rawTargets) || rawTargets.length === 0) {
+        if (data.target) {
+          rawTargets = [data.target];
+        } else {
+          rawTargets = [
+            {
+              schoolIds: ['ALL'],
+              classes: ['ALL'],
+              sections: [],
+              studentIds: [],
+            },
+          ];
+        }
+      }
+
+      const formattedTargets = rawTargets.map((t: any, idx: number) => ({
+        id: `target-${idx + 1}-${Date.now()}`,
+        selectedSchoolIds: Array.isArray(t.schoolIds) && t.schoolIds.length > 0 ? t.schoolIds : ['ALL'],
+        selectedClasses: Array.isArray(t.classes) && t.classes.length > 0 ? t.classes : ['ALL'],
+        availableClasses: [],
+        isLoadingClasses: false,
+        selectedSections: Array.isArray(t.sections) ? t.sections : [],
+        availableSections: [],
+        isLoadingSections: false,
+        selectedStudentIds: Array.isArray(t.studentIds) ? t.studentIds : [],
+        availableStudents: [],
+        isLoadingStudents: false,
+      }));
+
+      setPublishFormState({
+        publishName: data.publishName || '',
+        publishMode: data.publishMode || 'Selected Questions',
+        targets: formattedTargets,
+        selectedQuestionsForPublish: data.questionIds || [],
+        shuffleQuestions: Boolean(data.shuffle),
+        randomCount: data.randomCount || 5,
+        startDate: data.startDate || '',
+        startTime: data.startTime || '00:00',
+        endDate: data.endDate || '',
+        endTime: data.endTime || '23:59',
+        editingPublishId: publishId,
+      });
+
+      setEditingPublishId(publishId);
+      setActiveTab('publish');
+    } catch (e) {
+      console.error('Failed to load assessment for editing', e);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPublishId(null);
+    setPublishFormState(undefined);
+    setActiveTab('history');
   };
 
   const loadAllInitialData = async () => {
@@ -230,10 +296,17 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             allQuestions={allQuestions}
             formState={publishFormState}
             onFormStateChange={setPublishFormState}
-            onResetFormState={() => setPublishFormState(undefined)}
+            editingPublishId={editingPublishId}
+            onCancelEdit={handleCancelEdit}
+            onResetFormState={() => {
+              setEditingPublishId(null);
+              setPublishFormState(undefined);
+            }}
             onPublishSuccess={async () => {
+              setEditingPublishId(null);
               setPublishFormState(undefined);
               await loadPublishHistory();
+              setActiveTab('history');
             }}
           />
         )}
@@ -245,6 +318,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             historyList={historyList}
             selectedHistoryDetail={selectedHistoryDetail}
             onSelectHistory={loadHistoryDetail}
+            onEditAssessment={handleEditAssessment}
+            onRefreshHistory={loadPublishHistory}
           />
         )}
       </main>

@@ -482,12 +482,22 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                                 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                                 : isIncomplete
                                 ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                                : card.isPaused
+                                ? 'bg-amber-950 text-amber-400 border border-amber-800'
                                 : isExpired
                                 ? 'bg-slate-800 text-slate-400'
-                                : 'bg-amber-950 text-amber-400 border border-amber-800'
+                                : 'bg-indigo-950 text-indigo-400 border border-indigo-800'
                             }`}
                           >
-                            {card.status === 'NOT_STARTED' && isExpired ? 'EXPIRED' : card.status}
+                            {isCompleted
+                              ? 'COMPLETED'
+                              : isIncomplete
+                              ? card.status
+                              : card.isPaused
+                              ? 'TEMPORARILY PAUSED'
+                              : card.status === 'NOT_STARTED' && isExpired
+                              ? 'EXPIRED'
+                              : card.status}
                           </span>
                         </div>
 
@@ -522,7 +532,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                           </div>
                         )}
 
-                        {card.status === 'NOT_STARTED' && (
+                        {!isCompleted && !isIncomplete && card.isPaused && (
+                          <div className="w-full py-3 rounded-xl font-bold bg-amber-950/60 border border-amber-800 text-amber-300 text-sm text-center">
+                            Temporarily Paused
+                          </div>
+                        )}
+
+                        {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'NOT_STARTED' && (
                           <button
                             type="button"
                             onClick={() => handleStartTest(assignmentId)}
@@ -537,7 +553,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                           </button>
                         )}
 
-                        {card.status === 'IN_PROGRESS' && (
+                        {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'IN_PROGRESS' && (
                           <div className="flex items-center gap-2 text-xs text-amber-400 font-semibold">
                             <Clock className="w-4 h-4 shrink-0" />
                             <span>Assessment in progress. One-time attempt started &mdash; cannot restart.</span>
