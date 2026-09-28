@@ -175,3 +175,23 @@ export interface PublishHistoryRecord {
     scoreOutOf100?: number;
   }[];
 }
+
+export interface AssessmentTemplate {
+  id: string;
+  name: string;
+  publishMode: PublishMode;
+  selectedQuestionIds: string[];
+  shuffleQuestions: boolean;
+  randomCount: number;
+  targets: Array<{
+    id?: string;
+    selectedSchoolIds: string[];
+    selectedClasses: string[];
+    selectedSections: string[];
+    selectedStudentIds: string[];
+  }>;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

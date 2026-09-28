@@ -16,6 +16,10 @@ import {
   X,
   Users,
   Search,
+  Bookmark,
+  BookmarkPlus,
+  Sparkles,
+  FolderDown,
 } from 'lucide-react';
 import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
 
@@ -1562,8 +1566,18 @@ export function PublishAssessmentSection({
     formState?.endDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [endTime, setEndTime] = useState(formState?.endTime ?? '23:59');
-  const [publishFeedback, setPublishFeedback] = useState<string | null>(null);
+  
+  // Feedback notification state (strictly typed for semantic green success vs red error)
+  const [publishFeedback, setPublishFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const showSuccessFeedback = (message: string) => {
+    setPublishFeedback({ type: 'success', message });
+  };
+
+  const showErrorFeedback = (message: string) => {
+    setPublishFeedback({ type: 'error', message });
+  };
 
   // When formState or editingPublishId changes (e.g. from clicking Edit), update all local states
   useEffect(() => {
@@ -1619,9 +1633,205 @@ export function PublishAssessmentSection({
   const [previewActiveIndex, setPreviewActiveIndex] = useState(0);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
+  // Template management state
+  const [savedTemplates, setSavedTemplates] = useState<any[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateNameInput, setTemplateNameInput] = useState('');
+  const [saveTemplateError, setSaveTemplateError] = useState<string | null>(null);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [showSavedTemplatesModal, setShowSavedTemplatesModal] = useState(false);
+  const [showOverwriteAlert, setShowOverwriteAlert] = useState(false);
+  const [pendingTemplateToLoad, setPendingTemplateToLoad] = useState<any | null>(null);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [templateToDelete, setTemplateToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
+
   const headers = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
+  };
+
+  const fetchSavedTemplates = async () => {
+    setIsLoadingTemplates(true);
+    try {
+      const res = await fetch('/api/templates', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedTemplates(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch templates:', err);
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchSavedTemplates();
+    }
+  }, [token]);
+
+  const handleOpenSaveTemplateModal = () => {
+    if (publishMode === 'Selected Questions' && selectedQuestionsForPublish.length === 0) {
+      showErrorFeedback('Please select at least 1 question before saving a template.');
+      return;
+    }
+    setTemplateNameInput('');
+    setSaveTemplateError(null);
+    setShowSaveTemplateModal(true);
+  };
+
+  const handleSaveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = templateNameInput.trim();
+    if (!trimmed) {
+      setSaveTemplateError('Template Name is required.');
+      return;
+    }
+
+    const exists = savedTemplates.some(
+      (t) => t.name && t.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      setSaveTemplateError(`A template named '${trimmed}' already exists. Please choose a different unique name.`);
+      return;
+    }
+
+    setIsSavingTemplate(true);
+    setSaveTemplateError(null);
+
+    try {
+      const cleanTargets = targets.map((t, idx) => ({
+        id: t.id || `target-${Date.now()}-${idx}`,
+        selectedSchoolIds: Array.isArray(t.selectedSchoolIds) ? t.selectedSchoolIds : ['ALL'],
+        selectedClasses: Array.isArray(t.selectedClasses) ? t.selectedClasses : ['ALL'],
+        selectedSections: Array.isArray(t.selectedSections) ? t.selectedSections : [],
+        selectedStudentIds: Array.isArray(t.selectedStudentIds) ? t.selectedStudentIds : [],
+      }));
+
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: trimmed,
+          publishMode,
+          selectedQuestionIds: selectedQuestionsForPublish,
+          shuffleQuestions,
+          randomCount: Number(randomCount) || 5,
+          targets: cleanTargets,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setShowSaveTemplateModal(false);
+        setTemplateNameInput('');
+        showSuccessFeedback(`Template '${trimmed}' saved successfully!`);
+        await fetchSavedTemplates();
+      } else {
+        setSaveTemplateError(data.error || 'Failed to save template.');
+      }
+    } catch (err: any) {
+      setSaveTemplateError(err.message || 'Network error saving template.');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const hasCurrentSelections = () => {
+    if (publishName.trim() !== '') return true;
+    if (selectedQuestionsForPublish.length > 0) return true;
+    if (targets.length > 1) return true;
+    if (targets.length === 1) {
+      const t = targets[0];
+      const isDefaultSchool = t.selectedSchoolIds.length === 1 && t.selectedSchoolIds[0] === 'ALL';
+      const isDefaultClass = t.selectedClasses.length === 1 && t.selectedClasses[0] === 'ALL';
+      const isDefaultSec = !t.selectedSections || t.selectedSections.length === 0;
+      const isDefaultStu = !t.selectedStudentIds || t.selectedStudentIds.length === 0;
+      if (!isDefaultSchool || !isDefaultClass || !isDefaultSec || !isDefaultStu) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleSelectTemplate = (tpl: any) => {
+    if (hasCurrentSelections()) {
+      setPendingTemplateToLoad(tpl);
+      setShowOverwriteAlert(true);
+    } else {
+      applyTemplate(tpl);
+    }
+  };
+
+  const applyTemplate = (tpl: any) => {
+    const rawTargets = Array.isArray(tpl.targets) && tpl.targets.length > 0
+      ? tpl.targets
+      : [
+          {
+            selectedSchoolIds: ['ALL'],
+            selectedClasses: ['ALL'],
+            selectedSections: [],
+            selectedStudentIds: [],
+          },
+        ];
+
+    const clonedTargets: TargetItem[] = rawTargets.map((t: any, idx: number) => ({
+      id: `target-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+      selectedSchoolIds: Array.isArray(t.selectedSchoolIds) ? [...t.selectedSchoolIds] : ['ALL'],
+      selectedClasses: Array.isArray(t.selectedClasses) ? [...t.selectedClasses] : ['ALL'],
+      availableClasses: [],
+      isLoadingClasses: false,
+      selectedSections: Array.isArray(t.selectedSections) ? [...t.selectedSections] : [],
+      availableSections: [],
+      isLoadingSections: false,
+      selectedStudentIds: Array.isArray(t.selectedStudentIds) ? [...t.selectedStudentIds] : [],
+      availableStudents: [],
+      isLoadingStudents: false,
+    }));
+
+    setPublishMode(tpl.publishMode || 'Selected Questions');
+    setSelectedQuestionsForPublish(Array.isArray(tpl.selectedQuestionIds) ? [...tpl.selectedQuestionIds] : []);
+    setShuffleQuestions(Boolean(tpl.shuffleQuestions));
+    setRandomCount(Number(tpl.randomCount) || 5);
+    setTargets(clonedTargets);
+
+    // Keep publishName empty and dates at fresh defaults
+    setPublishName('');
+
+    setShowSavedTemplatesModal(false);
+    setShowOverwriteAlert(false);
+    setPendingTemplateToLoad(null);
+    showSuccessFeedback(`Template '${tpl.name}' loaded successfully into Publish Assessment form.`);
+  };
+
+  const handleConfirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+    const { id: templateId, name: templateName } = templateToDelete;
+    setIsDeletingTemplate(true);
+
+    try {
+      const res = await fetch(`/api/templates/${templateId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (res.ok) {
+        setSavedTemplates((prev) => prev.filter((t) => (t.id || t._id) !== templateId));
+        setTemplateToDelete(null);
+        showSuccessFeedback(`Template '${templateName}' deleted successfully.`);
+        await fetchSavedTemplates();
+      } else {
+        const data = await res.json();
+        showErrorFeedback(data.error || 'Failed to delete template.');
+      }
+    } catch (err: any) {
+      showErrorFeedback(err.message || 'Error deleting template.');
+    } finally {
+      setIsDeletingTemplate(false);
+    }
   };
 
   const resolveTargetSchoolIds = (ids: string[]) => {
@@ -1672,12 +1882,12 @@ export function PublishAssessmentSection({
     setPublishFeedback(null);
 
     if (targets.length === 0) {
-      setPublishFeedback('Please add at least one target configuration before publishing.');
+      showErrorFeedback('Please add at least one target configuration before publishing.');
       return;
     }
 
     if (!publishName.trim()) {
-      setPublishFeedback('Please specify a Publish Name (e.g. Class 7 Reasoning Test - September)');
+      showErrorFeedback('Please specify a Publish Name (e.g. Class 7 Reasoning Test - September)');
       return;
     }
 
@@ -1685,7 +1895,7 @@ export function PublishAssessmentSection({
     for (let i = 0; i < targets.length; i++) {
       const resolvedIds = resolveTargetSchoolIds(targets[i].selectedSchoolIds);
       if (resolvedIds.length === 0) {
-        setPublishFeedback(`Target ${i + 1}: Please select at least one target school workspace.`);
+        showErrorFeedback(`Target ${i + 1}: Please select at least one target school workspace.`);
         return;
       }
     }
@@ -1705,7 +1915,7 @@ export function PublishAssessmentSection({
         const stu2 = [...(t2.selectedStudentIds || [])].sort().join(',');
 
         if (s1 === s2 && c1 === c2 && sec1 === sec2 && stu1 === stu2) {
-          setPublishFeedback(
+          showErrorFeedback(
             `Duplicate Target Detected: Target ${i + 1} and Target ${j + 1} are exact duplicates with identical School(s), Class(es), Section(s), and Student(s). Please remove or edit one of the duplicate targets.`
           );
           return;
@@ -1714,7 +1924,7 @@ export function PublishAssessmentSection({
     }
 
     if (publishMode === 'Selected Questions' && selectedQuestionsForPublish.length === 0) {
-      setPublishFeedback('Please select at least 1 question from Question Bank.');
+      showErrorFeedback('Please select at least 1 question from Question Bank.');
       return;
     }
 
@@ -1757,7 +1967,7 @@ export function PublishAssessmentSection({
 
       const valData = await valRes.json();
       if (!valRes.ok || !valData.valid) {
-        setPublishFeedback(valData.error || 'Target configuration validation failed.');
+        showErrorFeedback(valData.error || 'Target configuration validation failed.');
         setIsSubmitting(false);
         return;
       }
@@ -1822,7 +2032,7 @@ export function PublishAssessmentSection({
       const data = await res.json();
       if (res.ok) {
         if (isEditMode) {
-          setPublishFeedback(`Successfully updated assessment '${publishName}'!`);
+          showSuccessFeedback(`Successfully updated assessment '${publishName}'!`);
           if (onResetFormState) {
             onResetFormState();
           }
@@ -1831,7 +2041,7 @@ export function PublishAssessmentSection({
             onCancelEdit();
           }
         } else {
-          setPublishFeedback(`Successfully published to ${data.assignedStudentCount ?? data.totalAssignedStudents} students!`);
+          showSuccessFeedback(`Successfully published to ${data.assignedStudentCount ?? data.totalAssignedStudents} students!`);
           setPublishName('');
           setSelectedQuestionsForPublish([]);
           setTargets([
@@ -1855,10 +2065,10 @@ export function PublishAssessmentSection({
           await onPublishSuccess();
         }
       } else {
-        setPublishFeedback(data.error || (isEditMode ? 'Failed to update assessment' : 'Failed to publish test'));
+        showErrorFeedback(data.error || (isEditMode ? 'Failed to update assessment' : 'Failed to publish test'));
       }
     } catch (err: any) {
-      setPublishFeedback(err.message || (isEditMode ? 'Network error updating assessment' : 'Network error publishing test'));
+      showErrorFeedback(err.message || (isEditMode ? 'Network error updating assessment' : 'Network error publishing test'));
     } finally {
       setIsSubmitting(false);
     }
@@ -1866,45 +2076,83 @@ export function PublishAssessmentSection({
 
   return (
     <div className="space-y-8 max-w-5xl">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">
-            {isEditMode ? 'Assessment Management' : 'Assessment Dispatch'}
-          </span>
-          {isEditMode && (
-            <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide">
-              Edit Mode
+      {/* Header with Save Template & Saved Templates Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">
+              {isEditMode ? 'Assessment Management' : 'Assessment Dispatch'}
             </span>
-          )}
+            {isEditMode && (
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide">
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">
+            {isEditMode ? 'Edit Assessment' : 'Publish Assessment'}
+          </h2>
+          <p className="text-sm text-slate-400">
+            {isEditMode
+              ? `Editing published assessment '${publishName}'. Modify target configurations, questions, or dates and click "Update Assessment" to save changes.`
+              : `Configure publication options: choose between Selected Questions or Random Questions, define student targets, and schedule availability.`}
+          </p>
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">
-          {isEditMode ? 'Edit Assessment' : 'Publish Assessment'}
-        </h2>
-        <p className="text-sm text-slate-400">
-          {isEditMode
-            ? `Editing published assessment '${publishName}'. Modify target configurations, questions, or dates and click "Update Assessment" to save changes.`
-            : `Configure publication options: choose between Selected Questions or Random Questions, define student targets, and schedule availability.`}
-        </p>
+
+        {/* Top-Right Area Controls: Saved Templates & Save Template */}
+        <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
+          {/* Saved Templates Button */}
+          <button
+            type="button"
+            onClick={() => {
+              fetchSavedTemplates();
+              setShowSavedTemplatesModal(true);
+            }}
+            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-2 shadow-sm hover:border-slate-600 transition-all cursor-pointer"
+            title="Saved Templates"
+          >
+            <Bookmark className="w-4 h-4 text-indigo-400" />
+            <span>Saved Templates</span>
+            {savedTemplates.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-800">
+                {savedTemplates.length}
+              </span>
+            )}
+          </button>
+
+          {/* Save Template round/icon button */}
+          <button
+            type="button"
+            onClick={handleOpenSaveTemplateModal}
+            className="w-9 h-9 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group relative flex items-center justify-center border border-indigo-400/40"
+            title="Save Template"
+            aria-label="Save Template"
+          >
+            <BookmarkPlus className="w-4 h-4" />
+            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 shadow-xl border border-slate-700 transition-opacity group-hover:opacity-100 z-30">
+              Save Template
+            </span>
+          </button>
+        </div>
       </div>
 
       {publishFeedback && (
         <div
-          className={`p-4 rounded-xl text-sm font-medium flex items-start justify-between gap-3 ${
-            publishFeedback.includes('Successfully')
-              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
-              : 'bg-rose-950/90 border border-rose-500/70 text-rose-200'
+          className={`p-4 rounded-xl text-sm font-medium flex items-start justify-between gap-3 animate-in fade-in duration-150 ${
+            publishFeedback.type === 'success'
+              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 shadow-lg shadow-emerald-950/40'
+              : 'bg-rose-950/90 border border-rose-500/70 text-rose-200 shadow-lg shadow-rose-950/40'
           }`}
         >
           <div className="flex items-start gap-2.5">
-            {publishFeedback.includes('Successfully') ? (
+            {publishFeedback.type === 'success' ? (
               <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
             ) : (
               <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             )}
-            <span className="whitespace-pre-line leading-relaxed">{publishFeedback}</span>
+            <span className="whitespace-pre-line leading-relaxed">{publishFeedback.message}</span>
           </div>
-          <button onClick={() => setPublishFeedback(null)} className="text-xs underline opacity-80 hover:opacity-100 shrink-0">
+          <button onClick={() => setPublishFeedback(null)} className="text-xs underline opacity-80 hover:opacity-100 shrink-0 cursor-pointer">
             Dismiss
           </button>
         </div>
@@ -2305,6 +2553,375 @@ export function PublishAssessmentSection({
             ) : (
               <p className="text-slate-400">No questions selected for preview.</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Save Template Modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                  <BookmarkPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Save Template</h3>
+                  <p className="text-xs text-slate-400">
+                    Save current questions & targets configuration
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTemplate} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold uppercase text-slate-300">
+                  Template Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  placeholder="e.g. Class 7 Reasoning Set"
+                  value={templateNameInput}
+                  onChange={(e) => {
+                    setTemplateNameInput(e.target.value);
+                    if (saveTemplateError) setSaveTemplateError(null);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              {/* Template Configuration Preview */}
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>Publish Mode:</span>
+                  <span className="font-semibold text-white">{publishMode}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>{publishMode === 'Selected Questions' ? 'Selected Questions:' : 'Random Count:'}</span>
+                  <span className="font-mono font-semibold text-indigo-400">
+                    {publishMode === 'Selected Questions'
+                      ? `${selectedQuestionsForPublish.length} questions`
+                      : `${randomCount} questions / student`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>Target Configurations:</span>
+                  <span className="font-semibold text-white">{targets.length} target(s)</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-400">
+                  <span>Shuffle Questions:</span>
+                  <span className="font-semibold text-white">{shuffleQuestions ? 'Enabled' : 'Disabled'}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-500 italic">
+                  Note: Publish Name, Availability Dates/Times, and Student attempt records are NEVER saved in templates.
+                </div>
+              </div>
+
+              {saveTemplateError && (
+                <div className="p-3 rounded-xl bg-rose-950/90 border border-rose-500/70 text-rose-200 text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <span>{saveTemplateError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingTemplate || !templateNameInput.trim()}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/30"
+                >
+                  {isSavingTemplate ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Save Template</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Templates List / Management Modal */}
+      {showSavedTemplatesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                  <Bookmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Saved Templates</h3>
+                  <p className="text-xs text-slate-400">
+                    Select a template to load its questions and targets into the form
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSavedTemplatesModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search filter for templates */}
+            {savedTemplates.length > 0 && (
+              <div className="relative shrink-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search saved templates..."
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+            )}
+
+            {/* Templates List */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {isLoadingTemplates ? (
+                <div className="py-12 text-center text-slate-400 space-y-2">
+                  <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs">Loading templates...</p>
+                </div>
+              ) : savedTemplates.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 space-y-3">
+                  <Bookmark className="w-10 h-10 text-slate-600 mx-auto" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-300">No Saved Templates</p>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                      Configure your questions and target recipients, then click the Save Template button to save them for future assessments.
+                    </p>
+                  </div>
+                </div>
+              ) : (() => {
+                const filtered = savedTemplates.filter((t) =>
+                  (t.name || '').toLowerCase().includes(templateSearch.toLowerCase())
+                );
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-xs text-slate-500">
+                      No templates match "{templateSearch}"
+                    </div>
+                  );
+                }
+                return filtered.map((tpl) => {
+                  const tplId = tpl.id || tpl._id;
+                  const isDeleting = isDeletingTemplate && templateToDelete?.id === tplId;
+                  const targetCount = Array.isArray(tpl.targets) ? tpl.targets.length : 0;
+                  const qCount = Array.isArray(tpl.selectedQuestionIds) ? tpl.selectedQuestionIds.length : 0;
+
+                  return (
+                    <div
+                      key={tplId}
+                      className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/80 hover:border-slate-600 transition-all space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                            <span>{tpl.name}</span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">
+                              {tpl.publishMode}
+                            </span>
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mt-1">
+                            <span>
+                              {tpl.publishMode === 'Selected Questions'
+                                ? `${qCount} Question(s)`
+                                : `${tpl.randomCount || 5} Random Questions`}
+                            </span>
+                            <span>&bull;</span>
+                            <span>{targetCount} Target Config(s)</span>
+                            {tpl.shuffleQuestions && (
+                              <>
+                                <span>&bull;</span>
+                                <span className="text-indigo-400">Shuffle Enabled</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setTemplateToDelete({ id: tplId, name: tpl.name })}
+                            className="p-2 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 border border-slate-700 hover:border-rose-800 transition-all cursor-pointer"
+                            title="Delete Template"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectTemplate(tpl)}
+                            className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                          >
+                            <FolderDown className="w-3.5 h-3.5" />
+                            <span>Load Template</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Target configurations summary inside card */}
+                      {Array.isArray(tpl.targets) && tpl.targets.length > 0 && (
+                        <div className="pt-2 border-t border-slate-800 space-y-1 text-[11px] text-slate-400">
+                          {tpl.targets.map((tgt: any, idx: number) => {
+                            const sch = tgt.selectedSchoolIds?.includes('ALL')
+                              ? 'All Schools'
+                              : `${tgt.selectedSchoolIds?.length || 0} School(s)`;
+                            const cls = tgt.selectedClasses?.includes('ALL')
+                              ? 'All Classes'
+                              : tgt.selectedClasses?.join(', ') || 'All Classes';
+                            const sec = tgt.selectedSections?.length
+                              ? `Sec: ${tgt.selectedSections.join(', ')}`
+                              : 'All Sections';
+                            const stu = tgt.selectedStudentIds?.length
+                              ? `${tgt.selectedStudentIds.length} Student(s)`
+                              : 'All Students';
+
+                            return (
+                              <div key={idx} className="flex items-center gap-2 truncate">
+                                <span className="text-indigo-400 font-mono font-bold shrink-0">T{idx + 1}:</span>
+                                <span className="truncate">{sch} &bull; {cls} &bull; {sec} &bull; {stu}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowSavedTemplatesModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Template Confirmation Modal */}
+      {templateToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-rose-500/50 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-white">Delete Template?</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Are you sure you want to permanently delete template <strong className="text-white">'{templateToDelete.name}'</strong>? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setTemplateToDelete(null)}
+                disabled={isDeletingTemplate}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteTemplate}
+                disabled={isDeletingTemplate}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeletingTemplate ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Template</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Overwrite Alert Modal */}
+      {showOverwriteAlert && pendingTemplateToLoad && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-white">Replace Current Selections?</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  You already have selections in the Publish Assessment form. Loading this template will replace the current Questions and Target Configuration. Do you want to continue?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+              <div className="text-slate-400">Template to load:</div>
+              <div className="font-semibold text-white">{pendingTemplateToLoad.name}</div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOverwriteAlert(false);
+                  setPendingTemplateToLoad(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => applyTemplate(pendingTemplateToLoad)}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer shadow-lg shadow-indigo-600/30"
+              >
+                Load Template
+              </button>
+            </div>
           </div>
         </div>
       )}

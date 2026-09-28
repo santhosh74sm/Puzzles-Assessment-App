@@ -7,6 +7,7 @@ import {
   PublishedTestModel,
   StudentTestAssignmentModel,
   PublishHistoryModel,
+  AssessmentTemplateModel,
 } from '../database/models.ts';
 import bcrypt from 'bcryptjs';
 
@@ -77,6 +78,7 @@ export async function ensureCollectionStructures() {
     'publishedtests',
     'studenttestassignments',
     'publishhistories',
+    'assessmenttemplates',
   ];
 
   for (const coll of requiredCollections) {

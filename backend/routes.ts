@@ -9,6 +9,7 @@ import {
   PublishedTestModel,
   StudentTestAssignmentModel,
   PublishHistoryModel,
+  AssessmentTemplateModel,
 } from '../database/models.ts';
 import { generateToken, authenticate, requireRole } from './middleware/auth.ts';
 import {
@@ -1010,69 +1011,84 @@ export function isStudentTargetedByPublishedTest(
   ].filter(Boolean);
 
   for (const t of targetList) {
+    if (!t) continue;
+
     // 1. School check
+    const sIds: string[] = [];
+    if (Array.isArray(t.schoolIds)) {
+      sIds.push(...t.schoolIds.map((s: any) => String(s).trim()).filter(Boolean));
+    } else if (t.schoolId) {
+      sIds.push(...(Array.isArray(t.schoolId) ? t.schoolId.map((s: any) => String(s).trim()) : [String(t.schoolId).trim()]).filter(Boolean));
+    }
+
+    const sNames: string[] = [];
+    if (Array.isArray(t.schoolNames)) {
+      sNames.push(...t.schoolNames.map((s: any) => String(s).trim().toLowerCase()).filter(Boolean));
+    } else if (t.schoolName) {
+      sNames.push(...String(t.schoolName).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
+    }
+
     const isAllSchools =
       t.isAllSchools === true ||
-      (Array.isArray(t.schoolIds) &&
-        (t.schoolIds.includes('ALL') ||
-         t.schoolIds.includes('ALL_SCHOOLS') ||
-         (totalSchoolsCount && totalSchoolsCount > 1 && t.schoolIds.length >= totalSchoolsCount))) ||
-      (Array.isArray(t.schoolNames) && t.schoolNames.some((n: string) => n.toLowerCase() === 'all schools'));
+      sIds.some((s) => s.toUpperCase() === 'ALL' || s.toUpperCase() === 'ALL_SCHOOLS') ||
+      sNames.some((n) => n === 'all' || n === 'all schools');
 
     const matchSchool =
       isAllSchools ||
-      (!t.schoolIds && !t.schoolId) ||
-      (Array.isArray(t.schoolIds) && t.schoolIds.length === 0) ||
-      (Array.isArray(t.schoolIds) && t.schoolIds.map(String).includes(studentSchoolId)) ||
-      (t.schoolId && String(t.schoolId) === studentSchoolId) ||
-      (Array.isArray(t.schoolNames) && t.schoolNames.some((n: string) => n.trim().toLowerCase() === studentSchoolName)) ||
-      (t.schoolName && t.schoolName.trim().toLowerCase() === studentSchoolName);
+      (studentSchoolId && sIds.includes(studentSchoolId)) ||
+      (studentSchoolName && sNames.includes(studentSchoolName));
 
     if (!matchSchool) continue;
 
     // 2. Class check
+    const cList: string[] = [];
+    if (Array.isArray(t.classes)) {
+      cList.push(...t.classes.map((c: any) => String(c).trim().toLowerCase()).filter(Boolean));
+    } else if (t.className) {
+      cList.push(...String(t.className).split(',').map((c) => c.trim().toLowerCase()).filter(Boolean));
+    }
+
     const isAllClasses =
-      !t.classes ||
-      t.classes.length === 0 ||
-      (Array.isArray(t.classes) &&
-        (t.classes.includes('ALL') ||
-         t.classes.includes('All Classes') ||
-         t.classes.some((c: string) => c.toLowerCase() === 'all classes')));
+      cList.length === 0 ||
+      cList.some((c) => c === 'all' || c === 'all classes');
 
     const matchClass =
       isAllClasses ||
-      (Array.isArray(t.classes) && t.classes.some((c: string) => c.trim().toLowerCase() === studentClass)) ||
-      (t.className && t.className.trim().toLowerCase() === studentClass);
+      (studentClass && cList.includes(studentClass));
 
     if (!matchClass) continue;
 
     // 3. Section check
+    const secList: string[] = [];
+    if (Array.isArray(t.sections)) {
+      secList.push(...t.sections.map((s: any) => String(s).trim().toUpperCase()).filter(Boolean));
+    } else if (t.section) {
+      secList.push(...String(t.section).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean));
+    }
+
     const isAllSections =
-      !t.sections ||
-      t.sections.length === 0 ||
-      (Array.isArray(t.sections) &&
-        (t.sections.includes('ALL') ||
-         t.sections.includes('All Sections') ||
-         t.sections.some((s: string) => s.toLowerCase() === 'all sections')));
+      secList.length === 0 ||
+      secList.some((s) => s === 'ALL' || s === 'ALL SECTIONS');
 
     const matchSection =
       isAllSections ||
-      (Array.isArray(t.sections) && t.sections.some((s: string) => s.trim().toUpperCase() === studentSection)) ||
-      (t.section && t.section.trim().toUpperCase() === studentSection);
+      (studentSection && secList.includes(studentSection));
 
     if (!matchSection) continue;
 
     // 4. Student check
+    const stuList: string[] = [];
+    if (Array.isArray(t.studentIds)) {
+      stuList.push(...t.studentIds.map((s: any) => String(s).trim()).filter(Boolean));
+    }
+
     const isAllStudents =
-      !t.studentIds ||
-      t.studentIds.length === 0 ||
-      (Array.isArray(t.studentIds) &&
-        (t.studentIds.includes('ALL') || t.studentIds.length === 0));
+      stuList.length === 0 ||
+      stuList.some((s) => s.toUpperCase() === 'ALL' || s.toUpperCase() === 'ALL_STUDENTS' || s.toLowerCase() === 'all students');
 
     const matchStudent =
       isAllStudents ||
-      (Array.isArray(t.studentIds) &&
-        t.studentIds.some((sId: string) => studentKeys.includes(String(sId).trim())));
+      stuList.some((sId) => studentKeys.includes(sId));
 
     if (!matchStudent) continue;
 
@@ -1706,7 +1722,9 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     }
 
     // Existing live assignments
-    const existingAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const existingAssignments = await StudentTestAssignmentModel.find({
+      $or: [{ publishedTestId: publishId }, { publishedTestId: pubTest._id ? pubTest._id.toString() : publishId }],
+    });
 
     // Revoke/remove assignments for students who are NO LONGER targeted AND have not started
     // Note: Preserve historical attempt records (COMPLETED, INCOMPLETE, LOCKED_INCOMPLETE, IN_PROGRESS) safely!
@@ -1724,7 +1742,9 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     }
 
     // Remaining live assignments after revocation
-    const remainingAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const remainingAssignments = await StudentTestAssignmentModel.find({
+      $or: [{ publishedTestId: publishId }, { publishedTestId: pubTest._id ? pubTest._id.toString() : publishId }],
+    });
     const remainingAssignMap = new Map<string, any>();
     for (const a of remainingAssignments) {
       remainingAssignMap.set(a.studentId, a);
@@ -1834,7 +1854,9 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     }
 
     // Refresh all live assignments for this published test
-    const allCurrentAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const allCurrentAssignments = await StudentTestAssignmentModel.find({
+      $or: [{ publishedTestId: publishId }, { publishedTestId: pubTest._id ? pubTest._id.toString() : publishId }],
+    });
     const currentCompleted = allCurrentAssignments.filter((a) => a.status === 'COMPLETED').length;
     const currentIncomplete = allCurrentAssignments.filter((a) => a.status === 'INCOMPLETE' || a.status === 'LOCKED_INCOMPLETE').length;
 
@@ -1937,9 +1959,13 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       pubMap.set(pt._id.toString(), pt);
     }
 
-    const studentUser = await UserModel.findOne({
-      $or: [{ uniqueStudentId: studentId }, { username: studentId }].filter(Boolean),
-    }).lean();
+    const studentUser = (req.user!.userId ? await UserModel.findById(req.user!.userId).lean() : null) ||
+      await UserModel.findOne({
+        $or: [
+          { uniqueStudentId: { $regex: new RegExp(`^${studentId}$`, 'i') } },
+          { username: { $regex: new RegExp(`^${studentId}$`, 'i') } },
+        ],
+      }).lean();
 
     // Determine current date-time string in client timezone if provided, else server time
     const clientDateTimeHeader = req.headers['x-client-now'] as string;
@@ -2058,9 +2084,13 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
 
     // Verify student is still targeted under updated target configuration
     if (assignment.status === 'NOT_STARTED') {
-      const studentUser = await UserModel.findOne({
-        $or: [{ uniqueStudentId: studentId }, { username: studentId }].filter(Boolean),
-      }).lean();
+      const studentUser = (req.user!.userId ? await UserModel.findById(req.user!.userId).lean() : null) ||
+        await UserModel.findOne({
+          $or: [
+            { uniqueStudentId: { $regex: new RegExp(`^${studentId}$`, 'i') } },
+            { username: { $regex: new RegExp(`^${studentId}$`, 'i') } },
+          ],
+        }).lean();
       if (studentUser && !isStudentTargetedByPublishedTest(studentUser, pubTest)) {
         await StudentTestAssignmentModel.deleteOne({ _id: assignment._id });
         return res.status(403).json({ error: 'You are no longer assigned to this assessment.' });
@@ -2510,12 +2540,12 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
 // Get All Publish History
 router.get('/publish-history', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
   try {
-    const history = await PublishHistoryModel.find().sort({ createdAt: -1 });
+    const history = await PublishHistoryModel.find().sort({ updatedAt: -1, publishedAt: -1, createdAt: -1 });
 
     const publishIds = history.map((h) => h.publishId).filter(Boolean);
     const pubTests = await PublishedTestModel.find(
       { _id: { $in: publishIds } },
-      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1, status: 1, isPaused: 1 }
+      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1, publishedAt: 1, updatedAt: 1, status: 1, isPaused: 1 }
     ).lean();
     const pubTestMap = new Map<string, any>(pubTests.map((pt: any) => [pt._id.toString(), pt]));
 
@@ -3003,6 +3033,112 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch student timeline report', details: err.message });
+  }
+});
+
+// ==========================================
+// 12. ASSESSMENT TEMPLATES
+// ==========================================
+
+// List all templates
+router.get('/templates', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const templates = await AssessmentTemplateModel.find().sort({ createdAt: -1 });
+    return res.json(formatDocs(templates));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch templates', details: err.message });
+  }
+});
+
+// Create a new template
+router.post('/templates', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const {
+      name,
+      publishMode,
+      selectedQuestionIds = [],
+      shuffleQuestions = false,
+      randomCount = 5,
+      targets = [],
+    } = req.body;
+
+    const trimmedName = (name || '').trim();
+    if (!trimmedName) {
+      return res.status(400).json({ error: 'Template Name is required.' });
+    }
+
+    // Check duplicate template name (case-insensitive)
+    const existing = await AssessmentTemplateModel.findOne({
+      name: { $regex: new RegExp(`^${escapeRegExp(trimmedName)}$`, 'i') },
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        error: `A template named '${trimmedName}' already exists. Please choose a different unique name.`,
+      });
+    }
+
+    if (!publishMode || !['Selected Questions', 'Random Questions'].includes(publishMode)) {
+      return res.status(400).json({ error: 'Valid Publish Mode is required.' });
+    }
+
+    if (publishMode === 'Selected Questions' && (!selectedQuestionIds || selectedQuestionIds.length === 0)) {
+      return res.status(400).json({ error: 'Please select at least 1 question before saving the template.' });
+    }
+
+    const cleanTargets = Array.isArray(targets)
+      ? targets.map((t: any, idx: number) => ({
+          id: t.id || `target-${Date.now()}-${idx}`,
+          selectedSchoolIds: Array.isArray(t.selectedSchoolIds) ? t.selectedSchoolIds : ['ALL'],
+          selectedClasses: Array.isArray(t.selectedClasses) ? t.selectedClasses : ['ALL'],
+          selectedSections: Array.isArray(t.selectedSections) ? t.selectedSections : [],
+          selectedStudentIds: Array.isArray(t.selectedStudentIds) ? t.selectedStudentIds : [],
+        }))
+      : [];
+
+    const newTemplate = await AssessmentTemplateModel.create({
+      name: trimmedName,
+      publishMode,
+      selectedQuestionIds: Array.isArray(selectedQuestionIds) ? selectedQuestionIds : [],
+      shuffleQuestions: Boolean(shuffleQuestions),
+      randomCount: Number(randomCount) || 5,
+      targets: cleanTargets,
+      createdBy: req.user?.username || 'san',
+    });
+
+    return res.status(201).json({
+      message: `Template '${trimmedName}' saved successfully.`,
+      template: formatDoc(newTemplate),
+    });
+  } catch (err: any) {
+    if (err.code === 11000) {
+      return res.status(400).json({
+        error: 'A template with this name already exists. Please choose a unique name.',
+      });
+    }
+    return res.status(500).json({ error: 'Failed to save template', details: err.message });
+  }
+});
+
+// Delete a template
+router.delete('/templates/:id', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    let deleted = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      deleted = await AssessmentTemplateModel.findByIdAndDelete(id);
+    }
+    if (!deleted) {
+      deleted = await AssessmentTemplateModel.findOneAndDelete({
+        $or: [{ _id: id }, { name: id }].filter(Boolean),
+      });
+    }
+    if (!deleted) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    return res.json({ message: 'Template deleted successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete template', details: err.message });
   }
 });
 

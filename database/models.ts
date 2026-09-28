@@ -483,3 +483,74 @@ export const QuestionModel = mongoose.models.Question || mongoose.model<IQuestio
 export const PublishedTestModel = mongoose.models.PublishedTest || mongoose.model<IPublishedTestDocument>('PublishedTest', PublishedTestSchema);
 export const StudentTestAssignmentModel = mongoose.models.StudentTestAssignment || mongoose.model<IStudentTestAssignmentDocument>('StudentTestAssignment', StudentTestAssignmentSchema);
 export const PublishHistoryModel = mongoose.models.PublishHistory || mongoose.model<IPublishHistoryDocument>('PublishHistory', PublishHistorySchema);
+
+// ==========================================
+// 8. ASSESSMENT TEMPLATE SCHEMA & MODEL
+// ==========================================
+export interface IAssessmentTemplateDocument extends Document {
+  id?: string;
+  name: string;
+  publishMode: 'Selected Questions' | 'Random Questions';
+  selectedQuestionIds: string[];
+  shuffleQuestions: boolean;
+  randomCount: number;
+  targets: Array<{
+    id?: string;
+    selectedSchoolIds: string[];
+    selectedClasses: string[];
+    selectedSections: string[];
+    selectedStudentIds: string[];
+  }>;
+  createdBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const AssessmentTemplateSchema = new Schema<IAssessmentTemplateDocument>(
+  {
+    name: { type: String, required: true, unique: true, trim: true, index: true },
+    publishMode: { type: String, required: true, enum: ['Selected Questions', 'Random Questions'] },
+    selectedQuestionIds: { type: [String], default: [] },
+    shuffleQuestions: { type: Boolean, default: false },
+    randomCount: { type: Number, default: 5 },
+    targets: {
+      type: [
+        {
+          id: { type: String },
+          selectedSchoolIds: { type: [String], default: [] },
+          selectedClasses: { type: [String], default: [] },
+          selectedSections: { type: [String], default: [] },
+          selectedStudentIds: { type: [String], default: [] },
+        },
+      ],
+      default: [],
+    },
+    createdBy: { type: String, default: 'san' },
+  },
+  {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: (_doc, ret: any) => {
+        ret.id = ret._id ? ret._id.toString() : ret.id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      transform: (_doc, ret: any) => {
+        ret.id = ret._id ? ret._id.toString() : ret.id;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+  }
+);
+
+export const AssessmentTemplateModel =
+  mongoose.models.AssessmentTemplate ||
+  mongoose.model<IAssessmentTemplateDocument>('AssessmentTemplate', AssessmentTemplateSchema);
+
