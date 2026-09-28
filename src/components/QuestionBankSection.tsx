@@ -1,0 +1,623 @@
+import React, { useState } from 'react';
+import {
+  Layers,
+  PlusCircle,
+  Eye,
+  HelpCircle,
+  Search,
+  CheckCircle,
+  Clock,
+  Award,
+} from 'lucide-react';
+
+interface QuestionBankSectionProps {
+  token: string;
+  questionGroups: any[];
+  allQuestions: any[];
+  onRefreshData: () => Promise<void>;
+}
+
+export function QuestionBankSection({
+  token,
+  questionGroups,
+  allQuestions,
+  onRefreshData,
+}: QuestionBankSectionProps) {
+  // New Question Group
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDesc, setNewGroupDesc] = useState('');
+  const [isSubmittingGroup, setIsSubmittingGroup] = useState(false);
+
+  // Group View Modal (Read Only)
+  const [viewGroupModal, setViewGroupModal] = useState<any | null>(null);
+
+  // New Question form
+  const [questionForm, setQuestionForm] = useState<{
+    groupId: string;
+    difficulty: string;
+    content: string;
+    timeSeconds: string;
+    points: string;
+    options: string;
+    correctAnswer: string;
+  }>({
+    groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
+    difficulty: 'Easy',
+    content: '',
+    timeSeconds: '',
+    points: '',
+    options: '',
+    correctAnswer: '',
+  });
+  const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+
+  // Filters for question list
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
+  const [selectedDifficultyFilter, setSelectedDifficultyFilter] = useState('');
+  const [questionSearch, setQuestionSearch] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+    setIsSubmittingGroup(true);
+    setFeedbackMessage(null);
+    try {
+      const res = await fetch('/api/question-groups', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name: newGroupName.trim(), description: newGroupDesc.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNewGroupName('');
+        setNewGroupDesc('');
+        setFeedbackMessage({ type: 'success', text: `Question Group "${data.name}" created successfully!` });
+        await onRefreshData();
+      } else {
+        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to create group' });
+      }
+    } catch (e: any) {
+      setFeedbackMessage({ type: 'error', text: e.message || 'Error creating group' });
+    } finally {
+      setIsSubmittingGroup(false);
+    }
+  };
+
+  const handleCreateQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!questionForm.groupId) {
+      setFeedbackMessage({ type: 'error', text: 'Please select a Question Group' });
+      return;
+    }
+    const opts = questionForm.options
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    setIsSubmittingQuestion(true);
+    setFeedbackMessage(null);
+    try {
+      const res = await fetch('/api/questions', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          groupId: questionForm.groupId,
+          difficulty: questionForm.difficulty,
+          content: questionForm.content.trim(),
+          timeSeconds: questionForm.timeSeconds ? Number(questionForm.timeSeconds) : null,
+          points: questionForm.points ? Number(questionForm.points) : null,
+          correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
+          options: opts,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQuestionForm((prev) => ({
+          ...prev,
+          content: '',
+          timeSeconds: '',
+          points: '',
+          options: '',
+          correctAnswer: '',
+        }));
+        setFeedbackMessage({ type: 'success', text: 'Question added to bank successfully!' });
+        await onRefreshData();
+      } else {
+        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to add question' });
+      }
+    } catch (e: any) {
+      setFeedbackMessage({ type: 'error', text: e.message || 'Error creating question' });
+    } finally {
+      setIsSubmittingQuestion(false);
+    }
+  };
+
+  const filteredQuestions = allQuestions.filter((q) => {
+    const matchesGroup = !selectedGroupFilter || q.groupId === selectedGroupFilter;
+    const matchesDiff = !selectedDifficultyFilter || q.difficulty === selectedDifficultyFilter;
+    const matchesSearch =
+      !questionSearch ||
+      q.content?.toLowerCase().includes(questionSearch.toLowerCase());
+    return matchesGroup && matchesDiff && matchesSearch;
+  });
+
+  // Dynamically compute difficulty breakdown per group from allQuestions stored in MongoDB Atlas
+  const getGroupBreakdown = (grp: any) => {
+    const grpIdStr = (grp.id || grp._id || '').toString();
+    const grpNameLower = (grp.name || '').trim().toLowerCase();
+
+    const groupQuestions = allQuestions.filter((q: any) => {
+      const qGrpId = (q.groupId || '').toString().trim();
+      const qGrpName = (q.groupName || '').toString().trim().toLowerCase();
+      return (grpIdStr && qGrpId === grpIdStr) || (grpNameLower && qGrpName === grpNameLower);
+    });
+
+    const getDifficultyTier = (level: string) => {
+      const lvl = level.toLowerCase();
+      const questions = groupQuestions.filter((q: any) => (q.difficulty || '').trim().toLowerCase() === lvl);
+      const fallbackTier = grp.breakdown?.[level];
+      const fallbackQuestions = fallbackTier?.questions || [];
+      const fallbackCount = fallbackTier?.count ?? (level === 'Easy' ? grp.easyCount : level === 'Medium' ? grp.mediumCount : grp.hardCount);
+
+      return {
+        count: groupQuestions.length > 0 ? questions.length : (fallbackCount || 0),
+        questions: groupQuestions.length > 0 ? questions : fallbackQuestions,
+      };
+    };
+
+    const easyTier = getDifficultyTier('Easy');
+    const mediumTier = getDifficultyTier('Medium');
+    const hardTier = getDifficultyTier('Hard');
+
+    return {
+      Easy: easyTier,
+      Medium: mediumTier,
+      Hard: hardTier,
+      total: easyTier.count + mediumTier.count + hardTier.count,
+    };
+  };
+
+  return (
+    <div className="space-y-8 max-w-7xl">
+      {/* Header */}
+      <div>
+        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Assessment Content</span>
+        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Question Bank & Groups</h2>
+        <p className="text-sm text-slate-400">
+          Create question groups (e.g. Creativity, Thinking, Reasoning, Aptitude), configure difficulty tiers (Easy, Medium, Hard), and build question items.
+        </p>
+      </div>
+
+      {feedbackMessage && (
+        <div
+          className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between ${
+            feedbackMessage.type === 'success'
+              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
+              : 'bg-rose-950/80 border border-rose-500/50 text-rose-300'
+          }`}
+        >
+          <span>{feedbackMessage.text}</span>
+          <button onClick={() => setFeedbackMessage(null)} className="text-xs underline opacity-80 hover:opacity-100">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Top Row: Create Group & Create Question */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Create Group */}
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <h3 className="font-bold text-lg text-white flex items-center gap-2">
+            <PlusCircle className="w-5 h-5 text-indigo-400" />
+            Add Question Group
+          </h3>
+          <form onSubmit={handleCreateGroup} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Group Name
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Aptitude, Creativity, Thinking"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Description
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Brief domain explanation"
+                value={newGroupDesc}
+                onChange={(e) => setNewGroupDesc(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmittingGroup}
+              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+            >
+              {isSubmittingGroup ? 'Creating Group...' : '+ Create Group'}
+            </button>
+          </form>
+        </div>
+
+        {/* Create Question */}
+        <div className="lg:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <h3 className="font-bold text-lg text-white flex items-center gap-2">
+            <PlusCircle className="w-5 h-5 text-indigo-400" />
+            Add Question to Group & Difficulty
+          </h3>
+          <form onSubmit={handleCreateQuestion} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Group
+              </label>
+              <select
+                value={questionForm.groupId}
+                onChange={(e) => setQuestionForm({ ...questionForm, groupId: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                {questionGroups.length === 0 ? (
+                  <option value="">No question groups</option>
+                ) : (
+                  questionGroups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Difficulty Level
+              </label>
+              <select
+                value={questionForm.difficulty}
+                onChange={(e) => setQuestionForm({ ...questionForm, difficulty: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard (Final Level)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Time Allowed (Seconds) <span className="text-slate-500 normal-case">(Optional)</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                placeholder="e.g. 30"
+                value={questionForm.timeSeconds}
+                onChange={(e) => setQuestionForm({ ...questionForm, timeSeconds: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-2 md:col-span-3">
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Question Content / Prompt
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Decode the hidden word puzzle from emojis: ☀️ + 👓 = ?"
+                value={questionForm.content}
+                onChange={(e) => setQuestionForm({ ...questionForm, content: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Points <span className="text-slate-500 normal-case">(Optional)</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                placeholder="e.g. 10"
+                value={questionForm.points}
+                onChange={(e) => setQuestionForm({ ...questionForm, points: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Correct Answer <span className="text-slate-500 normal-case">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Sunglasses"
+                value={questionForm.correctAnswer}
+                onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                Options <span className="text-slate-500 normal-case">(Optional, comma-separated)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Sunglasses, Sunlight, Hot Day, Beach"
+                value={questionForm.options}
+                onChange={(e) => setQuestionForm({ ...questionForm, options: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-2 md:col-span-3 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmittingQuestion || questionGroups.length === 0}
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+              >
+                {isSubmittingQuestion ? 'Saving...' : '+ Save to Question Bank'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Question Groups Breakdown (View Mode) */}
+      <div className="space-y-4">
+        <h3 className="font-bold text-lg text-white">Question Groups Breakdown (View Mode)</h3>
+        {questionGroups.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {questionGroups.map((grp) => {
+              const breakdown = getGroupBreakdown(grp);
+              return (
+                <div
+                  key={grp.id || grp._id}
+                  className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-white">{grp.name}</span>
+                      <button
+                        onClick={() => setViewGroupModal({ ...grp, breakdown })}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center gap-1 transition-all"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View Mode
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-1">{grp.description || 'No description'}</p>
+
+                    <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                      <div className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60">
+                        <span className="text-xs text-emerald-400 block font-semibold">Easy</span>
+                        <span className="text-base font-bold text-white">{breakdown.Easy.count}</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60">
+                        <span className="text-xs text-amber-400 block font-semibold">Medium</span>
+                        <span className="text-base font-bold text-white">{breakdown.Medium.count}</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60">
+                        <span className="text-xs text-rose-400 block font-semibold">Hard</span>
+                        <span className="text-base font-bold text-white">{breakdown.Hard.count}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-center py-12">
+            <Layers className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <h4 className="text-base font-semibold text-slate-300">No question groups</h4>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Create question groups using the form above to organize questions by domain.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Question Bank Roster Table */}
+      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-lg text-white">
+              Questions Repository ({filteredQuestions.length} of {allQuestions.length})
+            </h3>
+            <p className="text-xs text-slate-400">All questions configured across groups and difficulty tiers</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                placeholder="Search question text..."
+                value={questionSearch}
+                onChange={(e) => setQuestionSearch(e.target.value)}
+                className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none w-56"
+              />
+            </div>
+
+            <select
+              value={selectedGroupFilter}
+              onChange={(e) => setSelectedGroupFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
+            >
+              <option value="">All Groups</option>
+              {questionGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={selectedDifficultyFilter}
+              onChange={(e) => setSelectedDifficultyFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
+            >
+              <option value="">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+        </div>
+
+        {filteredQuestions.length > 0 ? (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            {filteredQuestions.map((q) => (
+              <div
+                key={q.id}
+                className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+              >
+                <div className="space-y-1">
+                  <p className="font-medium text-white">{q.content}</p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-indigo-400 font-semibold">{q.groupName || 'Unassigned'}</span>
+                    <span className="text-slate-500">&bull;</span>
+                    <span
+                      className={`px-2 py-0.5 rounded font-mono font-bold ${
+                        q.difficulty === 'Easy'
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                          : q.difficulty === 'Medium'
+                          ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                          : 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                      }`}
+                    >
+                      {q.difficulty}
+                    </span>
+                    {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
+                      <>
+                        <span className="text-slate-500">&bull;</span>
+                        <span className="text-slate-400">
+                          Ans: <strong className="text-emerald-400">{typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer)}</strong>
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+                  {q.timeSeconds != null && q.timeSeconds > 0 && (
+                    <span className="px-2.5 py-1 rounded bg-slate-700/80 text-slate-300 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      {q.timeSeconds}s
+                    </span>
+                  )}
+                  {q.points != null && q.points > 0 && (
+                    <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold">
+                      <Award className="w-3 h-3 text-emerald-400" />
+                      {q.points} pts
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 rounded-xl bg-slate-800/30 border border-slate-800 text-center py-8">
+            <HelpCircle className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+            <h5 className="text-sm font-semibold text-slate-300">No questions found</h5>
+            <p className="text-xs text-slate-500 mt-1">
+              {allQuestions.length === 0
+                ? 'No questions added to the Question Bank yet. Use the form above to add questions.'
+                : 'No questions match the current filter selection.'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Read-Only View Modal */}
+      {viewGroupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <div>
+                <span className="text-xs font-mono uppercase text-indigo-400">Read-Only View</span>
+                <h3 className="text-xl font-bold text-white">{viewGroupModal.name} Group</h3>
+              </div>
+              <button
+                onClick={() => setViewGroupModal(null)}
+                className="text-slate-400 hover:text-white text-lg font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {(['Easy', 'Medium', 'Hard'] as const).map((diff) => {
+                const tier = viewGroupModal.breakdown?.[diff];
+                return (
+                  <div key={diff} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4
+                        className={`text-sm font-bold uppercase tracking-wider ${
+                          diff === 'Easy'
+                            ? 'text-emerald-400'
+                            : diff === 'Medium'
+                            ? 'text-amber-400'
+                            : 'text-rose-400'
+                        }`}
+                      >
+                        {diff} Tier ({tier?.count || 0} questions)
+                      </h4>
+                    </div>
+
+                    {tier?.questions && tier.questions.length > 0 ? (
+                      <div className="space-y-2">
+                        {tier.questions.map((q: any) => (
+                          <div
+                            key={q.id}
+                            className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between text-sm"
+                          >
+                            <div>
+                              <p className="text-white font-medium">{q.content}</p>
+                              {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
+                                <span className="text-xs text-emerald-400">Ans: {typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer)}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+                              {q.timeSeconds != null && q.timeSeconds > 0 && (
+                                <span className="px-2 py-1 rounded bg-slate-700 text-slate-300">
+                                  {q.timeSeconds}s
+                                </span>
+                              )}
+                              {q.points != null && q.points > 0 && (
+                                <span className="px-2 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                  {q.points} pts
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic">No questions currently in this difficulty.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

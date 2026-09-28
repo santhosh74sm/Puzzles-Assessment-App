@@ -1,0 +1,2377 @@
+import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import {
+  UserModel,
+  SchoolModel,
+  QuestionGroupModel,
+  QuestionModel,
+  PublishedTestModel,
+  StudentTestAssignmentModel,
+  PublishHistoryModel,
+} from '../database/models.ts';
+import { generateToken, authenticate, requireRole } from './middleware/auth.ts';
+import {
+  computeStudentInsights,
+  selectRandomQuestionsForRuleEngine,
+} from './services/randomEngine.ts';
+import { Question, QuestionAttemptLog } from './types.ts';
+
+const router = express.Router();
+
+// Helper to convert Mongoose documents to clean JSON with 'id'
+function formatDoc(doc: any): any {
+  if (!doc) return null;
+  const obj = doc.toObject ? doc.toObject() : { ...doc };
+  if (obj._id && !obj.id) {
+    obj.id = obj._id.toString();
+  }
+  delete obj.__v;
+  return obj;
+}
+
+function formatDocs(docs: any[]): any[] {
+  return docs.map(formatDoc);
+}
+
+// ==========================================
+// 1. AUTHENTICATION & PASSWORD MANAGEMENT
+// ==========================================
+
+// Check if system has any users
+router.get('/auth/setup-status', async (req: Request, res: Response) => {
+  try {
+    const usersCount = await UserModel.countDocuments();
+    return res.json({ hasUsers: usersCount > 0, totalUsers: usersCount });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to check setup status', details: err.message });
+  }
+});
+
+// Setup First Super Admin (Only allowed when database has 0 users)
+router.post('/auth/setup-first-admin', async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    const count = await UserModel.countDocuments();
+    if (count > 0) {
+      return res.status(403).json({ error: 'Database already has registered users. Initial setup is closed.' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const firstSuperAdmin = await UserModel.create({
+      username: username.trim(),
+      role: 'super_admin',
+      passwordHash: bcrypt.hashSync(password, salt),
+      mustChangePassword: false,
+    });
+
+    const token = generateToken({
+      userId: firstSuperAdmin._id.toString(),
+      username: firstSuperAdmin.username,
+      role: firstSuperAdmin.role,
+    });
+
+    return res.status(201).json({
+      message: 'First Super Admin initialized successfully for production.',
+      token,
+      user: {
+        id: firstSuperAdmin._id.toString(),
+        username: firstSuperAdmin.username,
+        role: firstSuperAdmin.role,
+        mustChangePassword: false,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to create initial Super Admin', details: err.message });
+  }
+});
+
+// Login (Supports Super Admin, School Admin, Student)
+router.post('/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    const trimmedUsername = username.trim();
+    // Case-insensitive lookup for username
+    const user = await UserModel.findOne({
+      username: { $regex: new RegExp(`^${trimmedUsername}$`, 'i') },
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const isMatch = bcrypt.compareSync(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const token = generateToken({
+      userId: user._id.toString(),
+      username: user.username,
+      role: user.role,
+      schoolId: user.schoolId,
+      schoolName: user.schoolName,
+      studentId: user.uniqueStudentId,
+    });
+
+    return res.json({
+      token,
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword,
+        schoolId: user.schoolId,
+        schoolName: user.schoolName,
+        studentName: user.studentName,
+        className: user.className,
+        section: user.section,
+        uniqueStudentId: user.uniqueStudentId,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Login failed', details: err.message });
+  }
+});
+
+// Force Password Change (Mandatory on first login)
+router.post('/auth/change-password', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.trim().length < 4) {
+      return res.status(400).json({ error: 'New password must be at least 4 characters long' });
+    }
+
+    const user = await UserModel.findById(req.user!.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent setting password identical to username
+    if (newPassword.toLowerCase() === user.username.toLowerCase()) {
+      return res.status(400).json({ error: 'New password cannot be identical to your ID/username' });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    user.passwordHash = bcrypt.hashSync(newPassword, salt);
+    user.mustChangePassword = false;
+    await user.save();
+
+    return res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update password', details: err.message });
+  }
+});
+
+// Get Current User Profile
+router.get('/auth/me', authenticate, async (req: Request, res: Response) => {
+  try {
+    const user = await UserModel.findById(req.user!.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    return res.json({
+      id: user._id.toString(),
+      username: user.username,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+      schoolId: user.schoolId,
+      schoolName: user.schoolName,
+      studentName: user.studentName,
+      className: user.className,
+      section: user.section,
+      uniqueStudentId: user.uniqueStudentId,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to get user profile', details: err.message });
+  }
+});
+
+// ==========================================
+// 2. SUPER ADMIN: SCHOOL WORKSPACE MANAGEMENT
+// ==========================================
+
+// Create School
+router.post('/schools', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { name, code } = req.body;
+    if (!name || !code) {
+      return res.status(400).json({ error: 'School name and code are required' });
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+    const existingSchool = await SchoolModel.findOne({ code: cleanCode });
+    if (existingSchool) {
+      return res.status(400).json({ error: `School code '${cleanCode}' is already registered.` });
+    }
+
+    const newSchool = await SchoolModel.create({
+      name: name.trim(),
+      code: cleanCode,
+    });
+
+    return res.status(201).json(formatDoc(newSchool));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to create school', details: err.message });
+  }
+});
+
+// List Schools
+router.get('/schools', authenticate, async (req: Request, res: Response) => {
+  try {
+    const user = req.user!;
+    if (user.role === 'super_admin') {
+      const schools = await SchoolModel.find();
+      const sorted = formatDocs(schools).sort((a: any, b: any) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+      );
+      return res.json(sorted);
+    }
+    // School Admin or Student can only view their own school
+    const schools = await SchoolModel.find({ _id: user.schoolId });
+    return res.json(formatDocs(schools));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch schools', details: err.message });
+  }
+});
+
+// List Admins for a School
+router.get('/schools/:schoolId/admins', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+    const admins = await UserModel.find({ role: 'school_admin', schoolId }).sort({ createdAt: -1 });
+
+    const formatted = admins.map((u) => ({
+      id: u._id.toString(),
+      username: u.username,
+      role: u.role,
+      schoolId: u.schoolId,
+      schoolName: u.schoolName,
+      mustChangePassword: u.mustChangePassword,
+      createdAt: u.createdAt,
+    }));
+    return res.json(formatted);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch school admins', details: err.message });
+  }
+});
+
+// Create School Admin (Username = Admin ID, Password = Admin ID)
+router.post('/schools/:schoolId/admins', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+    const school = await SchoolModel.findById(schoolId);
+    if (!school) return res.status(404).json({ error: 'School not found' });
+
+    // Generate unique Admin ID: e.g. ADM-SCH-XXXX
+    let adminId = '';
+    let isUnique = false;
+    while (!isUnique) {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      adminId = `ADM-${school.code}-${randomSuffix}`;
+      const exists = await UserModel.findOne({ username: adminId });
+      if (!exists) isUnique = true;
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(adminId, salt);
+
+    const newAdmin = await UserModel.create({
+      username: adminId,
+      role: 'school_admin',
+      passwordHash,
+      mustChangePassword: true,
+      schoolId: school._id.toString(),
+      schoolName: school.name,
+    });
+
+    return res.status(201).json({
+      admin: {
+        id: newAdmin._id.toString(),
+        username: newAdmin.username,
+        role: newAdmin.role,
+        schoolId: newAdmin.schoolId,
+        schoolName: newAdmin.schoolName,
+        mustChangePassword: newAdmin.mustChangePassword,
+        createdAt: newAdmin.createdAt,
+      },
+      credentials: {
+        username: adminId,
+        initialPassword: adminId,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to create school admin', details: err.message });
+  }
+});
+
+// Delete School Admin
+router.delete('/schools/:schoolId/admins/:adminId', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId, adminId } = req.params;
+
+    // Verify school exists
+    const school = await SchoolModel.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ error: 'School not found' });
+    }
+
+    // Find the target school admin
+    let admin = await UserModel.findById(adminId);
+    if (!admin) {
+      admin = await UserModel.findOne({ username: adminId });
+    }
+
+    if (!admin) {
+      return res.status(404).json({ error: 'School admin not found' });
+    }
+
+    // Verify role is strictly school_admin
+    if (admin.role !== 'school_admin') {
+      return res.status(400).json({ error: 'User is not a school administrator' });
+    }
+
+    // Verify the admin belongs to the target school
+    if (admin.schoolId !== school._id.toString()) {
+      return res.status(400).json({ error: 'School admin does not belong to this school workspace' });
+    }
+
+    const adminUsername = admin.username;
+
+    // Delete ONLY the target school admin user document from MongoDB Atlas
+    await UserModel.findByIdAndDelete(admin._id);
+
+    return res.json({
+      success: true,
+      message: `School Admin '${adminUsername}' deleted successfully from MongoDB Atlas.`,
+      deletedId: admin._id.toString(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete school admin', details: err.message });
+  }
+});
+
+// ==========================================
+// 3. STUDENT REGISTRATION & MANAGEMENT
+// ==========================================
+
+// Register Student
+router.post('/students', authenticate, async (req: Request, res: Response) => {
+  try {
+    const {
+      studentName,
+      className,
+      section,
+      schoolAdmissionNumber,
+      schoolId,
+    } = req.body;
+
+    if (!studentName || !className || !section || !schoolAdmissionNumber || !schoolId) {
+      return res.status(400).json({ error: 'All student fields are required' });
+    }
+
+    // Role check: Only Super Admin or School Admin belonging to the school
+    if (req.user!.role === 'school_admin' && req.user!.schoolId !== schoolId) {
+      return res.status(403).json({ error: 'You cannot add students to another school' });
+    }
+    if (req.user!.role === 'student') {
+      return res.status(403).json({ error: 'Students cannot create candidate profiles' });
+    }
+
+    const school = await SchoolModel.findById(schoolId);
+    if (!school) return res.status(404).json({ error: 'School not found' });
+
+    const cleanClass = className.replace(/[^0-9]/g, '') || '0';
+    const cleanSection = section.trim().toUpperCase();
+
+    if (!cleanSection) {
+      return res.status(400).json({ error: 'Section is required' });
+    }
+
+    // Unique App Number / Student ID
+    let uniqueStudentId = '';
+    let isUnique = false;
+    while (!isUnique) {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      uniqueStudentId = `STU-${cleanClass}${cleanSection}-${randomSuffix}`;
+      const exists = await UserModel.findOne({ username: uniqueStudentId });
+      if (!exists) isUnique = true;
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const newStudent = await UserModel.create({
+      username: uniqueStudentId,
+      role: 'student',
+      passwordHash: bcrypt.hashSync(uniqueStudentId, salt),
+      mustChangePassword: true,
+      schoolId: school._id.toString(),
+      schoolName: school.name,
+      studentName: studentName.trim(),
+      className: className.trim(),
+      section: cleanSection,
+      schoolAdmissionNumber: schoolAdmissionNumber.trim(),
+      uniqueStudentId,
+    });
+
+    return res.status(201).json({
+      student: formatDoc(newStudent),
+      credentials: {
+        username: uniqueStudentId,
+        initialPassword: uniqueStudentId,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to register student', details: err.message });
+  }
+});
+
+// List Students (Filtered by school, class, section, search)
+router.get('/students', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { schoolId, className, section, search } = req.query as {
+      schoolId?: string;
+      className?: string;
+      section?: string;
+      search?: string;
+    };
+
+    const query: any = { role: 'student' };
+
+    // Enforce access control
+    if (req.user!.role === 'school_admin' || req.user!.role === 'student') {
+      query.schoolId = req.user!.schoolId;
+    } else if (schoolId) {
+      query.schoolId = schoolId;
+    }
+
+    if (className) {
+      query.className = { $regex: new RegExp(`^${className}$`, 'i') };
+    }
+    if (section) {
+      query.section = { $regex: new RegExp(`^${section}$`, 'i') };
+    }
+    if (search) {
+      const q = search.trim();
+      query.$or = [
+        { studentName: { $regex: q, $options: 'i' } },
+        { schoolAdmissionNumber: { $regex: q, $options: 'i' } },
+        { uniqueStudentId: { $regex: q, $options: 'i' } },
+        { username: { $regex: q, $options: 'i' } },
+      ];
+    }
+
+    const list = await UserModel.find(query);
+    const sorted = formatDocs(list).sort((a: any, b: any) =>
+      (a.studentName || '').localeCompare(b.studentName || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+    return res.json(sorted);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to list students', details: err.message });
+  }
+});
+
+// Update Student Profile
+router.put('/students/:id', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { studentName, schoolAdmissionNumber, className, section } = req.body;
+
+    // Student role cannot edit profiles
+    if (req.user!.role === 'student') {
+      return res.status(403).json({ error: 'Students cannot edit student profiles' });
+    }
+
+    // Find student by ID or uniqueStudentId
+    let student = await UserModel.findById(id);
+    if (!student) {
+      student = await UserModel.findOne({ uniqueStudentId: id });
+    }
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Enforce school isolation for School Admins
+    if (req.user!.role === 'school_admin' && student.schoolId !== req.user!.schoolId) {
+      return res.status(403).json({ error: 'Forbidden: You cannot modify students from another school' });
+    }
+
+    // Validate required fields
+    if (!studentName || !className || !section || !schoolAdmissionNumber) {
+      return res.status(400).json({ error: 'Student Full Name, Admission Number, Class, and Section are all required' });
+    }
+
+    // Validate class (Class 1 to Class 12)
+    const validClasses = [
+      'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
+      'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12',
+    ];
+    if (!validClasses.includes(className.trim())) {
+      return res.status(400).json({ error: 'Class must be one of Class 1 through Class 12' });
+    }
+
+    const cleanSection = section.trim().toUpperCase();
+    if (!cleanSection) {
+      return res.status(400).json({ error: 'Section is required' });
+    }
+
+    // Update editable fields without altering username, uniqueStudentId, role, schoolId, or passwordHash
+    student.studentName = studentName.trim();
+    student.schoolAdmissionNumber = schoolAdmissionNumber.trim();
+    student.className = className.trim();
+    student.section = cleanSection;
+
+    await student.save();
+
+    // Also update studentName, className, and section in their existing StudentTestAssignment documents to keep names synchronized
+    await StudentTestAssignmentModel.updateMany(
+      { studentId: student.uniqueStudentId },
+      {
+        $set: {
+          studentName: student.studentName,
+          className: student.className,
+          section: student.section,
+        },
+      }
+    );
+
+    return res.json({
+      message: 'Student updated successfully',
+      student: formatDoc(student),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update student', details: err.message });
+  }
+});
+
+// Delete Student
+router.delete('/students/:id', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Student role cannot delete profiles
+    if (req.user!.role === 'student') {
+      return res.status(403).json({ error: 'Students cannot delete student profiles' });
+    }
+
+    // Find student by ID or uniqueStudentId
+    let student = await UserModel.findById(id);
+    if (!student) {
+      student = await UserModel.findOne({ uniqueStudentId: id });
+    }
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Enforce school isolation for School Admins
+    if (req.user!.role === 'school_admin' && student.schoolId !== req.user!.schoolId) {
+      return res.status(403).json({ error: 'Forbidden: You cannot delete students from another school' });
+    }
+
+    const studentUniqueId = student.uniqueStudentId;
+
+    // Delete student user account document from MongoDB Atlas
+    await UserModel.findByIdAndDelete(student._id);
+
+    // If student had test assignments, update their status record or clean up assignments safely without breaking overall history/test records
+    await StudentTestAssignmentModel.deleteMany({ studentId: studentUniqueId });
+
+    return res.json({
+      success: true,
+      message: `Student '${student.studentName}' (${studentUniqueId}) deleted successfully from MongoDB Atlas.`,
+      deletedId: student._id.toString(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete student', details: err.message });
+  }
+});
+
+// ==========================================
+// 4. QUESTION GROUPS & QUESTION BANK
+// ==========================================
+
+// Create Question Group
+router.post('/question-groups', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json({ error: 'Group name is required' });
+
+    const cleanName = name.trim();
+    const existing = await QuestionGroupModel.findOne({
+      name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
+    });
+    if (existing) {
+      return res.status(400).json({ error: `Question Group '${cleanName}' already exists.` });
+    }
+
+    const newGroup = await QuestionGroupModel.create({
+      name: cleanName,
+      description: description?.trim() || '',
+    });
+
+    return res.status(201).json(formatDoc(newGroup));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to create question group', details: err.message });
+  }
+});
+
+// List Question Groups (With Question Counts & Difficulty Breakdown)
+router.get('/question-groups', authenticate, async (req: Request, res: Response) => {
+  try {
+    const groups = await QuestionGroupModel.find().sort({ createdAt: 1 });
+    const questions = await QuestionModel.find();
+
+    const withCounts = groups.map((g) => {
+      const gIdStr = g._id.toString();
+      const gNameLower = (g.name || '').trim().toLowerCase();
+
+      const groupQuestions = questions.filter((q) => {
+        const qGroupId = (q.groupId || '').toString().trim();
+        const qGroupName = (q.groupName || '').toString().trim().toLowerCase();
+        return qGroupId === gIdStr || (qGroupName && qGroupName === gNameLower);
+      });
+
+      const easyQuestions = groupQuestions.filter((q) => (q.difficulty || '').trim().toLowerCase() === 'easy');
+      const mediumQuestions = groupQuestions.filter((q) => (q.difficulty || '').trim().toLowerCase() === 'medium');
+      const hardQuestions = groupQuestions.filter((q) => (q.difficulty || '').trim().toLowerCase() === 'hard');
+
+      return {
+        id: gIdStr,
+        _id: gIdStr,
+        name: g.name,
+        description: g.description,
+        createdAt: g.createdAt,
+        questionCount: groupQuestions.length,
+        easyCount: easyQuestions.length,
+        mediumCount: mediumQuestions.length,
+        hardCount: hardQuestions.length,
+        breakdown: {
+          Easy: {
+            count: easyQuestions.length,
+            questions: formatDocs(easyQuestions),
+          },
+          Medium: {
+            count: mediumQuestions.length,
+            questions: formatDocs(mediumQuestions),
+          },
+          Hard: {
+            count: hardQuestions.length,
+            questions: formatDocs(hardQuestions),
+          },
+        },
+      };
+    });
+
+    return res.json(withCounts);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch question groups', details: err.message });
+  }
+});
+
+// Add Question
+router.post('/questions', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const {
+      groupId,
+      difficulty,
+      content,
+      timeSeconds,
+      points,
+      options,
+      correctAnswer,
+      metadata,
+    } = req.body;
+
+    if (!groupId || !difficulty || !content) {
+      return res.status(400).json({ error: 'Question Group, Difficulty, and Content are required' });
+    }
+
+    const group = await QuestionGroupModel.findById(groupId);
+    if (!group) return res.status(404).json({ error: 'Question Group not found' });
+
+    const parsedTime = timeSeconds !== undefined && timeSeconds !== null && timeSeconds !== ''
+      ? Number(timeSeconds)
+      : null;
+    const parsedPoints = points !== undefined && points !== null && points !== ''
+      ? Number(points)
+      : null;
+    const parsedCorrectAnswer = correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== ''
+      ? correctAnswer
+      : null;
+
+    const newQuestion = await QuestionModel.create({
+      groupId: group._id.toString(),
+      groupName: group.name,
+      difficulty,
+      content: content.trim(),
+      timeSeconds: parsedTime,
+      points: parsedPoints,
+      options: options || [],
+      correctAnswer: parsedCorrectAnswer,
+      metadata: metadata || {},
+    });
+
+    return res.status(201).json(formatDoc(newQuestion));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to add question', details: err.message });
+  }
+});
+
+// List Questions (Filtered by groupId, difficulty)
+router.get('/questions', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { groupId, difficulty } = req.query as {
+      groupId?: string;
+      difficulty?: string;
+    };
+
+    const query: any = {};
+    if (groupId) query.groupId = groupId;
+    if (difficulty) query.difficulty = difficulty;
+
+    const list = await QuestionModel.find(query).sort({ createdAt: -1 });
+
+    // Sanitize correct answers for student callers
+    if (req.user!.role === 'student') {
+      const sanitized = list.map((q) => {
+        const doc = formatDoc(q);
+        delete doc.correctAnswer;
+        return doc;
+      });
+      return res.json(sanitized);
+    }
+
+    return res.json(formatDocs(list));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to list questions', details: err.message });
+  }
+});
+
+// ==========================================
+// 5. PUBLISH ASSESSMENT & TARGET METADATA
+// ==========================================
+
+// Helper to validate target configurations and detect duplicates/overlaps
+async function validatePublishTargets(rawTargets: any[]) {
+  if (!Array.isArray(rawTargets) || rawTargets.length === 0) {
+    return { valid: false, error: 'At least one target configuration is required.' };
+  }
+
+  const normalizedTargets: Array<{
+    targetIndex: number;
+    schoolIds: string[];
+    classes: string[];
+    className: string;
+    sections: string[];
+    studentIds: string[];
+  }> = [];
+
+  for (let i = 0; i < rawTargets.length; i++) {
+    const t = rawTargets[i];
+    let sIds: string[] = [];
+    if (Array.isArray(t.schoolIds) && t.schoolIds.length > 0) {
+      sIds = t.schoolIds.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (t.schoolId) {
+      sIds = Array.isArray(t.schoolId)
+        ? t.schoolId.map((s: any) => String(s).trim()).filter(Boolean)
+        : [String(t.schoolId).trim()].filter(Boolean);
+    }
+
+    if (sIds.length === 0) {
+      return { valid: false, error: `Target ${i + 1}: Please select at least one target school workspace.` };
+    }
+
+    if (sIds.some((s) => s.toUpperCase() === 'ALL' || s.toUpperCase() === 'ALL_SCHOOLS')) {
+      const allSchools = await SchoolModel.find({}, { _id: 1 });
+      sIds = allSchools.map((s: any) => s._id.toString());
+    }
+
+    let classList: string[] = [];
+    if (Array.isArray(t.classes)) {
+      classList = t.classes.map((c: any) => String(c).trim()).filter(Boolean);
+    } else if (typeof t.className === 'string') {
+      classList = t.className
+        .split(',')
+        .map((c: string) => c.trim())
+        .filter(Boolean);
+    }
+
+    // Filter out 'ALL' and 'All Classes'
+    classList = classList.filter(
+      (c) => c.toUpperCase() !== 'ALL' && c.toLowerCase() !== 'all classes'
+    );
+
+    let secList: string[] = [];
+    if (Array.isArray(t.sections)) {
+      secList = Array.from(new Set(t.sections.map((s: any) => String(s).trim().toUpperCase()).filter(Boolean)));
+    }
+
+    let studentIdList: string[] = [];
+    if (Array.isArray(t.studentIds)) {
+      studentIdList = Array.from(
+        new Set(
+          t.studentIds
+            .map((s: any) => String(s).trim())
+            .filter((s: string) => s && s.toUpperCase() !== 'ALL')
+        )
+      );
+    }
+
+    normalizedTargets.push({
+      targetIndex: i + 1,
+      schoolIds: sIds,
+      classes: classList,
+      className: classList.length === 1 ? classList[0] : classList.join(', '),
+      sections: secList,
+      studentIds: studentIdList,
+    });
+  }
+
+  // 1. Check for Exact Duplicate Targets
+  for (let i = 0; i < normalizedTargets.length; i++) {
+    for (let j = i + 1; j < normalizedTargets.length; j++) {
+      const t1 = normalizedTargets[i];
+      const t2 = normalizedTargets[j];
+
+      const s1 = [...t1.schoolIds].sort().join(',');
+      const s2 = [...t2.schoolIds].sort().join(',');
+      const c1 = [...t1.classes].map((c) => c.toLowerCase()).sort().join(',');
+      const c2 = [...t2.classes].map((c) => c.toLowerCase()).sort().join(',');
+      const sec1 = [...t1.sections].sort().join(',');
+      const sec2 = [...t2.sections].sort().join(',');
+      const stu1 = [...(t1.studentIds || [])].sort().join(',');
+      const stu2 = [...(t2.studentIds || [])].sort().join(',');
+
+      if (s1 === s2 && c1 === c2 && sec1 === sec2 && stu1 === stu2) {
+        return {
+          valid: false,
+          error: `Duplicate Target Detected: Target ${t1.targetIndex} and Target ${t2.targetIndex} are exact duplicates with identical School(s), Class(es), Section(s), and Student(s). Please remove or edit one of the duplicate targets.`,
+        };
+      }
+    }
+  }
+
+  // 2. Query actual students from MongoDB Atlas for each target
+  const targetStudentsMap: any[][] = [];
+  for (let i = 0; i < normalizedTargets.length; i++) {
+    const t = normalizedTargets[i];
+    const q: any = {
+      role: 'student',
+      schoolId: { $in: t.schoolIds },
+    };
+    if (t.classes.length === 1) {
+      q.className = { $regex: new RegExp(`^${t.classes[0]}$`, 'i') };
+    } else if (t.classes.length > 1) {
+      q.className = { $in: t.classes.map((c) => new RegExp(`^${c}$`, 'i')) };
+    }
+    if (t.sections.length > 0) {
+      q.section = { $in: t.sections };
+    }
+    if (t.studentIds && t.studentIds.length > 0) {
+      const validObjIds = t.studentIds.filter((id: string) => mongoose.Types.ObjectId.isValid(id));
+      q.$or = [
+        { uniqueStudentId: { $in: t.studentIds } },
+        { _id: { $in: validObjIds } },
+        { username: { $in: t.studentIds } },
+      ];
+    }
+    const students = await UserModel.find(q, {
+      _id: 1,
+      uniqueStudentId: 1,
+      studentName: 1,
+      schoolId: 1,
+      schoolName: 1,
+      className: 1,
+      section: 1,
+    }).lean();
+    targetStudentsMap.push(students);
+  }
+
+  // 3. Detect Student-Level Overlaps based on actual student records in MongoDB Atlas
+  const studentTargetMap = new Map<string, { student: any; targetIndices: number[] }>();
+  for (let i = 0; i < normalizedTargets.length; i++) {
+    for (const st of targetStudentsMap[i]) {
+      const studentKey = String(st.uniqueStudentId || st._id).trim();
+      if (!studentTargetMap.has(studentKey)) {
+        studentTargetMap.set(studentKey, { student: st, targetIndices: [] });
+      }
+      studentTargetMap.get(studentKey)!.targetIndices.push(normalizedTargets[i].targetIndex);
+    }
+  }
+
+  const conflictingPairs = new Map<string, { tA: number; tB: number; students: any[] }>();
+  for (const [_, entry] of studentTargetMap.entries()) {
+    if (entry.targetIndices.length > 1) {
+      for (let a = 0; a < entry.targetIndices.length; a++) {
+        for (let b = a + 1; b < entry.targetIndices.length; b++) {
+          const tA = entry.targetIndices[a];
+          const tB = entry.targetIndices[b];
+          const pairKey = `${tA}-${tB}`;
+          if (!conflictingPairs.has(pairKey)) {
+            conflictingPairs.set(pairKey, { tA, tB, students: [] });
+          }
+          conflictingPairs.get(pairKey)!.students.push(entry.student);
+        }
+      }
+    }
+  }
+
+  if (conflictingPairs.size > 0) {
+    const conflictMsgs: string[] = [];
+    for (const [_, info] of conflictingPairs.entries()) {
+      const sampleNames = info.students
+        .slice(0, 3)
+        .map((s) => `${s.studentName || s.uniqueStudentId} (${s.className || 'Class'} Sec ${s.section || 'All'})`)
+        .join(', ');
+      conflictMsgs.push(
+        `Target ${info.tA} and Target ${info.tB} overlap: ${info.students.length} student(s) would be assigned more than once (e.g. ${sampleNames}).`
+      );
+    }
+    return {
+      valid: false,
+      error: `Overlapping Targets Detected: ${conflictMsgs.join(' ')} Please adjust your target configurations to avoid assigning the same students multiple times.`,
+    };
+  }
+
+  // 4. Also check Logical Overlap (e.g. in case schools currently have no registered students yet)
+  for (let i = 0; i < normalizedTargets.length; i++) {
+    for (let j = i + 1; j < normalizedTargets.length; j++) {
+      const t1 = normalizedTargets[i];
+      const t2 = normalizedTargets[j];
+
+      const sharedSchools = t1.schoolIds.filter((id) => t2.schoolIds.includes(id));
+      if (sharedSchools.length > 0) {
+        const classOverlap =
+          t1.classes.length === 0 ||
+          t2.classes.length === 0 ||
+          t1.classes.some((c) => t2.classes.map((x) => x.toLowerCase()).includes(c.toLowerCase()));
+        const sectionOverlap =
+          t1.sections.length === 0 ||
+          t2.sections.length === 0 ||
+          t1.sections.some((sec) => t2.sections.includes(sec));
+
+        const studentOverlap =
+          !t1.studentIds?.length ||
+          !t2.studentIds?.length ||
+          t1.studentIds.includes('ALL') ||
+          t2.studentIds.includes('ALL') ||
+          t1.studentIds.some((id: string) => t2.studentIds!.includes(id));
+
+        if (classOverlap && sectionOverlap && studentOverlap) {
+          const c1Desc = t1.classes.length > 0 ? t1.classes.join(' + ') : 'All Classes';
+          const c2Desc = t2.classes.length > 0 ? t2.classes.join(' + ') : 'All Classes';
+          return {
+            valid: false,
+            error: `Target Conflict Detected: Target ${t1.targetIndex} and Target ${t2.targetIndex} have overlapping criteria on common school(s), class (${c1Desc} vs ${c2Desc}), sections, and students. Please refine them to be mutually exclusive.`,
+          };
+        }
+      }
+    }
+  }
+
+  return {
+    valid: true,
+    normalizedTargets,
+    targetStudentsMap,
+  };
+}
+
+// Target Configuration Validation Endpoint
+router.post('/publish/validate-targets', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { targets } = req.body;
+    const result = await validatePublishTargets(targets);
+    if (!result.valid) {
+      return res.status(400).json({ valid: false, error: result.error });
+    }
+    return res.json({ valid: true, message: 'All target configurations are valid and conflict-free.' });
+  } catch (err: any) {
+    return res.status(500).json({ valid: false, error: 'Failed to validate targets', details: err.message });
+  }
+});
+
+// Dynamic Class List for Target Configuration
+// Fetches unique classes from actual students in MongoDB Atlas matching selected school(s)
+router.get('/target-classes', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { schoolIds } = req.query as { schoolIds?: string };
+
+    let schoolIdList: string[] = [];
+    if (schoolIds) {
+      schoolIdList = schoolIds
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    if (schoolIdList.some((s) => s.toUpperCase() === 'ALL' || s.toUpperCase() === 'ALL_SCHOOLS')) {
+      const allSchools = await SchoolModel.find({}, { _id: 1 });
+      schoolIdList = allSchools.map((s: any) => s._id.toString());
+    }
+
+    // Role-based restrictions if not super_admin
+    if (req.user!.role === 'school_admin' || req.user!.role === 'student') {
+      if (req.user!.schoolId) {
+        schoolIdList = [req.user!.schoolId];
+      }
+    }
+
+    if (schoolIdList.length === 0) {
+      return res.json({ classes: [] });
+    }
+
+    const query: any = {
+      role: 'student',
+      schoolId: { $in: schoolIdList },
+    };
+
+    const rawClasses = await UserModel.distinct('className', query);
+
+    const cleanClasses = Array.from(
+      new Set(
+        rawClasses
+          .filter((c: any) => typeof c === 'string' && c.trim().length > 0)
+          .map((c: string) => c.trim())
+      )
+    ).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    return res.json({ classes: cleanClasses });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch dynamic classes', details: err.message });
+  }
+});
+
+// Dynamic Section List for Target Configuration
+// Fetches unique sections from actual students in MongoDB Atlas matching selected school(s) and optional class(es)
+router.get('/target-sections', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { schoolIds, className, classes } = req.query as {
+      schoolIds?: string;
+      className?: string;
+      classes?: string;
+    };
+
+    let schoolIdList: string[] = [];
+    if (schoolIds) {
+      schoolIdList = schoolIds
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    if (schoolIdList.some((s) => s.toUpperCase() === 'ALL' || s.toUpperCase() === 'ALL_SCHOOLS')) {
+      const allSchools = await SchoolModel.find({}, { _id: 1 });
+      schoolIdList = allSchools.map((s: any) => s._id.toString());
+    }
+
+    // Role-based restrictions if not super_admin
+    if (req.user!.role === 'school_admin' || req.user!.role === 'student') {
+      if (req.user!.schoolId) {
+        schoolIdList = [req.user!.schoolId];
+      }
+    }
+
+    if (schoolIdList.length === 0) {
+      return res.json({ sections: [] });
+    }
+
+    const query: any = {
+      role: 'student',
+      schoolId: { $in: schoolIdList },
+    };
+
+    let classList: string[] = [];
+    if (classes) {
+      classList = classes
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean);
+    } else if (className) {
+      classList = [className.trim()].filter(Boolean);
+    }
+
+    classList = classList.filter(
+      (c) => c.toUpperCase() !== 'ALL' && c.toLowerCase() !== 'all classes'
+    );
+
+    if (classList.length === 1) {
+      query.className = { $regex: new RegExp(`^${classList[0]}$`, 'i') };
+    } else if (classList.length > 1) {
+      query.className = {
+        $in: classList.map((c) => new RegExp(`^${c}$`, 'i')),
+      };
+    }
+
+    const rawSections = await UserModel.distinct('section', query);
+
+    const cleanSections = Array.from(
+      new Set(
+        rawSections
+          .filter((s: any) => typeof s === 'string' && s.trim().length > 0)
+          .map((s: string) => s.trim().toUpperCase())
+      )
+    ).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    return res.json({ sections: cleanSections });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch dynamic sections', details: err.message });
+  }
+});
+
+// Dynamic Student List for Target Configuration
+// Fetches students from MongoDB Atlas matching selected school(s), class(es), and section(s)
+router.get('/target-students', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { schoolIds, classes, sections } = req.query as {
+      schoolIds?: string;
+      classes?: string;
+      sections?: string;
+    };
+
+    let schoolIdList: string[] = [];
+    if (schoolIds) {
+      schoolIdList = schoolIds
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    if (schoolIdList.some((s) => s.toUpperCase() === 'ALL' || s.toUpperCase() === 'ALL_SCHOOLS')) {
+      const allSchools = await SchoolModel.find({}, { _id: 1 });
+      schoolIdList = allSchools.map((s: any) => s._id.toString());
+    }
+
+    if (req.user!.role === 'school_admin' || req.user!.role === 'student') {
+      if (req.user!.schoolId) {
+        schoolIdList = [req.user!.schoolId];
+      }
+    }
+
+    if (schoolIdList.length === 0) {
+      return res.json({ students: [] });
+    }
+
+    const query: any = {
+      role: 'student',
+      schoolId: { $in: schoolIdList },
+    };
+
+    let classList: string[] = [];
+    if (classes) {
+      classList = classes
+        .split(',')
+        .map((c) => c.trim())
+        .filter((c) => c && c.toUpperCase() !== 'ALL' && c.toLowerCase() !== 'all classes');
+    }
+
+    if (classList.length === 1) {
+      query.className = { $regex: new RegExp(`^${classList[0]}$`, 'i') };
+    } else if (classList.length > 1) {
+      query.className = {
+        $in: classList.map((c) => new RegExp(`^${c}$`, 'i')),
+      };
+    }
+
+    let sectionList: string[] = [];
+    if (sections) {
+      sectionList = sections
+        .split(',')
+        .map((s) => s.trim().toUpperCase())
+        .filter((s) => s && s !== 'ALL' && s !== 'ALL SECTIONS');
+    }
+
+    if (sectionList.length === 1) {
+      query.section = { $regex: new RegExp(`^${sectionList[0]}$`, 'i') };
+    } else if (sectionList.length > 1) {
+      query.section = {
+        $in: sectionList.map((s) => new RegExp(`^${s}$`, 'i')),
+      };
+    }
+
+    const rawStudents = await UserModel.find(query, {
+      _id: 1,
+      uniqueStudentId: 1,
+      studentName: 1,
+      schoolAdmissionNumber: 1,
+      username: 1,
+      className: 1,
+      section: 1,
+      schoolId: 1,
+      schoolName: 1,
+    });
+
+    const formatted = formatDocs(rawStudents);
+    const sorted = formatted.sort((a: any, b: any) =>
+      (a.studentName || '').localeCompare(b.studentName || '', undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+    );
+
+    return res.json({ students: sorted });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch target students', details: err.message });
+  }
+});
+
+router.post('/publish', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const {
+      publishName,
+      publishMode,
+      target,
+      targets,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+      selectedQuestionIds,
+      randomCount,
+      shuffle,
+    } = req.body;
+
+    const targetList = Array.isArray(targets) && targets.length > 0 ? targets : target ? [target] : [];
+
+    if (!publishName || !publishMode || targetList.length === 0 || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Publish Name, Mode, at least one Target Configuration, and Dates are mandatory.' });
+    }
+
+    if (publishMode === 'Selected Questions' && (!selectedQuestionIds || selectedQuestionIds.length === 0)) {
+      return res.status(400).json({ error: 'Please select at least 1 question for Selected Questions mode.' });
+    }
+
+    // Validate duplicate & overlapping targets across the assessment
+    const validation = await validatePublishTargets(targetList);
+    if (!validation.valid) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const allTargetSchoolIds = Array.from(
+      new Set(validation.normalizedTargets!.flatMap((t) => t.schoolIds))
+    );
+
+    const schools = await SchoolModel.find({ _id: { $in: allTargetSchoolIds } });
+    if (schools.length === 0) {
+      return res.status(404).json({ error: 'Selected target school(s) not found.' });
+    }
+
+    const schoolMap = new Map<string, any>(schools.map((s: any) => [s._id.toString(), s]));
+
+    // Deduplicate candidate students across all targets using uniqueStudentId / _id
+    const uniqueStudentsMap = new Map<string, any>();
+    for (const studentList of validation.targetStudentsMap!) {
+      for (const student of studentList) {
+        const key = String(student.uniqueStudentId || student._id).trim();
+        if (!uniqueStudentsMap.has(key)) {
+          uniqueStudentsMap.set(key, student);
+        }
+      }
+    }
+
+    const candidateStudents = Array.from(uniqueStudentsMap.values());
+    if (candidateStudents.length === 0) {
+      return res.status(400).json({ error: 'No students found matching the selected target criteria across all targets.' });
+    }
+
+    const allTargetSchoolNames = allTargetSchoolIds.map((id) => schoolMap.get(id)?.name || id);
+    const combinedSchoolNames = allTargetSchoolNames.join(', ');
+    const allTargetClasses = Array.from(
+      new Set(
+        validation.normalizedTargets!.flatMap((t) =>
+          t.classes.length > 0 ? t.classes : ['All Classes']
+        )
+      )
+    );
+    const allTargetSections = Array.from(new Set(validation.normalizedTargets!.flatMap((t) => t.sections)));
+
+    const targetsRecord = validation.normalizedTargets!.map((nt) => {
+      const sNames = nt.schoolIds.map((id) => schoolMap.get(id)?.name || id);
+      return {
+        schoolIds: nt.schoolIds,
+        schoolNames: sNames,
+        classes: nt.classes.length > 0 ? nt.classes : ['All Classes'],
+        sections: nt.sections,
+        studentIds: nt.studentIds || [],
+      };
+    });
+
+    const allQuestionsDocs = await QuestionModel.find();
+    const allQuestions: Question[] = formatDocs(allQuestionsDocs);
+
+    const allTargetStudentIds = Array.from(
+      new Set(validation.normalizedTargets!.flatMap((t) => t.studentIds || []))
+    );
+
+    // Create Published Test Record with targets array
+    const newPublish = await PublishedTestModel.create({
+      publishName: publishName.trim(),
+      publishMode,
+      target: {
+        schoolId: allTargetSchoolIds[0] || '',
+        schoolIds: allTargetSchoolIds,
+        schoolName: combinedSchoolNames,
+        schoolNames: allTargetSchoolNames,
+        classes: allTargetClasses,
+        sections: allTargetSections,
+        studentIds: allTargetStudentIds,
+      },
+      targets: targetsRecord,
+      startDate,
+      startTime: startTime || '00:00',
+      endDate,
+      endTime: endTime || '23:59',
+      questionIds: selectedQuestionIds || [],
+      randomCount: randomCount ? Number(randomCount) : undefined,
+      shuffle: Boolean(shuffle),
+      createdBy: req.user!.username,
+    });
+
+    const publishedTestId = newPublish._id.toString();
+    const newAssignments: any[] = [];
+
+    // Pre-fetch all past completed assignments for adaptive rule engine if in Random mode
+    const pastAssignmentsDocs = publishMode === 'Random Questions' ? await StudentTestAssignmentModel.find() : [];
+    const pastAssignments = formatDocs(pastAssignmentsDocs);
+
+    // Create assignments for every unique target student (guarantees exactly 1 assignment per student)
+    for (const student of candidateStudents) {
+      let studentQuestionList: Question[] = [];
+
+      if (publishMode === 'Selected Questions') {
+        const pool = allQuestions.filter((q) => selectedQuestionIds.includes(q.id));
+        studentQuestionList = [...pool];
+        if (shuffle) {
+          studentQuestionList.sort(() => 0.5 - Math.random());
+        }
+      } else {
+        const insights = computeStudentInsights(student.uniqueStudentId!, pastAssignments);
+        studentQuestionList = selectRandomQuestionsForRuleEngine(
+          Number(randomCount) || 5,
+          allQuestions,
+          insights
+        );
+      }
+
+      const questionLogs: QuestionAttemptLog[] = studentQuestionList.map((q) => ({
+        questionId: q.id,
+        groupName: q.groupName,
+        difficulty: q.difficulty,
+        content: q.content,
+        points: q.points != null ? Number(q.points) : null,
+        studentAnswer: null,
+        correctAnswer: q.correctAnswer ?? null,
+        isCorrect: false,
+        timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+        timeTakenSeconds: 0,
+        earnedPoints: 0,
+        options: q.options || [],
+        metadata: q.metadata || {},
+      }));
+
+      const stSchool = schoolMap.get(student.schoolId);
+
+      newAssignments.push({
+        publishedTestId,
+        publishName: publishName.trim(),
+        studentId: student.uniqueStudentId!,
+        studentName: student.studentName || '',
+        schoolId: student.schoolId,
+        schoolName: stSchool ? stSchool.name : (student.schoolName || ''),
+        className: student.className || '',
+        section: student.section || '',
+        status: 'NOT_STARTED',
+        totalQuestions: questionLogs.length,
+        correctCount: 0,
+        wrongCount: 0,
+        totalPointsEarned: 0,
+        scoreOutOf100: 0,
+        totalTimeTakenSeconds: 0,
+        questions: questionLogs,
+      });
+    }
+
+    // Insert student assignments into MongoDB Atlas
+    await StudentTestAssignmentModel.insertMany(newAssignments);
+
+    // Create permanent history record in MongoDB Atlas
+    const historyRecord = await PublishHistoryModel.create({
+      publishId: publishedTestId,
+      publishName: publishName.trim(),
+      date: startDate,
+      time: startTime || new Date().toLocaleTimeString(),
+      startDate,
+      startTime: startTime || '00:00',
+      endDate,
+      endTime: endTime || '23:59',
+      schoolId: allTargetSchoolIds[0] || '',
+      schoolName: combinedSchoolNames,
+      schoolIds: allTargetSchoolIds,
+      schoolNames: allTargetSchoolNames,
+      classes: allTargetClasses.length > 0 ? allTargetClasses : ['All Classes'],
+      sections: allTargetSections.length > 0 ? allTargetSections : ['All Sections'],
+      totalRecipients: candidateStudents.length,
+      targets: targetsRecord,
+      publishMode,
+      assignedQuestionsCount: publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount || 0),
+      completedCount: 0,
+      incompleteCount: 0,
+      studentsStatus: candidateStudents.map((s) => ({
+        studentId: s.uniqueStudentId!,
+        studentName: s.studentName!,
+        className: s.className!,
+        section: s.section!,
+        status: 'NOT_STARTED',
+      })),
+    });
+
+    return res.status(201).json({
+      message: `Assessment '${publishName}' published successfully to ${candidateStudents.length} students across ${schools.length} school(s).`,
+      publishedTest: formatDoc(newPublish),
+      assignedStudentCount: candidateStudents.length,
+      totalAssignedStudents: candidateStudents.length,
+      historyRecordId: historyRecord._id.toString(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to publish assessment', details: err.message });
+  }
+});
+
+// List All Published Tests
+router.get('/published-tests', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const list = await PublishedTestModel.find().sort({ createdAt: -1 });
+    return res.json(formatDocs(list));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch published tests', details: err.message });
+  }
+});
+
+// ==========================================
+// 6. STUDENT ASSESSMENT PORTAL & EXECUTION
+// ==========================================
+
+// Get All Tests Assigned to Current Student
+router.get('/student/tests', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (req.user!.role !== 'student') {
+      return res.status(403).json({ error: 'Only student accounts can access candidate assessments' });
+    }
+
+    const studentId = req.user!.studentId || req.user!.username;
+    const assignments = await StudentTestAssignmentModel.find({ studentId }).sort({ createdAt: -1 });
+
+    const publishedTests = await PublishedTestModel.find({
+      _id: { $in: assignments.map((a) => a.publishedTestId) },
+    });
+    const pubMap = new Map<string, any>();
+    for (const pt of publishedTests) {
+      pubMap.set(pt._id.toString(), pt);
+    }
+
+    // Determine current date-time string in client timezone if provided, else server time
+    const clientDateTimeHeader = req.headers['x-client-now'] as string;
+    let currentDateTimeStr = '';
+    if (clientDateTimeHeader && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clientDateTimeHeader)) {
+      currentDateTimeStr = clientDateTimeHeader.slice(0, 16);
+    } else {
+      const clientOffsetHeader = req.headers['x-timezone-offset'];
+      const clientOffset = clientOffsetHeader !== undefined && clientOffsetHeader !== ''
+        ? Number(clientOffsetHeader)
+        : null;
+
+      const nowMs = Date.now();
+      const clientNow = clientOffset !== null && !isNaN(clientOffset)
+        ? new Date(nowMs - (clientOffset * 60000))
+        : new Date(nowMs);
+
+      const clientYear = clientNow.getUTCFullYear();
+      const clientMonth = String(clientNow.getUTCMonth() + 1).padStart(2, '0');
+      const clientDay = String(clientNow.getUTCDate()).padStart(2, '0');
+      const clientHour = String(clientNow.getUTCHours()).padStart(2, '0');
+      const clientMin = String(clientNow.getUTCMinutes()).padStart(2, '0');
+      currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
+    }
+
+    const result = assignments.map((a) => {
+      const pubId = a.publishedTestId?.toString ? a.publishedTestId.toString() : String(a.publishedTestId);
+      const pub = pubMap.get(pubId);
+      const doc = formatDoc(a);
+
+      let isUpcoming = false;
+      let isExpired = false;
+
+      if (pub?.startDate && pub.startDate !== 'Today') {
+        const startStr = `${pub.startDate}T${pub.startTime || '00:00'}`;
+        if (currentDateTimeStr < startStr) {
+          isUpcoming = true;
+        }
+      }
+
+      if (pub?.endDate && pub.endDate !== 'Open') {
+        const endStr = `${pub.endDate}T${pub.endTime || '23:59'}`;
+        if (currentDateTimeStr > endStr) {
+          isExpired = true;
+        }
+      }
+
+      const canStart = a.status === 'NOT_STARTED' && !isUpcoming && !isExpired;
+
+      return {
+        ...doc,
+        assignmentId: a._id.toString(),
+        id: a._id.toString(),
+        publishedTestId: pubId,
+        publishName: pub?.publishName || a.publishName,
+        startDate: pub?.startDate || 'Today',
+        startTime: pub?.startTime || '00:00',
+        endDate: pub?.endDate || 'Open',
+        endTime: pub?.endTime || '23:59',
+        isUpcoming,
+        isExpired,
+        canStart,
+      };
+    });
+
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch student tests', details: err.message });
+  }
+});
+
+// Start an Assessment (Atomic Lock check: Can ONLY be started once from NOT_STARTED)
+router.post('/student/tests/:assignmentId/start', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (req.user!.role !== 'student') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { assignmentId } = req.params;
+    const studentId = req.user!.studentId || req.user!.username;
+
+    const assignment = await StudentTestAssignmentModel.findById(assignmentId);
+    if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
+    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+
+    // Strict One-Time Attempt Enforcement:
+    // Only NOT_STARTED can be started.
+    // If IN_PROGRESS, COMPLETED, or LOCKED_INCOMPLETE, reject restart.
+    if (assignment.status === 'COMPLETED') {
+      return res.status(400).json({ error: 'You have already completed this assessment. Re-attempts are not permitted.' });
+    }
+    if (assignment.status === 'LOCKED_INCOMPLETE' || assignment.status === 'INCOMPLETE') {
+      return res.status(400).json({ error: 'This assessment is incomplete and locked. Re-attempts are not permitted under the one-time attempt security policy.' });
+    }
+    if (assignment.status === 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'This assessment has already been started. Re-attempts or restarts are not permitted under the one-time attempt security policy.' });
+    }
+    if (assignment.status !== 'NOT_STARTED') {
+      return res.status(400).json({ error: 'Only unstarted assessments can be started.' });
+    }
+
+    // Set startedAt and status to IN_PROGRESS on initial start (permanently saved in MongoDB Atlas)
+    assignment.status = 'IN_PROGRESS';
+    assignment.exitType = null;
+    assignment.startedAt = new Date();
+    await assignment.save();
+
+    // Update student status in publish history
+    await PublishHistoryModel.updateOne(
+      { publishId: assignment.publishedTestId, 'studentsStatus.studentId': studentId },
+      { $set: { 'studentsStatus.$.status': 'IN_PROGRESS', 'studentsStatus.$.exitType': null } }
+    );
+
+    // Fetch question options and sanitize correct answers
+    const allQuestionsDocs = await QuestionModel.find();
+    const qMap = new Map<string, any>();
+    for (const q of allQuestionsDocs) {
+      qMap.set(q._id.toString(), q);
+    }
+
+    const sanitizedQuestions = assignment.questions.map((q: any) => {
+      const fullQ = qMap.get(q.questionId);
+      return {
+        questionId: q.questionId,
+        groupName: q.groupName || fullQ?.groupName || 'General',
+        difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
+        content: q.content || fullQ?.content || 'Question',
+        points: q.points != null ? Number(q.points) : (fullQ?.points != null ? Number(fullQ.points) : null),
+        timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
+        options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
+        metadata: q.metadata || fullQ?.metadata || {},
+        pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
+        timeTakenSeconds: q.timeTakenSeconds || 0,
+        studentAnswer: q.studentAnswer,
+      };
+    });
+
+    const doc = formatDoc(assignment);
+    return res.json({
+      ...doc,
+      assignmentId: assignment._id.toString(),
+      id: assignment._id.toString(),
+      questions: sanitizedQuestions,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to start assessment', details: err.message });
+  }
+});
+
+// Helper to transition assessment to INCOMPLETE with distinct EXIT or LOGOUT tracking
+async function markAssignmentIncomplete(
+  assignmentId: string,
+  studentId: string,
+  exitType: 'EXIT' | 'LOGOUT',
+  reason?: string
+) {
+  const assignment = await StudentTestAssignmentModel.findById(assignmentId);
+  if (!assignment) return { error: 'Assessment not found', code: 404 };
+  if (assignment.studentId !== studentId) return { error: 'Access forbidden', code: 403 };
+
+  if (assignment.status === 'COMPLETED') {
+    return { error: 'Assessment is already submitted and completed.', code: 400 };
+  }
+
+  // Calculate points and stats up to exit/lockout
+  let earnedTotal = 0;
+  let possibleTotal = 0;
+  let correctCount = 0;
+  let wrongCount = 0;
+  let totalTime = 0;
+
+  for (const q of assignment.questions) {
+    possibleTotal += q.points || 0;
+    totalTime += q.timeTakenSeconds || 0;
+    if (q.isCorrect) {
+      earnedTotal += q.earnedPoints || q.points;
+      correctCount++;
+    } else {
+      wrongCount++;
+    }
+  }
+
+  const wasAlreadyIncomplete = assignment.status === 'INCOMPLETE' || assignment.status === 'LOCKED_INCOMPLETE';
+
+  assignment.status = 'INCOMPLETE';
+  assignment.exitType = exitType;
+  assignment.lockedAt = new Date();
+  assignment.totalPointsEarned = earnedTotal;
+  assignment.correctCount = correctCount;
+  assignment.wrongCount = wrongCount;
+  assignment.totalTimeTakenSeconds = totalTime;
+  assignment.scoreOutOf100 = possibleTotal > 0 ? Math.round((earnedTotal / possibleTotal) * 100) : 0;
+  await assignment.save();
+
+  // Update permanent publish history record in MongoDB Atlas
+  try {
+    if (!wasAlreadyIncomplete) {
+      await PublishHistoryModel.updateOne(
+        { publishId: assignment.publishedTestId },
+        { $inc: { incompleteCount: 1 } }
+      );
+    }
+
+    await PublishHistoryModel.updateOne(
+      { publishId: assignment.publishedTestId, 'studentsStatus.studentId': studentId },
+      {
+        $set: {
+          'studentsStatus.$.status': 'INCOMPLETE',
+          'studentsStatus.$.exitType': exitType,
+          'studentsStatus.$.scoreOutOf100': assignment.scoreOutOf100,
+        },
+      }
+    );
+  } catch (histErr: any) {
+    console.error('[History Incomplete Update Error]:', histErr.message);
+  }
+
+  return {
+    status: 'INCOMPLETE',
+    exitType,
+    message: reason || `Assessment marked INCOMPLETE (${exitType}).`,
+    scoreOutOf100: assignment.scoreOutOf100,
+  };
+}
+
+// Student Assessment Explicit Exit (Recorded as INCOMPLETE with Exit Type: EXIT)
+router.post('/student/tests/:assignmentId/exit', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (req.user!.role !== 'student') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const { assignmentId } = req.params;
+    const studentId = req.user!.studentId || req.user!.username;
+    const requestedExitType: 'EXIT' | 'LOGOUT' = req.body.exitType === 'LOGOUT' ? 'LOGOUT' : 'EXIT';
+    const reason = req.body.reason || (requestedExitType === 'LOGOUT' ? 'Student logged out during assessment' : 'Student explicitly exited assessment');
+
+    const result = await markAssignmentIncomplete(assignmentId, studentId, requestedExitType, reason);
+    if ('error' in result) {
+      return res.status(result.code || 400).json({ error: result.error });
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to record assessment exit', details: err.message });
+  }
+});
+
+// Security Lockout / Violation / Timeout Trigger (also sets status: INCOMPLETE)
+router.post('/student/tests/:assignmentId/lock', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const studentId = req.user!.studentId || req.user!.username;
+    const exitType: 'EXIT' | 'LOGOUT' = req.body.exitType === 'LOGOUT' ? 'LOGOUT' : 'EXIT';
+    const reason = req.body.reason || 'Assessment exit or security lock';
+
+    const result = await markAssignmentIncomplete(assignmentId, studentId, exitType, reason);
+    if ('error' in result) {
+      return res.status(result.code || 400).json({ error: result.error });
+    }
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to lock assessment', details: err.message });
+  }
+});
+
+// Student Logout Handler: Automatically marks any IN_PROGRESS test as INCOMPLETE with Exit Type: LOGOUT
+router.post('/student/logout', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (req.user!.role !== 'student') {
+      return res.json({ success: true, message: 'Logged out' });
+    }
+    const studentId = req.user!.studentId || req.user!.username;
+
+    // Find all IN_PROGRESS assignments for this student
+    const inProgressList = await StudentTestAssignmentModel.find({
+      studentId,
+      status: 'IN_PROGRESS',
+    });
+
+    for (const assignment of inProgressList) {
+      await markAssignmentIncomplete(
+        assignment._id.toString(),
+        studentId,
+        'LOGOUT',
+        'Student logged out during active assessment'
+      );
+    }
+
+    return res.json({
+      success: true,
+      markedIncompleteCount: inProgressList.length,
+      message: inProgressList.length > 0
+        ? `Marked ${inProgressList.length} in-progress assessment(s) as INCOMPLETE (LOGOUT).`
+        : 'Logged out successfully.'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to handle student logout', details: err.message });
+  }
+});
+
+// Answer Question & Real-Time Timing / Correctness Evaluation
+router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const { questionId, answer, timeTakenSeconds } = req.body;
+    const studentId = req.user!.studentId || req.user!.username;
+
+    const assignment = await StudentTestAssignmentModel.findById(assignmentId);
+    if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
+    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+
+    if (assignment.status === 'COMPLETED' || assignment.status === 'LOCKED_INCOMPLETE') {
+      return res.status(400).json({ error: 'Assessment is no longer accepting answers' });
+    }
+
+    const questionIndex = assignment.questions.findIndex((q: any) => q.questionId === questionId);
+    if (questionIndex === -1) return res.status(404).json({ error: 'Question not found in this assessment' });
+
+    const qItem = assignment.questions[questionIndex];
+
+    // Evaluate answer correctness ONLY if question has a configured correct answer
+    const hasCorrectAnswer = qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '';
+    let isCorrect: boolean | undefined = undefined;
+
+    if (hasCorrectAnswer) {
+      const expected = qItem.correctAnswer;
+      if (answer === undefined || answer === null || String(answer).trim() === '') {
+        isCorrect = false;
+      } else if (typeof expected === 'string' && typeof answer === 'string') {
+        isCorrect = expected.trim().toLowerCase() === answer.trim().toLowerCase();
+      } else if (typeof expected === 'number' && !isNaN(Number(answer))) {
+        isCorrect = Number(expected) === Number(answer);
+      } else {
+        isCorrect = JSON.stringify(expected) === JSON.stringify(answer);
+      }
+    }
+
+    const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
+    const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
+
+    // Use atomic update to prevent Mongoose document version conflicts
+    await StudentTestAssignmentModel.findByIdAndUpdate(assignmentId, {
+      $set: {
+        [`questions.${questionIndex}.studentAnswer`]: answer,
+        [`questions.${questionIndex}.isCorrect`]: hasCorrectAnswer ? (isCorrect ?? false) : false,
+        [`questions.${questionIndex}.timeTakenSeconds`]: Math.max(0, Number(timeTakenSeconds) || 0),
+        [`questions.${questionIndex}.earnedPoints`]: pointsEarned,
+      },
+    });
+
+    return res.json({
+      success: true,
+      questionId,
+      timeTakenSeconds,
+      isCorrect,
+      earnedPoints: pointsEarned,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to save question answer', details: err.message });
+  }
+});
+
+// Final Test Submission
+router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const studentId = req.user!.studentId || req.user!.username;
+
+    const assignment = await StudentTestAssignmentModel.findById(assignmentId);
+    if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
+    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+
+    if (assignment.status === 'COMPLETED') {
+      return res.json({
+        status: 'COMPLETED',
+        message: 'Assessment is already submitted.',
+        scoreOutOf100: assignment.scoreOutOf100,
+        totalPointsEarned: assignment.totalPointsEarned,
+      });
+    }
+
+    if (assignment.status === 'LOCKED_INCOMPLETE') {
+      return res.status(400).json({ error: 'This assessment is locked and can no longer be submitted.' });
+    }
+
+    // Process answers payload if sent from frontend
+    const { answers } = req.body;
+    if (answers && Array.isArray(answers)) {
+      for (const ansItem of answers) {
+        const qIdx = assignment.questions.findIndex((q: any) => q.questionId === ansItem.questionId);
+        if (qIdx !== -1) {
+          const qItem = assignment.questions[qIdx];
+          const hasCorrectAnswer = qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '';
+          let isCorrect: boolean | undefined = undefined;
+
+          if (hasCorrectAnswer) {
+            const expected = qItem.correctAnswer;
+            const stuAns = ansItem.answer;
+            if (stuAns === undefined || stuAns === null || String(stuAns).trim() === '') {
+              isCorrect = false;
+            } else if (typeof expected === 'string' && typeof stuAns === 'string') {
+              isCorrect = expected.trim().toLowerCase() === stuAns.trim().toLowerCase();
+            } else if (typeof expected === 'number' && !isNaN(Number(stuAns))) {
+              isCorrect = Number(expected) === Number(stuAns);
+            } else {
+              isCorrect = JSON.stringify(expected) === JSON.stringify(stuAns);
+            }
+          }
+
+          const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
+          const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
+
+          assignment.questions[qIdx].studentAnswer = ansItem.answer;
+          assignment.questions[qIdx].isCorrect = hasCorrectAnswer ? (isCorrect ?? false) : false;
+          assignment.questions[qIdx].timeTakenSeconds = Math.max(0, Number(ansItem.timeTakenSeconds) || 0);
+          assignment.questions[qIdx].earnedPoints = pointsEarned;
+        }
+      }
+    }
+
+    // Finalize score computations
+    let earnedPointsTotal = 0;
+    let possiblePointsTotal = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let totalTime = 0;
+
+    for (const q of assignment.questions) {
+      const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
+      if (hasPoints) {
+        possiblePointsTotal += Number(q.points);
+      }
+      totalTime += Math.max(0, Number(q.timeTakenSeconds) || 0);
+
+      const hasCorrectAnswer = q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '';
+      if (hasCorrectAnswer) {
+        if (q.isCorrect) {
+          earnedPointsTotal += (q.earnedPoints != null && !isNaN(Number(q.earnedPoints)) ? Number(q.earnedPoints) : (hasPoints ? Number(q.points) : 0));
+          correctCount++;
+        } else {
+          wrongCount++;
+        }
+      }
+      // If question has no correct answer, do not attempt automatic evaluation or increment counts
+    }
+
+    const calculatedScore = possiblePointsTotal > 0 ? Math.round((earnedPointsTotal / possiblePointsTotal) * 100) : 0;
+    const finalScore = Number.isFinite(calculatedScore) ? calculatedScore : 0;
+
+    const completedAt = new Date();
+    // Atomic direct update in MongoDB Atlas to avoid Mongoose VersionError and parallel save issues
+    await StudentTestAssignmentModel.findByIdAndUpdate(assignmentId, {
+      $set: {
+        questions: assignment.questions,
+        status: 'COMPLETED',
+        completedAt,
+        totalPointsEarned: earnedPointsTotal,
+        correctCount,
+        wrongCount,
+        totalTimeTakenSeconds: totalTime,
+        scoreOutOf100: finalScore,
+      },
+    });
+
+    // Update publish history in Atlas
+    try {
+      const publishHistory = await PublishHistoryModel.findOne({ publishId: assignment.publishedTestId });
+      if (publishHistory) {
+        const currentIncomplete = Number(publishHistory.incompleteCount) || 0;
+        const decIncomplete = currentIncomplete > 0 ? -1 : 0;
+
+        await PublishHistoryModel.updateOne(
+          { publishId: assignment.publishedTestId },
+          {
+            $inc: {
+              completedCount: 1,
+              ...(decIncomplete !== 0 ? { incompleteCount: decIncomplete } : {}),
+            },
+          }
+        );
+        await PublishHistoryModel.updateOne(
+          { publishId: assignment.publishedTestId, 'studentsStatus.studentId': studentId },
+          {
+            $set: {
+              'studentsStatus.$.status': 'COMPLETED',
+              'studentsStatus.$.completionDate': new Date().toISOString().split('T')[0],
+              'studentsStatus.$.completionTime': new Date().toLocaleTimeString(),
+              'studentsStatus.$.scoreOutOf100': finalScore,
+            },
+          }
+        );
+      }
+    } catch (historyErr: any) {
+      console.error('[Submit] Warning: Failed to update publish history record:', historyErr.message);
+      // Non-blocking: student assignment is already safely completed in MongoDB Atlas
+    }
+
+    return res.json({
+      status: 'COMPLETED',
+      scoreOutOf100: finalScore,
+      totalPointsEarned: earnedPointsTotal,
+      correctCount,
+      wrongCount,
+      totalTimeTakenSeconds: totalTime,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to submit assessment', details: err.message });
+  }
+});
+
+// ==========================================
+// 7. PUBLISH HISTORY & DRILL-DOWN
+// ==========================================
+
+// Get All Publish History
+router.get('/publish-history', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const history = await PublishHistoryModel.find().sort({ createdAt: -1 });
+
+    const publishIds = history.map((h) => h.publishId).filter(Boolean);
+    const pubTests = await PublishedTestModel.find(
+      { _id: { $in: publishIds } },
+      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1 }
+    ).lean();
+    const pubTestMap = new Map<string, any>(pubTests.map((pt: any) => [pt._id.toString(), pt]));
+
+    // Aggregation of actual assigned student counts per school per publishedTestId
+    const schoolCountsAgg = await StudentTestAssignmentModel.aggregate([
+      {
+        $group: {
+          _id: { publishedTestId: '$publishedTestId', schoolName: '$schoolName', schoolId: '$schoolId' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const schoolCountsMap = new Map<string, Array<{ schoolName: string; schoolId?: string; count: number }>>();
+    for (const item of schoolCountsAgg) {
+      const pId = item._id.publishedTestId;
+      const sName = item._id.schoolName || 'Unknown School';
+      if (!schoolCountsMap.has(pId)) {
+        schoolCountsMap.set(pId, []);
+      }
+      schoolCountsMap.get(pId)!.push({ schoolName: sName, schoolId: item._id.schoolId, count: item.count });
+    }
+
+    const formatted = formatDocs(history).map((h: any) => {
+      let schoolCounts = schoolCountsMap.get(h.publishId) || [];
+      // Fallback if no live assignments exist (e.g. legacy publish records)
+      if (schoolCounts.length === 0) {
+        if (Array.isArray(h.studentsStatus) && h.studentsStatus.length > 0) {
+          const sMap = new Map<string, number>();
+          for (const st of h.studentsStatus) {
+            const name = st.schoolName || h.schoolName || 'School';
+            sMap.set(name, (sMap.get(name) || 0) + 1);
+          }
+          schoolCounts = Array.from(sMap.entries()).map(([schoolName, count]) => ({ schoolName, count }));
+        } else if (h.schoolNames && h.schoolNames.length > 0) {
+          schoolCounts = h.schoolNames.map((name: string) => ({
+            schoolName: name,
+            count: Math.round((h.totalRecipients || 0) / h.schoolNames.length) || 1,
+          }));
+        } else if (h.schoolName) {
+          schoolCounts = [{ schoolName: h.schoolName, count: h.totalRecipients || 0 }];
+        }
+      }
+
+      const pub = pubTestMap.get(h.publishId);
+      return {
+        ...h,
+        schoolCounts,
+        startDate: h.startDate || pub?.startDate || h.date,
+        startTime: h.startTime || pub?.startTime || h.time,
+        endDate: h.endDate || pub?.endDate || '',
+        endTime: h.endTime || pub?.endTime || '',
+        createdAt: h.createdAt || pub?.createdAt,
+      };
+    });
+
+    return res.json(formatted);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch publish history', details: err.message });
+  }
+});
+
+// Get Specific Publish History Record with Who Completed & Who Did Not Complete
+router.get('/publish-history/:publishId', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { publishId } = req.params;
+    const historyDoc = await PublishHistoryModel.findOne({ publishId });
+    if (!historyDoc) return res.status(404).json({ error: 'Publish history record not found' });
+
+    const pubTest = await PublishedTestModel.findById(publishId).lean();
+
+    // Fetch live assignments from MongoDB collection studenttestassignments
+    const liveAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const assignMap = new Map<string, any>();
+    for (const a of liveAssignments) {
+      assignMap.set(a.studentId, a);
+    }
+
+    const history = formatDoc(historyDoc);
+
+    const processedStudentIds = new Set<string>();
+    const studentsStatus: any[] = (history.studentsStatus || []).map((s: any) => {
+      const sId = s.studentId || s.uniqueStudentId;
+      processedStudentIds.add(sId);
+      const live = assignMap.get(sId);
+      const effectiveStatus = live ? live.status : s.status;
+      const effectiveExitType = effectiveStatus === 'COMPLETED' ? null : (live ? live.exitType : s.exitType);
+      const effectiveScore = live ? live.scoreOutOf100 : s.scoreOutOf100;
+      return {
+        ...s,
+        studentName: s.studentName || live?.studentName || 'Student',
+        schoolId: live?.schoolId || s.schoolId || history.schoolId || '',
+        schoolName: live?.schoolName || s.schoolName || history.schoolName || '',
+        className: live?.className || s.className || '',
+        section: live?.section || s.section || '',
+        assessmentName: history.publishName,
+        status: effectiveStatus,
+        exitType: effectiveExitType || null,
+        scoreOutOf100: effectiveScore != null ? effectiveScore : 0,
+      };
+    });
+
+    for (const [stId, live] of assignMap.entries()) {
+      if (!processedStudentIds.has(stId)) {
+        studentsStatus.push({
+          studentId: stId,
+          uniqueStudentId: stId,
+          studentName: live.studentName || 'Student',
+          schoolId: live.schoolId || history.schoolId || '',
+          schoolName: live.schoolName || history.schoolName || '',
+          className: live.className || '',
+          section: live.section || '',
+          assessmentName: history.publishName,
+          status: live.status,
+          exitType: live.exitType || null,
+          scoreOutOf100: live.scoreOutOf100 != null ? live.scoreOutOf100 : 0,
+        });
+      }
+    }
+
+    // Resolve targets configuration: check historyDoc.targets, historyDoc.target, or PublishedTestModel.targets
+    let rawTargets: any[] = [];
+    if (Array.isArray(history.targets) && history.targets.length > 0) {
+      rawTargets = history.targets;
+    } else {
+      if (pubTest && Array.isArray(pubTest.targets) && pubTest.targets.length > 0) {
+        rawTargets = pubTest.targets;
+      } else if (history.target) {
+        rawTargets = [history.target];
+      } else if (pubTest?.target) {
+        rawTargets = [pubTest.target];
+      } else {
+        rawTargets = [
+          {
+            schoolNames: history.schoolNames || (history.schoolName ? [history.schoolName] : []),
+            schoolIds: history.schoolIds || (history.schoolId ? [history.schoolId] : []),
+            classes: history.classes || ['All Classes'],
+            sections: history.sections || [],
+          },
+        ];
+      }
+    }
+
+    // For each target, compute the exact assigned student count from studentsStatus
+    const allSchoolsList = await SchoolModel.find({}, { _id: 1, name: 1 });
+    const totalSchoolsCount = allSchoolsList.length;
+
+    const resolvedTargets = rawTargets.map((t: any, idx: number) => {
+      // Determine if target covers All Schools
+      const isAllSchools =
+        t.isAllSchools === true ||
+        (Array.isArray(t.schoolIds) && (t.schoolIds.includes('ALL') || (totalSchoolsCount > 1 && t.schoolIds.length >= totalSchoolsCount))) ||
+        (Array.isArray(t.schoolNames) && t.schoolNames.includes('All Schools'));
+
+      // Count students matching this specific target configuration
+      const matchingCount = studentsStatus.filter((st: any) => {
+        const matchSchool =
+          isAllSchools ||
+          !t.schoolIds ||
+          t.schoolIds.length === 0 ||
+          t.schoolIds.includes(st.schoolId) ||
+          (Array.isArray(t.schoolNames) && t.schoolNames.includes(st.schoolName));
+
+        const matchClass =
+          !t.classes ||
+          t.classes.length === 0 ||
+          t.classes.includes('ALL') ||
+          t.classes.includes('All Classes') ||
+          t.classes.some((c: string) => c.toLowerCase() === (st.className || '').toLowerCase());
+
+        const matchSection =
+          !t.sections ||
+          t.sections.length === 0 ||
+          t.sections.includes('ALL') ||
+          t.sections.includes('All Sections') ||
+          t.sections.some((sec: string) => sec.toUpperCase() === (st.section || '').toUpperCase());
+
+        const matchStudent =
+          !t.studentIds ||
+          t.studentIds.length === 0 ||
+          t.studentIds.includes('ALL') ||
+          t.studentIds.includes(st.studentId) ||
+          t.studentIds.includes(st.uniqueStudentId);
+
+        return matchSchool && matchClass && matchSection && matchStudent;
+      }).length;
+
+      return {
+        ...t,
+        targetNumber: idx + 1,
+        isAllSchools,
+        assignedCount: matchingCount > 0 ? matchingCount : (t.assignedCount != null ? t.assignedCount : 0),
+      };
+    });
+
+    const completedStudents = studentsStatus.filter((s: any) => s.status === 'COMPLETED');
+    const notCompletedStudents = studentsStatus.filter((s: any) => s.status !== 'COMPLETED');
+
+    // School counts summary
+    const schoolCountsMap = new Map<string, number>();
+    for (const st of studentsStatus) {
+      const sName = st.schoolName || history.schoolName || 'School';
+      schoolCountsMap.set(sName, (schoolCountsMap.get(sName) || 0) + 1);
+    }
+    const schoolCounts = Array.from(schoolCountsMap.entries()).map(([schoolName, count]) => ({ schoolName, count }));
+
+    return res.json({
+      ...history,
+      startDate: history.startDate || pubTest?.startDate || history.date,
+      startTime: history.startTime || pubTest?.startTime || history.time,
+      endDate: history.endDate || pubTest?.endDate || '',
+      endTime: history.endTime || pubTest?.endTime || '',
+      createdAt: history.createdAt || pubTest?.createdAt,
+      targets: resolvedTargets,
+      schoolCounts,
+      studentsStatus,
+      completedStudents,
+      notCompletedStudents,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch publish history detail', details: err.message });
+  }
+});
+
+// ==========================================
+// 8. REPORTS & STUDENT TEST TIMELINE
+// ==========================================
+
+// Get unique classes for a school from actual student records in MongoDB Atlas
+router.get('/reports/schools/:schoolId/classes', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+    const rawClasses = await UserModel.distinct('className', {
+      role: 'student',
+      schoolId,
+    });
+
+    const cleanClasses = Array.from(
+      new Set(
+        rawClasses
+          .filter((c: any) => typeof c === 'string' && c.trim().length > 0)
+          .map((c: string) => c.trim())
+      )
+    ).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    return res.json({ classes: cleanClasses });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch classes for school', details: err.message });
+  }
+});
+
+// Helper to escape regex special characters
+const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Get unique sections for a school and class from actual student records in MongoDB Atlas
+router.get('/reports/schools/:schoolId/sections', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+    const { className } = req.query as { className?: string };
+
+    const query: any = {
+      role: 'student',
+      schoolId,
+    };
+
+    if (className && className.trim()) {
+      query.className = { $regex: new RegExp(`^${escapeRegExp(className.trim())}$`, 'i') };
+    }
+
+    const rawSections = await UserModel.distinct('section', query);
+
+    const cleanSections = Array.from(
+      new Set(
+        rawSections
+          .filter((s: any) => typeof s === 'string' && s.trim().length > 0)
+          .map((s: string) => s.trim().toUpperCase())
+      )
+    ).sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    return res.json({ sections: cleanSections });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch sections for school and class', details: err.message });
+  }
+});
+
+// Super Admin Student Reports List (School -> Class -> Section -> Search)
+router.get('/reports/schools/:schoolId/students', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+    const { className, section, search } = req.query as { className?: string; section?: string; search?: string };
+
+    const query: any = { role: 'student', schoolId };
+
+    if (className && className.trim()) {
+      query.className = { $regex: new RegExp(`^${escapeRegExp(className.trim())}$`, 'i') };
+    }
+    if (section && section.trim()) {
+      query.section = { $regex: new RegExp(`^${escapeRegExp(section.trim())}$`, 'i') };
+    }
+    if (search && search.trim()) {
+      const escapedQ = escapeRegExp(search.trim());
+      query.$or = [
+        { studentName: { $regex: escapedQ, $options: 'i' } },
+        { schoolAdmissionNumber: { $regex: escapedQ, $options: 'i' } },
+        { uniqueStudentId: { $regex: escapedQ, $options: 'i' } },
+        { username: { $regex: escapedQ, $options: 'i' } },
+      ];
+    }
+
+    const students = await UserModel.find(query);
+    const sorted = formatDocs(students).sort((a: any, b: any) =>
+      (a.studentName || '').localeCompare(b.studentName || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+    return res.json(sorted);
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch student reports list', details: err.message });
+  }
+});
+
+// Student Individual Report & Timeline
+router.get('/reports/students/:studentId', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { studentId } = req.params;
+
+    // Student can only access their own report
+    if (req.user!.role === 'student' && req.user!.studentId !== studentId && req.user!.username !== studentId) {
+      return res.status(403).json({ error: 'Access forbidden: You can only view your own report' });
+    }
+
+    const isMongoId = mongoose.Types.ObjectId.isValid(studentId);
+    const student = await UserModel.findOne({
+      $or: [
+        { uniqueStudentId: studentId },
+        { username: studentId },
+        ...(isMongoId ? [{ _id: studentId }] : []),
+      ],
+    });
+
+    const targetStudentId = student?.uniqueStudentId || studentId;
+    const assignments = await StudentTestAssignmentModel.find({
+      $or: [
+        { studentId: targetStudentId },
+        { studentId },
+      ],
+    }).sort({ createdAt: 1 });
+
+    // Timeline entries
+    const timeline = assignments.map((a) => ({
+      assignmentId: a._id.toString(),
+      publishedTestId: a.publishedTestId,
+      testName: a.publishName,
+      status: a.status,
+      exitType: a.status === 'COMPLETED' ? null : (a.exitType || null),
+      date: a.completedAt ? a.completedAt.toISOString().split('T')[0] : a.startedAt ? a.startedAt.toISOString().split('T')[0] : 'Assigned',
+      scoreOutOf100: a.scoreOutOf100,
+      totalPointsEarned: a.totalPointsEarned,
+      correctCount: a.correctCount,
+      wrongCount: a.wrongCount,
+      totalTimeTakenSeconds: a.totalTimeTakenSeconds,
+      questions: a.questions, // Full question-level details: answers, time taken, points, correct/wrong
+    }));
+
+    return res.json({
+      student: student ? {
+        id: student._id.toString(),
+        studentName: student.studentName,
+        className: student.className,
+        section: student.section,
+        schoolAdmissionNumber: student.schoolAdmissionNumber,
+        uniqueStudentId: student.uniqueStudentId,
+        schoolName: student.schoolName,
+      } : null,
+      timeline,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to fetch student timeline report', details: err.message });
+  }
+});
+
+export default router;
