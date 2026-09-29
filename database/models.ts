@@ -58,6 +58,8 @@ export const UserSchema = new Schema<IUserDocument>(
   }
 );
 
+UserSchema.index({ role: 1, schoolId: 1, className: 1, section: 1 });
+
 // ==========================================
 // 2. SCHOOL SCHEMA & MODEL
 // ==========================================
@@ -191,6 +193,8 @@ export const QuestionSchema = new Schema<IQuestionDocument>(
   }
 );
 
+QuestionSchema.index({ groupId: 1, difficulty: 1, createdAt: -1 });
+
 // ==========================================
 // 5. PUBLISHED TEST SCHEMA & MODEL
 // ==========================================
@@ -220,6 +224,7 @@ export interface IPublishedTestDocument extends Document {
   endTime: string;
   shuffle: boolean;
   questionIds: string[];
+  questionsSnapshot?: any[];
   randomCount?: number;
   createdBy?: string;
   status?: 'ACTIVE' | 'PAUSED';
@@ -263,6 +268,7 @@ export const PublishedTestSchema = new Schema<IPublishedTestDocument>(
     endTime: { type: String, required: true },
     shuffle: { type: Boolean, default: false },
     questionIds: { type: [String], default: [] },
+    questionsSnapshot: [{ type: Schema.Types.Mixed }],
     randomCount: { type: Number, default: 5 },
     createdBy: { type: String, default: 'san' },
   },
@@ -377,6 +383,9 @@ export const StudentTestAssignmentSchema = new Schema<IStudentTestAssignmentDocu
 
 // Compound Unique Index: prevents duplicate assignments of the same test to the same student
 StudentTestAssignmentSchema.index({ publishedTestId: 1, studentId: 1 }, { unique: true });
+StudentTestAssignmentSchema.index({ studentId: 1, createdAt: -1 });
+StudentTestAssignmentSchema.index({ schoolId: 1, status: 1 });
+StudentTestAssignmentSchema.index({ publishedTestId: 1, schoolId: 1 });
 
 // ==========================================
 // 7. PUBLISH HISTORY SCHEMA & MODEL
@@ -406,6 +415,9 @@ export interface IPublishHistoryDocument extends Document {
   }>;
   publishMode: 'Selected Questions' | 'Random Questions';
   assignedQuestionsCount: number;
+  questionIds?: string[];
+  questionsSnapshot?: any[];
+  randomCount?: number;
   completedCount: number;
   incompleteCount: number;
   studentsStatus: any[];
@@ -449,6 +461,9 @@ export const PublishHistorySchema = new Schema<IPublishHistoryDocument>(
     },
     publishMode: { type: String, required: true },
     assignedQuestionsCount: { type: Number, default: 0 },
+    questionIds: { type: [String], default: [] },
+    questionsSnapshot: [{ type: Schema.Types.Mixed }],
+    randomCount: { type: Number },
     completedCount: { type: Number, default: 0 },
     incompleteCount: { type: Number, default: 0 },
     studentsStatus: [{ type: Schema.Types.Mixed }],
@@ -476,7 +491,7 @@ export const PublishHistorySchema = new Schema<IPublishHistoryDocument>(
   }
 );
 
-// Models registration
+PublishHistorySchema.index({ updatedAt: -1, createdAt: -1 });
 export const UserModel = mongoose.models.User || mongoose.model<IUserDocument>('User', UserSchema);
 export const SchoolModel = mongoose.models.School || mongoose.model<ISchoolDocument>('School', SchoolSchema);
 export const QuestionGroupModel = mongoose.models.QuestionGroup || mongoose.model<IQuestionGroupDocument>('QuestionGroup', QuestionGroupSchema);

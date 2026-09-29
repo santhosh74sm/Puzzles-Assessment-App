@@ -41,12 +41,15 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
   const [publishFormState, setPublishFormState] = useState<PublishAssessmentFormState | undefined>(undefined);
   const [editingPublishId, setEditingPublishId] = useState<string | null>(null);
 
-  const headers = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
+  const headers = React.useMemo(
+    () => ({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    }),
+    [token]
+  );
 
-  const loadSchools = async () => {
+  const loadSchools = React.useCallback(async () => {
     try {
       const res = await fetch('/api/schools', { headers });
       const data = await res.json();
@@ -58,9 +61,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     } catch (e) {
       console.error('Failed to load schools', e);
     }
-  };
+  }, [headers]);
 
-  const loadQuestionBank = async () => {
+  const loadQuestionBank = React.useCallback(async () => {
     try {
       const [resGrp, resQ] = await Promise.all([
         fetch('/api/question-groups', { headers }),
@@ -73,9 +76,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     } catch (e) {
       console.error('Failed to load question bank', e);
     }
-  };
+  }, [headers]);
 
-  const loadPublishHistory = async () => {
+  const loadPublishHistory = React.useCallback(async () => {
     try {
       const res = await fetch('/api/publish-history', { headers });
       const data = await res.json();
@@ -83,9 +86,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     } catch (e) {
       console.error('Failed to load publish history', e);
     }
-  };
+  }, [headers]);
 
-  const loadHistoryDetail = async (publishId: string) => {
+  const loadHistoryDetail = React.useCallback(async (publishId: string) => {
     try {
       const res = await fetch(`/api/publish-history/${publishId}`, { headers });
       const data = await res.json();
@@ -93,9 +96,9 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     } catch (e) {
       console.error('Failed to load history detail', e);
     }
-  };
+  }, [headers]);
 
-  const handleEditAssessment = async (publishId: string) => {
+  const handleEditAssessment = React.useCallback(async (publishId: string) => {
     try {
       const res = await fetch(`/api/published-tests/${publishId}`, { headers });
       if (!res.ok) {
@@ -153,21 +156,21 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
     } catch (e) {
       console.error('Failed to load assessment for editing', e);
     }
-  };
+  }, [headers]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = React.useCallback(() => {
     setEditingPublishId(null);
     setPublishFormState(undefined);
     setActiveTab('history');
-  };
+  }, []);
 
-  const loadAllInitialData = async () => {
+  const loadAllInitialData = React.useCallback(async () => {
     await Promise.all([
       loadSchools(),
       loadQuestionBank(),
       loadPublishHistory(),
     ]);
-  };
+  }, [loadSchools, loadQuestionBank, loadPublishHistory]);
 
   useEffect(() => {
     loadAllInitialData();

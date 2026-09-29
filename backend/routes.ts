@@ -360,6 +360,49 @@ router.delete('/schools/:schoolId/admins/:adminId', authenticate, requireRole('s
   }
 });
 
+// Delete School Workspace (Super Admin Only)
+router.delete('/schools/:schoolId', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.params;
+
+    const school = await SchoolModel.findById(schoolId);
+    if (!school) {
+      return res.status(404).json({ error: 'School not found' });
+    }
+
+    const schoolIdStr = school._id.toString();
+    const schoolName = school.name;
+
+    // 1. Delete all School Admin account(s) belonging to this school
+    await UserModel.deleteMany({ role: 'school_admin', schoolId: schoolIdStr });
+
+    // 2. Delete all Student account(s) belonging to this school
+    await UserModel.deleteMany({ role: 'student', schoolId: schoolIdStr });
+
+    // 3. Delete active / NOT_STARTED assessment assignments for this school
+    // Note: Preserve historical COMPLETED, INCOMPLETE, LOCKED_INCOMPLETE attempt records!
+    await StudentTestAssignmentModel.deleteMany({
+      $or: [
+        { schoolId: schoolIdStr },
+        { schoolId: school.id },
+        { schoolName: school.name },
+      ],
+      status: 'NOT_STARTED',
+    });
+
+    // 4. Delete the School Workspace record
+    await SchoolModel.findByIdAndDelete(school._id);
+
+    return res.json({
+      success: true,
+      message: `School Workspace '${schoolName}' and associated admin/student accounts have been deleted. Historical assessment data has been preserved.`,
+      deletedSchoolId: schoolIdStr,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete school workspace', details: err.message });
+  }
+});
+
 // ==========================================
 // 3. STUDENT REGISTRATION & MANAGEMENT
 // ==========================================
@@ -469,7 +512,7 @@ router.get('/students', authenticate, async (req: Request, res: Response) => {
       ];
     }
 
-    const list = await UserModel.find(query);
+    const list = await UserModel.find(query, { passwordHash: 0 });
     const sorted = formatDocs(list).sort((a: any, b: any) =>
       (a.studentName || '').localeCompare(b.studentName || '', undefined, { numeric: true, sensitivity: 'base' })
     );
@@ -752,6 +795,68 @@ router.get('/questions', authenticate, async (req: Request, res: Response) => {
     return res.json(formatDocs(list));
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to list questions', details: err.message });
+  }
+});
+
+// Delete Question from Question Bank (Super Admin Only)
+// CRITICAL: Deleting from Question Bank removes ONLY the live/current Question Bank record.
+// Lifecycle rule for student assignments:
+// - COMPLETED, IN_PROGRESS, INCOMPLETE, LOCKED_INCOMPLETE: preserve historical snapshot permanently.
+// - NOT_STARTED: safely remove the deleted question from pending unstarted assignments.
+// - Historical PublishedTest & PublishHistory snapshots remain strictly preserved!
+router.delete('/questions/:id', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    let question = await QuestionModel.findById(id);
+    if (!question && mongoose.Types.ObjectId.isValid(id)) {
+      question = await QuestionModel.findById(new mongoose.Types.ObjectId(id));
+    }
+
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found in Question Bank' });
+    }
+
+    const questionContentPreview = question.content
+      ? question.content.substring(0, 60) + (question.content.length > 60 ? '...' : '')
+      : 'Question';
+
+    const deletedIdStr = question._id.toString();
+
+    // 1. Delete ONLY the live Question Bank document from QuestionModel
+    await QuestionModel.findByIdAndDelete(question._id);
+
+    // 2. Safely remove the deleted question ONLY from NOT_STARTED student assignments that actually contain it
+    // DO NOT touch COMPLETED, IN_PROGRESS, INCOMPLETE, or LOCKED_INCOMPLETE attempts!
+    const matchingAssignments = await StudentTestAssignmentModel.find({
+      status: 'NOT_STARTED',
+      $or: [
+        { 'questions.questionId': deletedIdStr },
+        { 'questions.id': deletedIdStr },
+        { 'questions._id': deletedIdStr },
+      ],
+    });
+    for (const assign of matchingAssignments) {
+      if (Array.isArray(assign.questions)) {
+        const originalCount = assign.questions.length;
+        assign.questions = assign.questions.filter((q: any) => {
+          const qId = String(q.questionId || q.id || q._id || '');
+          return qId !== deletedIdStr;
+        });
+        if (assign.questions.length !== originalCount) {
+          assign.totalQuestions = assign.questions.length;
+          await assign.save();
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Question '${questionContentPreview}' deleted successfully from Question Bank. Historical assessment snapshots remain preserved.`,
+      deletedId: deletedIdStr,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete question', details: err.message });
   }
 });
 
@@ -1365,9 +1470,8 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
     }
 
     if (publishMode === 'Random Questions') {
-      const allQDocs = await QuestionModel.find();
-      const allQList: Question[] = formatDocs(allQDocs);
-      const eligiblePool = allQList.filter((q) => (selectedQuestionIds || []).includes(q.id));
+      const eligibleQDocs = await QuestionModel.find({ _id: { $in: selectedQuestionIds || [] } });
+      const eligiblePool: Question[] = formatDocs(eligibleQDocs);
       if (eligiblePool.length === 0) {
         return res.status(400).json({ error: '0 eligible questions are available. Select at least one Group and Difficulty.' });
       }
@@ -1435,8 +1539,24 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       };
     });
 
-    const allQuestionsDocs = await QuestionModel.find();
+    const allQuestionsDocs = await QuestionModel.find({ _id: { $in: selectedQuestionIds || [] } });
     const allQuestions: Question[] = formatDocs(allQuestionsDocs);
+
+    const eligibleQuestionsSnapshot = allQuestions
+      .filter((q) => (selectedQuestionIds || []).includes(q.id))
+      .map((q) => ({
+        id: q.id,
+        questionId: q.id,
+        groupName: (q.groupName || 'General').trim(),
+        difficulty: (q.difficulty || 'Medium').trim(),
+        content: q.content,
+        points: q.points != null ? Number(q.points) : null,
+        timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+        timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+        options: q.options || [],
+        metadata: q.metadata || {},
+        pairs: q.metadata?.pairs || [],
+      }));
 
     const allTargetStudentIds = Array.from(
       new Set(validation.normalizedTargets!.flatMap((t) => t.studentIds || []))
@@ -1461,6 +1581,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       endDate,
       endTime: endTime || '23:59',
       questionIds: selectedQuestionIds || [],
+      questionsSnapshot: eligibleQuestionsSnapshot,
       randomCount: randomCount ? Number(randomCount) : undefined,
       shuffle: Boolean(shuffle),
       createdBy: req.user!.username,
@@ -1472,8 +1593,14 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
     const publishedTestId = newPublish._id.toString();
     const newAssignments: any[] = [];
 
-    // Pre-fetch all past completed assignments for adaptive rule engine if in Random mode
-    const pastAssignmentsDocs = publishMode === 'Random Questions' ? await StudentTestAssignmentModel.find() : [];
+    // Pre-fetch past assignments only for candidate students if in Random mode
+    const candidateStudentIds = candidateStudents.map((s) => s.uniqueStudentId).filter(Boolean);
+    const pastAssignmentsDocs = publishMode === 'Random Questions' && candidateStudentIds.length > 0
+      ? await StudentTestAssignmentModel.find(
+          { studentId: { $in: candidateStudentIds } },
+          { studentId: 1, questions: 1, status: 1, scoreOutOf100: 1, startedAt: 1, completedAt: 1 }
+        )
+      : [];
     const pastAssignments = formatDocs(pastAssignmentsDocs);
 
     // Create assignments for every unique target student (guarantees exactly 1 assignment per student)
@@ -1556,7 +1683,10 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       totalRecipients: candidateStudents.length,
       targets: targetsRecord,
       publishMode,
-      assignedQuestionsCount: publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount || 0),
+      assignedQuestionsCount: publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount ? Number(randomCount) : 0),
+      questionIds: selectedQuestionIds || [],
+      questionsSnapshot: eligibleQuestionsSnapshot,
+      randomCount: randomCount ? Number(randomCount) : undefined,
       completedCount: 0,
       incompleteCount: 0,
       status: 'ACTIVE',
@@ -1647,9 +1777,8 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     }
 
     if (publishMode === 'Random Questions') {
-      const allQDocs = await QuestionModel.find();
-      const allQList: Question[] = formatDocs(allQDocs);
-      const eligiblePool = allQList.filter((q) => (selectedQuestionIds || []).includes(q.id));
+      const eligibleQDocs = await QuestionModel.find({ _id: { $in: selectedQuestionIds || [] } });
+      const eligiblePool: Question[] = formatDocs(eligibleQDocs);
       if (eligiblePool.length === 0) {
         return res.status(400).json({ error: '0 eligible questions are available. Select at least one Group and Difficulty.' });
       }
@@ -1715,6 +1844,24 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
       };
     });
 
+    // Prepare questions snapshot
+    const allQuestionsDocs = await QuestionModel.find({ _id: { $in: selectedQuestionIds || [] } });
+    const allQuestions: Question[] = formatDocs(allQuestionsDocs);
+    const selectedQuestionsDocs = allQuestions.filter((q) => (selectedQuestionIds || []).includes(q.id));
+    const eligibleQuestionsSnapshot = selectedQuestionsDocs.map((q) => ({
+      id: q.id,
+      questionId: q.id,
+      groupName: (q.groupName || 'General').trim(),
+      difficulty: (q.difficulty || 'Medium').trim(),
+      content: q.content,
+      points: q.points != null ? Number(q.points) : null,
+      timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+      timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+      options: q.options || [],
+      metadata: q.metadata || {},
+      pairs: q.metadata?.pairs || [],
+    }));
+
     // Update published test document with latest update timestamp
     const serverNow = new Date();
     pubTest.publishName = publishName.trim();
@@ -1734,6 +1881,7 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     pubTest.endDate = endDate;
     pubTest.endTime = endTime || '23:59';
     pubTest.questionIds = selectedQuestionIds || [];
+    pubTest.questionsSnapshot = eligibleQuestionsSnapshot;
     pubTest.randomCount = randomCount ? Number(randomCount) : undefined;
     pubTest.shuffle = Boolean(shuffle);
     pubTest.publishedAt = serverNow;
@@ -1785,10 +1933,13 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     }
 
     // Prepare questions for newly assigned students or update NOT_STARTED students
-    const allQuestionsDocs = await QuestionModel.find();
-    const allQuestions: Question[] = formatDocs(allQuestionsDocs);
-    const selectedQuestionsDocs = allQuestions.filter((q) => (selectedQuestionIds || []).includes(q.id));
-    const pastAssignmentsDocs = publishMode === 'Random Questions' ? await StudentTestAssignmentModel.find() : [];
+    const candidateStudentIds = candidateStudents.map((s) => s.uniqueStudentId).filter(Boolean);
+    const pastAssignmentsDocs = publishMode === 'Random Questions' && candidateStudentIds.length > 0
+      ? await StudentTestAssignmentModel.find(
+          { studentId: { $in: candidateStudentIds } },
+          { studentId: 1, questions: 1, status: 1, scoreOutOf100: 1, startedAt: 1, completedAt: 1 }
+        )
+      : [];
     const pastAssignments = formatDocs(pastAssignmentsDocs);
 
     // For any candidate student who does not have an assignment yet, create one safely
@@ -1914,6 +2065,9 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
       historyDoc.targets = targetsRecord;
       historyDoc.totalRecipients = allCurrentAssignments.length;
       historyDoc.assignedQuestionsCount = publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount || 0);
+      historyDoc.questionIds = selectedQuestionIds || [];
+      historyDoc.questionsSnapshot = eligibleQuestionsSnapshot;
+      historyDoc.randomCount = randomCount ? Number(randomCount) : undefined;
       historyDoc.completedCount = currentCompleted;
       historyDoc.incompleteCount = currentIncomplete;
 
@@ -2026,6 +2180,19 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
     }
 
+    // Pre-fetch active question IDs only for question IDs present in student's NOT_STARTED tests
+    const unstartedQuestionIds = Array.from(
+      new Set(
+        assignments
+          .filter((a) => a.status === 'NOT_STARTED')
+          .flatMap((a) => (a.questions || []).map((q: any) => String(q.questionId || q.id || q._id || '')).filter(Boolean))
+      )
+    );
+    const activeQuestionsDocs = unstartedQuestionIds.length > 0
+      ? await QuestionModel.find({ _id: { $in: unstartedQuestionIds } }, { _id: 1 }).lean()
+      : [];
+    const activeQuestionIdSet = new Set(activeQuestionsDocs.map((q: any) => q._id.toString()));
+
     const result: any[] = [];
     const staleAssignmentsToDelete: string[] = [];
 
@@ -2064,11 +2231,22 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         }
       }
 
+      let activeQuestionsCount = (a.questions || []).length;
+      if (a.status === 'NOT_STARTED') {
+        const validActive = (a.questions || []).filter((q: any) => {
+          const qId = String(q.questionId || q.id || q._id || '');
+          return activeQuestionIdSet.has(qId);
+        });
+        activeQuestionsCount = validActive.length;
+      }
+
       const isPaused = pub?.isPaused === true || pub?.status === 'PAUSED';
-      const canStart = a.status === 'NOT_STARTED' && !isUpcoming && !isExpired && !isPaused;
+      const hasActiveQuestions = a.status !== 'NOT_STARTED' || activeQuestionsCount > 0;
+      const canStart = a.status === 'NOT_STARTED' && !isUpcoming && !isExpired && !isPaused && hasActiveQuestions;
 
       result.push({
         ...doc,
+        totalQuestions: activeQuestionsCount,
         assignmentId: a._id.toString(),
         id: a._id.toString(),
         publishedTestId: pubId,
@@ -2148,6 +2326,29 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       return res.status(400).json({ error: 'Only unstarted assessments can be started.' });
     }
 
+    // Defensive active question check:
+    // Ensure that if any question was deleted from the active Question Bank while this assignment was NOT_STARTED,
+    // that deleted question is excluded when starting.
+    const allQuestionsDocs = await QuestionModel.find();
+    const activeQuestionIdSet = new Set(allQuestionsDocs.map((q) => q._id.toString()));
+
+    const activeQuestions = (assignment.questions || []).filter((q: any) => {
+      const qId = String(q.questionId || q.id || q._id || '');
+      return activeQuestionIdSet.has(qId);
+    });
+
+    if (activeQuestions.length === 0) {
+      assignment.questions = [];
+      assignment.totalQuestions = 0;
+      await assignment.save();
+      return res.status(400).json({
+        error: 'This assessment cannot be started because its questions have been removed from the active Question Bank.',
+      });
+    }
+
+    assignment.questions = activeQuestions;
+    assignment.totalQuestions = activeQuestions.length;
+
     // Set startedAt and status to IN_PROGRESS on initial start (permanently saved in MongoDB Atlas)
     assignment.status = 'IN_PROGRESS';
     assignment.exitType = null;
@@ -2160,17 +2361,15 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       { $set: { 'studentsStatus.$.status': 'IN_PROGRESS', 'studentsStatus.$.exitType': null } }
     );
 
-    // Fetch question options and sanitize correct answers
-    const allQuestionsDocs = await QuestionModel.find();
     const qMap = new Map<string, any>();
     for (const q of allQuestionsDocs) {
       qMap.set(q._id.toString(), q);
     }
 
     const sanitizedQuestions = assignment.questions.map((q: any) => {
-      const fullQ = qMap.get(q.questionId);
+      const fullQ = qMap.get(String(q.questionId || q.id || q._id));
       return {
-        questionId: q.questionId,
+        questionId: q.questionId || q.id || q._id,
         groupName: q.groupName || fullQ?.groupName || 'General',
         difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
         content: q.content || fullQ?.content || 'Question',
@@ -2575,7 +2774,7 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
 // Get All Publish History
 router.get('/publish-history', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
   try {
-    const history = await PublishHistoryModel.find().sort({ updatedAt: -1, publishedAt: -1, createdAt: -1 });
+    const history = await PublishHistoryModel.find({}, { questionsSnapshot: 0, studentsStatus: 0 }).sort({ updatedAt: -1, publishedAt: -1, createdAt: -1 });
 
     const publishIds = history.map((h) => h.publishId).filter(Boolean);
     const pubTests = await PublishedTestModel.find(
@@ -2584,15 +2783,18 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
     ).lean();
     const pubTestMap = new Map<string, any>(pubTests.map((pt: any) => [pt._id.toString(), pt]));
 
-    // Aggregation of actual assigned student counts per school per publishedTestId
-    const schoolCountsAgg = await StudentTestAssignmentModel.aggregate([
+    // Aggregation of actual assigned student counts per school per publishedTestId (filtered to active published tests)
+    const schoolCountsAgg = publishIds.length > 0 ? await StudentTestAssignmentModel.aggregate([
+      {
+        $match: { publishedTestId: { $in: publishIds } },
+      },
       {
         $group: {
           _id: { publishedTestId: '$publishedTestId', schoolName: '$schoolName', schoolId: '$schoolId' },
           count: { $sum: 1 },
         },
       },
-    ]);
+    ]) : [];
 
     const schoolCountsMap = new Map<string, Array<{ schoolName: string; schoolId?: string; count: number }>>();
     for (const item of schoolCountsAgg) {
@@ -2784,48 +2986,106 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
     const completedStudents = studentsStatus.filter((s: any) => s.status === 'COMPLETED');
     const notCompletedStudents = studentsStatus.filter((s: any) => s.status !== 'COMPLETED');
 
-    // Extract historical questions snapshot from live assignments, fallback to QuestionModel
+    // Extract historical questions snapshot from historyDoc / pubTest questionsSnapshot (preserves full eligible pool)
     const questionMap = new Map<string, any>();
-    for (const a of liveAssignments) {
-      if (Array.isArray(a.questions)) {
-        for (const q of a.questions) {
-          const qId = q.questionId || q.id || q._id;
-          if (qId && !questionMap.has(String(qId))) {
-            questionMap.set(String(qId), {
-              id: String(qId),
-              questionId: String(qId),
-              groupName: (q.groupName || 'General').trim(),
-              difficulty: (q.difficulty || 'Medium').trim(),
-              content: q.content || 'Question',
-              points: q.points != null ? Number(q.points) : null,
-              timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
-              timeSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
-              options: q.options || [],
-              metadata: q.metadata || {},
-              pairs: q.pairs || q.metadata?.pairs || [],
-            });
-          }
+
+    const storedSnapshot =
+      Array.isArray(history.questionsSnapshot) && history.questionsSnapshot.length > 0
+        ? history.questionsSnapshot
+        : Array.isArray(pubTest?.questionsSnapshot) && pubTest.questionsSnapshot.length > 0
+        ? pubTest.questionsSnapshot
+        : [];
+
+    for (const q of storedSnapshot) {
+      const qId = q.questionId || q.id || q._id;
+      if (qId && !questionMap.has(String(qId))) {
+        questionMap.set(String(qId), {
+          id: String(qId),
+          questionId: String(qId),
+          groupName: (q.groupName || 'General').trim(),
+          difficulty: (q.difficulty || 'Medium').trim(),
+          content: q.content || 'Question',
+          points: q.points != null ? Number(q.points) : null,
+          timeAllowedSeconds:
+            q.timeAllowedSeconds != null
+              ? Number(q.timeAllowedSeconds)
+              : q.timeSeconds != null
+              ? Number(q.timeSeconds)
+              : null,
+          timeSeconds:
+            q.timeAllowedSeconds != null
+              ? Number(q.timeAllowedSeconds)
+              : q.timeSeconds != null
+              ? Number(q.timeSeconds)
+              : null,
+          options: q.options || [],
+          metadata: q.metadata || {},
+          pairs: q.pairs || q.metadata?.pairs || [],
+        });
+      }
+    }
+
+    const targetQIds =
+      Array.isArray(history.questionIds) && history.questionIds.length > 0
+        ? history.questionIds
+        : Array.isArray(pubTest?.questionIds) && pubTest.questionIds.length > 0
+        ? pubTest.questionIds
+        : [];
+
+    if (questionMap.size === 0 && targetQIds.length > 0) {
+      const qDocs = await QuestionModel.find({ _id: { $in: targetQIds } });
+      for (const q of qDocs) {
+        const qId = q._id.toString();
+        if (!questionMap.has(qId)) {
+          questionMap.set(qId, {
+            id: qId,
+            questionId: qId,
+            groupName: (q.groupName || 'General').trim(),
+            difficulty: (q.difficulty || 'Medium').trim(),
+            content: q.content,
+            points: q.points != null ? Number(q.points) : null,
+            timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+            timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+            options: q.options || [],
+            metadata: q.metadata || {},
+            pairs: q.metadata?.pairs || [],
+          });
         }
       }
     }
 
-    if (questionMap.size === 0 && pubTest?.questionIds && pubTest.questionIds.length > 0) {
-      const qDocs = await QuestionModel.find({ _id: { $in: pubTest.questionIds } });
-      for (const q of qDocs) {
-        const qId = q._id.toString();
-        questionMap.set(qId, {
-          id: qId,
-          questionId: qId,
-          groupName: (q.groupName || 'General').trim(),
-          difficulty: (q.difficulty || 'Medium').trim(),
-          content: q.content,
-          points: q.points != null ? Number(q.points) : null,
-          timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
-          timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
-          options: q.options || [],
-          metadata: q.metadata || {},
-          pairs: q.metadata?.pairs || [],
-        });
+    if (questionMap.size === 0) {
+      for (const a of liveAssignments) {
+        if (Array.isArray(a.questions)) {
+          for (const q of a.questions) {
+            const qId = q.questionId || q.id || q._id;
+            if (qId && !questionMap.has(String(qId))) {
+              questionMap.set(String(qId), {
+                id: String(qId),
+                questionId: String(qId),
+                groupName: (q.groupName || 'General').trim(),
+                difficulty: (q.difficulty || 'Medium').trim(),
+                content: q.content || 'Question',
+                points: q.points != null ? Number(q.points) : null,
+                timeAllowedSeconds:
+                  q.timeAllowedSeconds != null
+                    ? Number(q.timeAllowedSeconds)
+                    : q.timeSeconds != null
+                    ? Number(q.timeSeconds)
+                    : null,
+                timeSeconds:
+                  q.timeAllowedSeconds != null
+                    ? Number(q.timeAllowedSeconds)
+                    : q.timeSeconds != null
+                    ? Number(q.timeSeconds)
+                    : null,
+                options: q.options || [],
+                metadata: q.metadata || {},
+                pairs: q.pairs || q.metadata?.pairs || [],
+              });
+            }
+          }
+        }
       }
     }
 
@@ -3153,11 +3413,29 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
     const publishHistories = await PublishHistoryModel.find({ publishId: { $in: publishIds } }).lean();
     const histMap = new Map<string, any>(publishHistories.map((ph: any) => [ph.publishId, ph]));
 
-    // Fetch all questions and groups in case any legacy record is missing groupName or difficulty
-    const allQuestions = await QuestionModel.find().lean();
-    const qMap = new Map<string, any>(allQuestions.map((q: any) => [q._id.toString(), q]));
-    const groups = await QuestionGroupModel.find().lean();
-    const gMap = new Map<string, any>(groups.map((g: any) => [g._id.toString(), g]));
+    // Fetch only needed questions and groups for this student's attempts
+    const neededQuestionIds = Array.from(
+      new Set(
+        sortedAssignments.flatMap((a) => (a.questions || []).map((q: any) => q.questionId).filter(Boolean))
+      )
+    );
+    const relevantQuestions = neededQuestionIds.length > 0
+      ? await QuestionModel.find({ _id: { $in: neededQuestionIds } }).lean()
+      : [];
+    const qMap = new Map<string, any>(relevantQuestions.map((q: any) => [q._id.toString(), q]));
+
+    const neededGroupIds = Array.from(
+      new Set(
+        [
+          ...relevantQuestions.map((q: any) => q.groupId),
+          ...sortedAssignments.flatMap((a) => (a.questions || []).map((q: any) => q.groupId)),
+        ].filter(Boolean)
+      )
+    );
+    const relevantGroups = neededGroupIds.length > 0
+      ? await QuestionGroupModel.find({ _id: { $in: neededGroupIds } }).lean()
+      : [];
+    const gMap = new Map<string, any>(relevantGroups.map((g: any) => [g._id.toString(), g]));
 
     // Timeline entries
     const timeline = sortedAssignments.map((a, idx) => {
@@ -3226,7 +3504,15 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         schoolAdmissionNumber: student.schoolAdmissionNumber,
         uniqueStudentId: student.uniqueStudentId,
         schoolName: student.schoolName,
-      } : null,
+      } : (sortedAssignments.length > 0 ? {
+        id: targetStudentId,
+        studentName: sortedAssignments[0].studentName || targetStudentId,
+        className: sortedAssignments[0].className || '',
+        section: sortedAssignments[0].section || '',
+        schoolAdmissionNumber: targetStudentId,
+        uniqueStudentId: targetStudentId,
+        schoolName: sortedAssignments[0].schoolName || '',
+      } : null),
       timeline,
     });
   } catch (err: any) {

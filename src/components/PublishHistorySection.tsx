@@ -1275,6 +1275,9 @@ function HistoricalAuditDrillDown({
     return studentsFinal.filter((s) => s.status !== 'COMPLETED');
   }, [studentsFinal]);
 
+  const [studentPage, setStudentPage] = useState(1);
+  const studentPageSize = 25;
+
   // Final list displayed based on active status tab
   const displayedStudents = useMemo(() => {
     const list =
@@ -1291,6 +1294,18 @@ function HistoricalAuditDrillDown({
       })
     );
   }, [drillDownTab, filteredCompleted, filteredIncomplete, studentsFinal]);
+
+  // Reset pagination when status tab or filters change
+  useEffect(() => {
+    setStudentPage(1);
+  }, [drillDownTab, selectedSchoolNames, selectedClasses, selectedSections, selectedStudentIds]);
+
+  const totalStudentPages = Math.max(1, Math.ceil(displayedStudents.length / studentPageSize));
+  const safeStudentPage = Math.min(studentPage, totalStudentPages);
+  const paginatedDisplayedStudents = useMemo(() => {
+    const startIdx = (safeStudentPage - 1) * studentPageSize;
+    return displayedStudents.slice(startIdx, startIdx + studentPageSize);
+  }, [displayedStudents, safeStudentPage, studentPageSize]);
 
   const publishDateTimeDisplay = formatPublishDateTime(detail?.publishedAt || detail?.updatedAt || detail?.createdAt);
   const availabilityWindowDisplay = formatAvailabilityWindow(
@@ -1560,15 +1575,29 @@ function HistoricalAuditDrillDown({
               ))}
             </div>
 
-            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-              <span className="text-xs font-mono text-slate-400">
-                Total Selected Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
-              </span>
+            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+                {detail?.publishMode === 'Random Questions' ? (
+                  <>
+                    <span className="text-slate-400">
+                      Total Eligible Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
+                    </span>
+                    <span className="text-slate-600">&bull;</span>
+                    <span className="text-slate-400">
+                      Questions Per Student: <strong className="text-indigo-300 text-sm">{detail.randomCount || detail.assignedQuestionsCount || '—'}</strong>
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-slate-400">
+                    Total Selected Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
+                  </span>
+                )}
+              </div>
               {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowQuestionsPreview(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer self-start sm:self-auto"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Preview Published Questions</span>
@@ -1723,76 +1752,108 @@ function HistoricalAuditDrillDown({
                 : 'No students match the current filter selection.'}
             </p>
           ) : (
-            displayedStudents.map((s: any) => (
-              <div
-                key={s.studentId || s.uniqueStudentId || s.id || s._id}
-                className={`p-3 rounded-xl border text-xs space-y-2 transition-all ${
-                  s.status === 'COMPLETED'
-                    ? 'bg-emerald-950/20 border-emerald-800/40'
-                    : s.status === 'INCOMPLETE'
-                    ? 'bg-rose-950/20 border-rose-800/40'
-                    : 'bg-slate-800/40 border-slate-700/50'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-white text-sm">{s.studentName}</p>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      {s.className} {s.section ? `(${s.section})` : ''} &bull; ID: {s.uniqueStudentId || s.studentId}
-                      {s.schoolName && <span className="text-slate-400"> &bull; {s.schoolName}</span>}
+            <>
+              {paginatedDisplayedStudents.map((s: any) => (
+                <div
+                  key={s.studentId || s.uniqueStudentId || s.id || s._id}
+                  className={`p-3 rounded-xl border text-xs space-y-2 transition-all ${
+                    s.status === 'COMPLETED'
+                      ? 'bg-emerald-950/20 border-emerald-800/40'
+                      : s.status === 'INCOMPLETE'
+                      ? 'bg-rose-950/20 border-rose-800/40'
+                      : 'bg-slate-800/40 border-slate-700/50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-white text-sm">{s.studentName}</p>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {s.className} {s.section ? `(${s.section})` : ''} &bull; ID: {s.uniqueStudentId || s.studentId}
+                        {s.schoolName && <span className="text-slate-400"> &bull; {s.schoolName}</span>}
+                      </span>
+                    </div>
+                    {s.status === 'COMPLETED' && s.scoreOutOf100 != null && (
+                      <span className="font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-[11px]">
+                        {s.scoreOutOf100}/100
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-slate-500">Assessment Name:</span>{' '}
+                    <span className="text-slate-200 font-medium">
+                      {s.assessmentName || detail.publishName}
                     </span>
                   </div>
-                  {s.status === 'COMPLETED' && s.scoreOutOf100 != null && (
-                    <span className="font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-[11px]">
-                      {s.scoreOutOf100}/100
-                    </span>
-                  )}
-                </div>
 
-                <div className="text-[11px] text-slate-400 font-mono">
-                  <span className="text-slate-500">Assessment Name:</span>{' '}
-                  <span className="text-slate-200 font-medium">
-                    {s.assessmentName || detail.publishName}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 font-mono text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Status:</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded font-bold uppercase text-[10px] ${
+                          s.status === 'COMPLETED'
+                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                            : s.status === 'INCOMPLETE'
+                            ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                            : s.status === 'IN_PROGRESS'
+                            ? 'bg-amber-950 text-amber-400 border border-amber-800'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        }`}
+                      >
+                        {s.status}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-slate-400">Exit Type:</span>
+                      <span
+                        className={`font-semibold font-mono text-xs ${
+                          s.status === 'COMPLETED'
+                            ? 'text-slate-500'
+                            : s.exitType === 'EXIT'
+                            ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
+                            : s.exitType === 'LOGOUT'
+                            ? 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
+                            : 'text-slate-500'
+                        }`}
+                      >
+                        {s.status === 'COMPLETED' ? '—' : (s.exitType || '—')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Student pagination controls */}
+              {totalStudentPages > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs font-mono">
+                  <span className="text-slate-400">
+                    Showing {(safeStudentPage - 1) * studentPageSize + 1}&ndash;{Math.min(safeStudentPage * studentPageSize, displayedStudents.length)} of {displayedStudents.length} students
                   </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 font-mono text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400">Status:</span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded font-bold uppercase text-[10px] ${
-                        s.status === 'COMPLETED'
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                          : s.status === 'INCOMPLETE'
-                          ? 'bg-rose-950 text-rose-400 border border-rose-800'
-                          : s.status === 'IN_PROGRESS'
-                          ? 'bg-amber-950 text-amber-400 border border-amber-800'
-                          : 'bg-slate-800 text-slate-400 border border-slate-700'
-                      }`}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={safeStudentPage <= 1}
+                      onClick={() => setStudentPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      {s.status}
+                      &larr; Prev
+                    </button>
+                    <span className="px-2.5 py-1 text-slate-300 font-bold bg-slate-800/60 rounded-lg">
+                      {safeStudentPage} / {totalStudentPages}
                     </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400">Exit Type:</span>
-                    <span
-                      className={`font-semibold font-mono text-xs ${
-                        s.status === 'COMPLETED'
-                          ? 'text-slate-500'
-                          : s.exitType === 'EXIT'
-                          ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
-                          : s.exitType === 'LOGOUT'
-                          ? 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
-                          : 'text-slate-500'
-                      }`}
+                    <button
+                      type="button"
+                      disabled={safeStudentPage >= totalStudentPages}
+                      onClick={() => setStudentPage((p) => Math.min(totalStudentPages, p + 1))}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      {s.status === 'COMPLETED' ? '—' : (s.exitType || '—')}
-                    </span>
+                      Next &rarr;
+                    </button>
                   </div>
                 </div>
-              </div>
-            ))
+              )}
+            </>
           )}
         </div>
       </div>

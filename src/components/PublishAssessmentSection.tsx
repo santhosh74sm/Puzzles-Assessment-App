@@ -1238,9 +1238,12 @@ function TargetCard({
             const validSelected = selectedClasses.filter(
               (cls) => cls === 'ALL' || cls === 'All Classes' || list.includes(cls)
             );
+            const isSelectedSame =
+              validSelected.length === selectedClasses.length &&
+              validSelected.every((v, i) => v === selectedClasses[i]);
             onUpdate({
               availableClasses: list,
-              selectedClasses: validSelected,
+              ...(isSelectedSame ? {} : { selectedClasses: validSelected }),
               isLoadingClasses: false,
             });
           }
@@ -1304,9 +1307,12 @@ function TargetCard({
           const list: string[] = Array.isArray(data) ? data : data.sections || [];
           if (!isCancelled) {
             const validSelected = selectedSections.filter((sec) => sec === 'ALL' || list.includes(sec));
+            const isSelectedSame =
+              validSelected.length === selectedSections.length &&
+              validSelected.every((v, i) => v === selectedSections[i]);
             onUpdate({
               availableSections: list,
-              selectedSections: validSelected,
+              ...(isSelectedSame ? {} : { selectedSections: validSelected }),
               isLoadingSections: false,
             });
           }
@@ -1385,9 +1391,12 @@ function TargetCard({
             const validSelected = (selectedStudentIds || []).filter(
               (id) => id === 'ALL' || validStudentKeys.has(id)
             );
+            const isSelectedSame =
+              validSelected.length === (selectedStudentIds || []).length &&
+              validSelected.every((v, i) => v === selectedStudentIds[i]);
             onUpdate({
               availableStudents: list,
-              selectedStudentIds: validSelected,
+              ...(isSelectedSame ? {} : { selectedStudentIds: validSelected }),
               isLoadingStudents: false,
             });
           }
@@ -1687,9 +1696,17 @@ export function PublishAssessmentSection({
     }
   }, [editingPublishId, formState]);
 
-  // Sync state back to parent container so it is preserved across page navigation
+  // High-performance O(1) set for question selection lookups
+  const selectedQuestionsSet = React.useMemo(
+    () => new Set(selectedQuestionsForPublish),
+    [selectedQuestionsForPublish]
+  );
+
+  // Sync state back to parent container with debouncing so rapid clicks/typing don't thrash parent renders
   useEffect(() => {
-    if (onFormStateChange) {
+    if (!onFormStateChange) return;
+
+    const timer = setTimeout(() => {
       onFormStateChange({
         publishName,
         publishMode,
@@ -1707,7 +1724,11 @@ export function PublishAssessmentSection({
         expandedDifficulties: Array.from(expandedDifficulties),
         questionPickerSearch,
       });
-    }
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+    };
   }, [
     publishName,
     publishMode,
@@ -1932,7 +1953,7 @@ export function PublishAssessmentSection({
     groupsHierarchy.forEach((g) => {
       const diffs: Array<{ difficulty: string; count: number }> = [];
       g.difficulties.forEach((d) => {
-        const count = d.questions.filter((q) => selectedQuestionsForPublish.includes(q.id)).length;
+        const count = d.questions.filter((q) => selectedQuestionsSet.has(q.id)).length;
         if (count > 0) {
           diffs.push({ difficulty: d.difficulty, count });
         }
@@ -1943,7 +1964,7 @@ export function PublishAssessmentSection({
     });
 
     return result;
-  }, [groupsHierarchy, selectedQuestionsForPublish]);
+  }, [groupsHierarchy, selectedQuestionsSet]);
 
   const randomSummaryData = React.useMemo(() => {
     const result: Array<{
@@ -2087,11 +2108,11 @@ export function PublishAssessmentSection({
 
   const isAllGroupsChecked =
     allVisibleQuestionIds.length > 0 &&
-    allVisibleQuestionIds.every((id) => selectedQuestionsForPublish.includes(id));
+    allVisibleQuestionIds.every((id) => selectedQuestionsSet.has(id));
 
   const isAllGroupsIndeterminate =
     !isAllGroupsChecked &&
-    allVisibleQuestionIds.some((id) => selectedQuestionsForPublish.includes(id));
+    allVisibleQuestionIds.some((id) => selectedQuestionsSet.has(id));
 
   const handleToggleAllGroups = () => {
     if (isAllGroupsChecked) {
@@ -2106,7 +2127,7 @@ export function PublishAssessmentSection({
   const handleToggleGroup = (groupQuestions: any[]) => {
     const groupQIds = groupQuestions.map((q) => q.id);
     const isGroupAllSelected =
-      groupQIds.length > 0 && groupQIds.every((id) => selectedQuestionsForPublish.includes(id));
+      groupQIds.length > 0 && groupQIds.every((id) => selectedQuestionsSet.has(id));
 
     if (isGroupAllSelected) {
       const toRemove = new Set(groupQIds);
@@ -2120,7 +2141,7 @@ export function PublishAssessmentSection({
   const handleToggleDifficulty = (diffQuestions: any[]) => {
     const diffQIds = diffQuestions.map((q) => q.id);
     const isDiffAllSelected =
-      diffQIds.length > 0 && diffQIds.every((id) => selectedQuestionsForPublish.includes(id));
+      diffQIds.length > 0 && diffQIds.every((id) => selectedQuestionsSet.has(id));
 
     if (isDiffAllSelected) {
       const toRemove = new Set(diffQIds);
@@ -2132,7 +2153,7 @@ export function PublishAssessmentSection({
   };
 
   const handleToggleQuestion = (qId: string) => {
-    if (selectedQuestionsForPublish.includes(qId)) {
+    if (selectedQuestionsSet.has(qId)) {
       setSelectedQuestionsForPublish((prev) => prev.filter((id) => id !== qId));
     } else {
       setSelectedQuestionsForPublish((prev) => [...prev, qId]);
@@ -2976,7 +2997,7 @@ export function PublishAssessmentSection({
                   const isGroupExpanded = expandedGroups.has(group.groupName);
                   const groupQIds = group.allGroupQuestions.map((q) => q.id);
                   const selectedInGroupCount = groupQIds.filter((id) =>
-                    selectedQuestionsForPublish.includes(id)
+                    selectedQuestionsSet.has(id)
                   ).length;
                   const isGroupChecked =
                     groupQIds.length > 0 && selectedInGroupCount === groupQIds.length;
@@ -3037,7 +3058,7 @@ export function PublishAssessmentSection({
                             const isDiffExpanded = expandedDifficulties.has(diffKey);
                             const diffQIds = diff.questions.map((q) => q.id);
                             const selectedInDiffCount = diffQIds.filter((id) =>
-                              selectedQuestionsForPublish.includes(id)
+                              selectedQuestionsSet.has(id)
                             ).length;
                             const isDiffChecked =
                               diffQIds.length > 0 && selectedInDiffCount === diffQIds.length;
@@ -3096,7 +3117,7 @@ export function PublishAssessmentSection({
                                 {isDiffExpanded && (
                                   <div className="p-2.5 space-y-1.5 bg-slate-950/30 ml-3 border-t border-slate-700/30">
                                     {diff.questions.map((q) => {
-                                      const isQuestionSelected = selectedQuestionsForPublish.includes(q.id);
+                                      const isQuestionSelected = selectedQuestionsSet.has(q.id);
 
                                       return (
                                         <div

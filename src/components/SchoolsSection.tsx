@@ -71,6 +71,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
   const [deletingAdmin, setDeletingAdmin] = useState<any | null>(null);
   const [isSubmittingDeleteAdmin, setIsSubmittingDeleteAdmin] = useState(false);
 
+  // School Workspace Delete confirmation state
+  const [deletingSchool, setDeletingSchool] = useState<any | null>(null);
+  const [isSubmittingDeleteSchool, setIsSubmittingDeleteSchool] = useState(false);
+
   // Student Report detail view state
   const [viewingReportStudent, setViewingReportStudent] = useState<any | null>(null);
 
@@ -312,29 +316,68 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
     }
   };
 
+  const handleConfirmDeleteSchool = async () => {
+    if (!deletingSchool) return;
+    setIsSubmittingDeleteSchool(true);
+    setFeedbackMessage(null);
+    try {
+      const schoolId = deletingSchool.id || deletingSchool._id;
+      const res = await fetch(`/api/schools/${schoolId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedbackMessage({
+          type: 'success',
+          text: data.message || `School Workspace "${deletingSchool.name}" deleted successfully. Historical assessment data has been preserved.`,
+        });
+        const deletedId = schoolId;
+        setDeletingSchool(null);
+        await onRefreshSchools();
+        if (activeSchoolId === deletedId) {
+          const remaining = sortedSchools.filter((s) => s.id !== deletedId);
+          setActiveSchoolId(remaining.length > 0 ? remaining[0].id : '');
+        }
+      } else {
+        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to delete school workspace' });
+      }
+    } catch (err: any) {
+      setFeedbackMessage({ type: 'error', text: err.message || 'Error deleting school workspace' });
+    } finally {
+      setIsSubmittingDeleteSchool(false);
+    }
+  };
+
+  const [rosterVisibleCount, setRosterVisibleCount] = useState(50);
+
   // Dynamically load available classes from actual MongoDB Atlas student records
   // Show ONLY the classes that actually have at least one student in the current student data
-  const availableRosterClasses = Array.from(
-    new Set(
-      studentsList
-        .map((s) => s.className)
-        .filter((cls): cls is string => typeof cls === 'string' && cls.trim().length > 0)
-        .map((cls) => cls.trim())
-    )
-  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  const availableRosterClasses = React.useMemo(() => {
+    return Array.from(
+      new Set(
+        studentsList
+          .map((s) => s.className)
+          .filter((cls): cls is string => typeof cls === 'string' && cls.trim().length > 0)
+          .map((cls) => cls.trim())
+      )
+    ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [studentsList]);
 
   // Dynamically load available sections from the actual sections present in the current school's students
-  const availableRosterSections = Array.from(
-    new Set(
-      (classFilter
-        ? studentsList.filter((s) => s.className === classFilter)
-        : studentsList
+  const availableRosterSections = React.useMemo(() => {
+    return Array.from(
+      new Set(
+        (classFilter
+          ? studentsList.filter((s) => s.className === classFilter)
+          : studentsList
+        )
+          .map((s) => s.section)
+          .filter((sec): sec is string => typeof sec === 'string' && sec.trim().length > 0)
+          .map((sec) => sec.trim().toUpperCase())
       )
-        .map((s) => s.section)
-        .filter((sec): sec is string => typeof sec === 'string' && sec.trim().length > 0)
-        .map((sec) => sec.trim().toUpperCase())
-    )
-  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [studentsList, classFilter]);
 
   useEffect(() => {
     if (classFilter && availableRosterClasses.length > 0 && !availableRosterClasses.includes(classFilter)) {
@@ -342,24 +385,30 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
     }
   }, [availableRosterClasses, classFilter]);
 
-  const filteredStudents = studentsList
-    .filter((s) => {
-      const matchesSearch =
-        !studentSearch ||
-        s.studentName?.toLowerCase().includes(studentSearch.toLowerCase()) ||
-        s.schoolAdmissionNumber?.toLowerCase().includes(studentSearch.toLowerCase()) ||
-        s.uniqueStudentId?.toLowerCase().includes(studentSearch.toLowerCase());
-      const matchesClass = !classFilter || s.className === classFilter;
-      const matchesSection =
-        !sectionFilter ||
-        (s.section && s.section.trim().toUpperCase() === sectionFilter.trim().toUpperCase());
-      return matchesSearch && matchesClass && matchesSection;
-    })
-    .sort((a, b) =>
-      (a.studentName || '').localeCompare(b.studentName || '', undefined, { numeric: true, sensitivity: 'base' })
-    );
+  const filteredStudents = React.useMemo(() => {
+    const qLower = studentSearch.trim().toLowerCase();
+    const secUpper = sectionFilter.trim().toUpperCase();
+    return studentsList
+      .filter((s) => {
+        const matchesSearch =
+          !qLower ||
+          (s.studentName && s.studentName.toLowerCase().includes(qLower)) ||
+          (s.schoolAdmissionNumber && s.schoolAdmissionNumber.toLowerCase().includes(qLower)) ||
+          (s.uniqueStudentId && s.uniqueStudentId.toLowerCase().includes(qLower));
+        const matchesClass = !classFilter || s.className === classFilter;
+        const matchesSection =
+          !sectionFilter ||
+          (s.section && s.section.trim().toUpperCase() === secUpper);
+        return matchesSearch && matchesClass && matchesSection;
+      })
+      .sort((a, b) =>
+        (a.studentName || '').localeCompare(b.studentName || '', undefined, { numeric: true, sensitivity: 'base' })
+      );
+  }, [studentsList, studentSearch, classFilter, sectionFilter]);
 
-  const activeSchool = schools.find((s) => s.id === activeSchoolId);
+  const activeSchool = React.useMemo(() => {
+    return schools.find((s) => s.id === activeSchoolId);
+  }, [schools, activeSchoolId]);
 
   // If viewing an individual student's report & timeline
   if (viewingReportStudent) {
@@ -560,21 +609,30 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                       <h4 className="font-bold text-base mt-2 text-white">{sch.name}</h4>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
                       <span className="text-[11px] text-slate-400">
                         {sch.createdAt ? new Date(sch.createdAt).toLocaleDateString() : 'Active'}
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCreateSchoolAdmin(sch.id);
-                        }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 font-medium transition-all flex items-center gap-1 border border-slate-700/60"
-                      >
-                        <Key className="w-3 h-3 text-indigo-400" />
-                        + Create Admin ID
-                      </button>
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          title="Create School Admin"
+                          onClick={() => handleCreateSchoolAdmin(sch.id)}
+                          className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 font-medium transition-all flex items-center gap-1 border border-slate-700/60 cursor-pointer"
+                        >
+                          <Key className="w-3 h-3 text-indigo-400" />
+                          <span>+ Admin</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Delete School Workspace"
+                          onClick={() => setDeletingSchool(sch)}
+                          className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 font-medium transition-all flex items-center gap-1 border border-slate-700/60 hover:border-rose-600 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -829,74 +887,100 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             {loadingData ? (
               <div className="py-8 text-center text-xs text-slate-400">Loading student roster...</div>
             ) : filteredStudents.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
-                      <th className="py-2.5 px-3">Student Name</th>
-                      <th className="py-2.5 px-3">Unique App ID</th>
-                      <th className="py-2.5 px-3">Admission #</th>
-                      <th className="py-2.5 px-3">Class & Sec</th>
-                      <th className="py-2.5 px-3">Password Status</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {filteredStudents.map((stu) => (
-                      <tr key={stu.id || stu.uniqueStudentId} className="hover:bg-slate-800/40 text-slate-200 transition-colors">
-                        <td className="py-2.5 px-3 font-medium text-white">{stu.studentName}</td>
-                        <td className="py-2.5 px-3 font-mono text-indigo-400 font-bold">{stu.uniqueStudentId}</td>
-                        <td className="py-2.5 px-3 font-mono text-slate-400">{stu.schoolAdmissionNumber}</td>
-                        <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">
-                            {stu.className} - {stu.section}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono ${
-                              stu.mustChangePassword
-                                ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
-                                : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
-                            }`}
-                          >
-                            {stu.mustChangePassword ? 'Initial PW' : 'Updated'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setViewingReportStudent(stu)}
-                              className="px-2.5 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-700/70 hover:border-indigo-500 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                              title="View Student Report & Timeline"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-indigo-400" />
-                              <span>View Report</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleStartEdit(stu)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-indigo-400 border border-slate-700 hover:border-indigo-500/50 transition-all cursor-pointer"
-                              title="Edit Student"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDeletingStudent(stu)}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-500/50 transition-all cursor-pointer"
-                              title="Delete Student"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+                        <th className="py-2.5 px-3">Student Name</th>
+                        <th className="py-2.5 px-3">Unique App ID</th>
+                        <th className="py-2.5 px-3">Admission #</th>
+                        <th className="py-2.5 px-3">Class & Sec</th>
+                        <th className="py-2.5 px-3">Password Status</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {filteredStudents.slice(0, rosterVisibleCount).map((stu) => (
+                        <tr key={stu.id || stu.uniqueStudentId} className="hover:bg-slate-800/40 text-slate-200 transition-colors">
+                          <td className="py-2.5 px-3 font-medium text-white">{stu.studentName}</td>
+                          <td className="py-2.5 px-3 font-mono text-indigo-400 font-bold">{stu.uniqueStudentId}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-400">{stu.schoolAdmissionNumber}</td>
+                          <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">
+                              {stu.className} - {stu.section}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono ${
+                                stu.mustChangePassword
+                                  ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                                  : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                              }`}
+                            >
+                              {stu.mustChangePassword ? 'Initial PW' : 'Updated'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setViewingReportStudent(stu)}
+                                className="px-2.5 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-700/70 hover:border-indigo-500 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                title="View Student Report & Timeline"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>View Report</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEdit(stu)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-indigo-400 border border-slate-700 hover:border-indigo-500/50 transition-all cursor-pointer"
+                                title="Edit Student"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeletingStudent(stu)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-500/50 transition-all cursor-pointer"
+                                title="Delete Student"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filteredStudents.length > rosterVisibleCount && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                    <span>
+                      Showing {rosterVisibleCount} of {filteredStudents.length} students
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRosterVisibleCount((prev) => prev + 50)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 font-semibold border border-slate-700 transition-all cursor-pointer"
+                      >
+                        + Load More ({filteredStudents.length - rosterVisibleCount} remaining)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRosterVisibleCount(filteredStudents.length)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer"
+                      >
+                        Show All
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="p-8 rounded-xl bg-slate-800/30 border border-slate-800 text-center py-8">
                 <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
@@ -1128,6 +1212,70 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-rose-600/20"
               >
                 {isSubmittingDeleteAdmin ? 'Deleting...' : 'Yes, Delete School Admin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete School Workspace Confirmation Modal */}
+      {deletingSchool && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-rose-900/50 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete School Workspace</h3>
+                <p className="text-xs text-rose-400/90 font-medium">Permanent workspace removal</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300">
+              Are you sure you want to permanently delete{' '}
+              <strong className="text-white font-semibold">{deletingSchool.name}</strong> ({deletingSchool.code})?
+            </p>
+
+            <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-2">
+              <div className="font-semibold text-rose-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                The following records will be permanently deleted:
+              </div>
+              <ul className="list-disc list-inside text-slate-300 space-y-1 pl-1 text-[11px] font-mono">
+                <li>School Workspace ({deletingSchool.name})</li>
+                <li>All School Administrator account(s) for this school</li>
+                <li>All Student account(s) and login credentials for this school</li>
+                <li>Active / unstarted (NOT_STARTED) assessment assignments</li>
+              </ul>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-300 space-y-1">
+              <div className="font-semibold flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                Historical Audit Safety:
+              </div>
+              <p className="text-[11px] text-emerald-200/90 leading-relaxed">
+                All <strong>completed assessments, question snapshots, answers, scores, timing data, and publish history</strong> will be strictly preserved for reporting and historical auditing.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingSchool(null)}
+                disabled={isSubmittingDeleteSchool}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSchool}
+                disabled={isSubmittingDeleteSchool}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-rose-600/20 cursor-pointer flex items-center gap-1.5"
+              >
+                {isSubmittingDeleteSchool ? 'Deleting School...' : 'Yes, Delete School Workspace'}
               </button>
             </div>
           </div>

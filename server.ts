@@ -5,11 +5,13 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import routes from './backend/routes.ts';
 import path from 'path';
+import fs from 'fs';
 import { connectMongoDB, getMongoConnectionInfo } from './backend/database.ts';
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
+  const HOST = '0.0.0.0';
 
   app.use(express.json());
 
@@ -55,33 +57,44 @@ async function startServer() {
     });
   });
 
-  // Serve downloadable static assets (e.g. backend.zip)
+  // Serve downloadable static assets
   app.use(express.static(path.resolve(process.cwd(), 'public')));
 
   // Mount API endpoints
   app.use('/api', routes);
 
-  // In non-production, mount Vite middleware for React frontend
-  if (process.env.NODE_ENV !== 'production') {
+  // Determine whether running in production mode
+  const distPath = path.resolve(process.cwd(), 'dist');
+  const hasDist = fs.existsSync(path.resolve(distPath, 'index.html'));
+  const isProduction =
+    process.env.NODE_ENV === 'production' ||
+    Boolean(process.env.K_SERVICE) ||
+    (hasDist && process.env.NODE_ENV !== 'development' && PORT !== 3000);
+
+  if (isProduction && hasDist) {
+    console.log(`[System] Running in production mode, serving built SPA from: ${distPath}`);
+    app.use(express.static(distPath));
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      res.sendFile(path.resolve(distPath, 'index.html'));
+    });
+  } else {
+    console.log('[System] Running in development mode with Vite middleware');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    // In production, serve built SPA
-    const distPath = path.resolve(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.resolve(distPath, 'index.html'));
-    });
   }
 
-  app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`[System] Server listening on ${HOST}:${PORT} (mode: ${isProduction ? 'production' : 'development'})`);
   });
 }
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err);
 });
+

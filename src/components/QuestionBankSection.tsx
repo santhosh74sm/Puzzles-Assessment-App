@@ -8,6 +8,9 @@ import {
   CheckCircle,
   Clock,
   Award,
+  Trash2,
+  AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface QuestionBankSectionProps {
@@ -30,6 +33,10 @@ export function QuestionBankSection({
 
   // Group View Modal (Read Only)
   const [viewGroupModal, setViewGroupModal] = useState<any | null>(null);
+
+  // Delete Question Confirmation State
+  const [deletingQuestion, setDeletingQuestion] = useState<any | null>(null);
+  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
 
   // New Question form
   const [questionForm, setQuestionForm] = useState<{
@@ -60,6 +67,46 @@ export function QuestionBankSection({
   const headers = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
+  };
+
+  const handleDeleteQuestion = async () => {
+    if (!deletingQuestion) return;
+    const qId = deletingQuestion.id || deletingQuestion._id;
+    if (!qId) return;
+
+    setIsDeletingQuestion(true);
+    setFeedbackMessage(null);
+    try {
+      const res = await fetch(`/api/questions/${qId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedbackMessage({
+          type: 'success',
+          text: `Question deleted from Question Bank successfully. Historical assessments and attempt reports remain preserved.`,
+        });
+        setDeletingQuestion(null);
+        // If viewGroupModal is open, close it or refresh it
+        if (viewGroupModal) {
+          setViewGroupModal(null);
+        }
+        await onRefreshData();
+      } else {
+        setFeedbackMessage({
+          type: 'error',
+          text: data.error || 'Failed to delete question from Question Bank',
+        });
+      }
+    } catch (e: any) {
+      setFeedbackMessage({
+        type: 'error',
+        text: e.message || 'Error occurred while deleting question',
+      });
+    } finally {
+      setIsDeletingQuestion(false);
+    }
   };
 
   const handleCreateGroup = async (e: React.FormEvent) => {
@@ -138,50 +185,79 @@ export function QuestionBankSection({
     }
   };
 
-  const filteredQuestions = allQuestions.filter((q) => {
-    const matchesGroup = !selectedGroupFilter || q.groupId === selectedGroupFilter;
-    const matchesDiff = !selectedDifficultyFilter || q.difficulty === selectedDifficultyFilter;
-    const matchesSearch =
-      !questionSearch ||
-      q.content?.toLowerCase().includes(questionSearch.toLowerCase());
-    return matchesGroup && matchesDiff && matchesSearch;
-  });
+  const [visibleQuestionsCount, setVisibleQuestionsCount] = useState(50);
 
-  // Dynamically compute difficulty breakdown per group from allQuestions stored in MongoDB Atlas
-  const getGroupBreakdown = (grp: any) => {
-    const grpIdStr = (grp.id || grp._id || '').toString();
-    const grpNameLower = (grp.name || '').trim().toLowerCase();
-
-    const groupQuestions = allQuestions.filter((q: any) => {
-      const qGrpId = (q.groupId || '').toString().trim();
-      const qGrpName = (q.groupName || '').toString().trim().toLowerCase();
-      return (grpIdStr && qGrpId === grpIdStr) || (grpNameLower && qGrpName === grpNameLower);
+  const filteredQuestions = React.useMemo(() => {
+    const qLower = questionSearch.trim().toLowerCase();
+    return allQuestions.filter((q) => {
+      const matchesGroup = !selectedGroupFilter || q.groupId === selectedGroupFilter;
+      const matchesDiff = !selectedDifficultyFilter || q.difficulty === selectedDifficultyFilter;
+      const matchesSearch =
+        !qLower ||
+        (q.content && q.content.toLowerCase().includes(qLower));
+      return matchesGroup && matchesDiff && matchesSearch;
     });
+  }, [allQuestions, selectedGroupFilter, selectedDifficultyFilter, questionSearch]);
 
-    const getDifficultyTier = (level: string) => {
-      const lvl = level.toLowerCase();
-      const questions = groupQuestions.filter((q: any) => (q.difficulty || '').trim().toLowerCase() === lvl);
-      const fallbackTier = grp.breakdown?.[level];
-      const fallbackQuestions = fallbackTier?.questions || [];
-      const fallbackCount = fallbackTier?.count ?? (level === 'Easy' ? grp.easyCount : level === 'Medium' ? grp.mediumCount : grp.hardCount);
+  // Pre-calculate single-pass difficulty breakdown per group
+  const groupBreakdownsMap = React.useMemo(() => {
+    const map = new Map<string, { Easy: any[]; Medium: any[]; Hard: any[] }>();
+
+    for (const q of allQuestions) {
+      const gId = (q.groupId || '').toString().trim();
+      const gName = (q.groupName || '').toString().trim().toLowerCase();
+      const diff = (q.difficulty || '').trim().toLowerCase();
+      const normalizedDiff: 'Easy' | 'Medium' | 'Hard' =
+        diff === 'easy' ? 'Easy' : diff === 'hard' ? 'Hard' : 'Medium';
+
+      const keys = [gId, gName].filter(Boolean);
+      for (const k of keys) {
+        if (!map.has(k)) {
+          map.set(k, { Easy: [], Medium: [], Hard: [] });
+        }
+        map.get(k)![normalizedDiff].push(q);
+      }
+    }
+
+    return map;
+  }, [allQuestions]);
+
+  const getGroupBreakdown = React.useCallback(
+    (grp: any) => {
+      const grpIdStr = (grp.id || grp._id || '').toString().trim();
+      const grpNameLower = (grp.name || '').trim().toLowerCase();
+
+      const bucket =
+        (grpIdStr && groupBreakdownsMap.get(grpIdStr)) ||
+        (grpNameLower && groupBreakdownsMap.get(grpNameLower)) || { Easy: [], Medium: [], Hard: [] };
+
+      const getDifficultyTier = (level: 'Easy' | 'Medium' | 'Hard') => {
+        const questions = bucket[level];
+        const fallbackTier = grp.breakdown?.[level];
+        const fallbackQuestions = fallbackTier?.questions || [];
+        const fallbackCount =
+          fallbackTier?.count ??
+          (level === 'Easy' ? grp.easyCount : level === 'Medium' ? grp.mediumCount : grp.hardCount);
+
+        return {
+          count: questions.length > 0 ? questions.length : fallbackCount || 0,
+          questions: questions.length > 0 ? questions : fallbackQuestions,
+        };
+      };
+
+      const easyTier = getDifficultyTier('Easy');
+      const mediumTier = getDifficultyTier('Medium');
+      const hardTier = getDifficultyTier('Hard');
 
       return {
-        count: groupQuestions.length > 0 ? questions.length : (fallbackCount || 0),
-        questions: groupQuestions.length > 0 ? questions : fallbackQuestions,
+        Easy: easyTier,
+        Medium: mediumTier,
+        Hard: hardTier,
+        total: easyTier.count + mediumTier.count + hardTier.count,
       };
-    };
-
-    const easyTier = getDifficultyTier('Easy');
-    const mediumTier = getDifficultyTier('Medium');
-    const hardTier = getDifficultyTier('Hard');
-
-    return {
-      Easy: easyTier,
-      Medium: mediumTier,
-      Hard: hardTier,
-      total: easyTier.count + mediumTier.count + hardTier.count,
-    };
-  };
+    },
+    [groupBreakdownsMap]
+  );
 
   return (
     <div className="space-y-8 max-w-7xl">
@@ -481,55 +557,89 @@ export function QuestionBankSection({
         </div>
 
         {filteredQuestions.length > 0 ? (
-          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-            {filteredQuestions.map((q) => (
-              <div
-                key={q.id}
-                className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
-              >
-                <div className="space-y-1">
-                  <p className="font-medium text-white">{q.content}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-indigo-400 font-semibold">{q.groupName || 'Unassigned'}</span>
-                    <span className="text-slate-500">&bull;</span>
-                    <span
-                      className={`px-2 py-0.5 rounded font-mono font-bold ${
-                        q.difficulty === 'Easy'
-                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
-                          : q.difficulty === 'Medium'
-                          ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
-                          : 'bg-rose-950 text-rose-300 border border-rose-800/60'
-                      }`}
-                    >
-                      {q.difficulty}
-                    </span>
-                    {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
-                      <>
-                        <span className="text-slate-500">&bull;</span>
-                        <span className="text-slate-400">
-                          Ans: <strong className="text-emerald-400">{typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer)}</strong>
-                        </span>
-                      </>
+          <div className="space-y-3">
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              {filteredQuestions.slice(0, visibleQuestionsCount).map((q) => (
+                <div
+                  key={q.id}
+                  className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
+                >
+                  <div className="space-y-1">
+                    <p className="font-medium text-white">{q.content}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-indigo-400 font-semibold">{q.groupName || 'Unassigned'}</span>
+                      <span className="text-slate-500">&bull;</span>
+                      <span
+                        className={`px-2 py-0.5 rounded font-mono font-bold ${
+                          q.difficulty === 'Easy'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                            : q.difficulty === 'Medium'
+                            ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                            : 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                        }`}
+                      >
+                        {q.difficulty}
+                      </span>
+                      {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
+                        <>
+                          <span className="text-slate-500">&bull;</span>
+                          <span className="text-slate-400">
+                            Ans: <strong className="text-emerald-400">{typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer)}</strong>
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+                    {q.timeSeconds != null && q.timeSeconds > 0 && (
+                      <span className="px-2.5 py-1 rounded bg-slate-700/80 text-slate-300 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        {q.timeSeconds}s
+                      </span>
                     )}
+                    {q.points != null && q.points > 0 && (
+                      <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold">
+                        <Award className="w-3 h-3 text-emerald-400" />
+                        {q.points} pts
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setDeletingQuestion(q)}
+                      title="Delete question from active Question Bank"
+                      className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 transition-all ml-1 flex items-center gap-1 font-sans"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs font-medium">Delete</span>
+                    </button>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
-                  {q.timeSeconds != null && q.timeSeconds > 0 && (
-                    <span className="px-2.5 py-1 rounded bg-slate-700/80 text-slate-300 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      {q.timeSeconds}s
-                    </span>
-                  )}
-                  {q.points != null && q.points > 0 && (
-                    <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold">
-                      <Award className="w-3 h-3 text-emerald-400" />
-                      {q.points} pts
-                    </span>
-                  )}
+            {filteredQuestions.length > visibleQuestionsCount && (
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                <span>
+                  Showing {visibleQuestionsCount} of {filteredQuestions.length} questions
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleQuestionsCount((prev) => prev + 50)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 font-semibold border border-slate-700 transition-all cursor-pointer"
+                  >
+                    + Load More ({filteredQuestions.length - visibleQuestionsCount} remaining)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVisibleQuestionsCount(filteredQuestions.length)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer"
+                  >
+                    Show All
+                  </button>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         ) : (
           <div className="p-8 rounded-xl bg-slate-800/30 border border-slate-800 text-center py-8">
@@ -604,6 +714,13 @@ export function QuestionBankSection({
                                   {q.points} pts
                                 </span>
                               )}
+                              <button
+                                onClick={() => setDeletingQuestion(q)}
+                                title="Delete question from active Question Bank"
+                                className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white transition-all ml-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -614,6 +731,127 @@ export function QuestionBankSection({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Question Confirmation Dialog */}
+      {deletingQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-500/50 flex items-center justify-center shrink-0 text-rose-400">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <span className="text-xs font-mono uppercase text-rose-400 tracking-wider font-semibold">
+                  Confirm Question Deletion
+                </span>
+                <h3 className="text-lg font-bold text-white mt-0.5">Delete Question from Bank</h3>
+              </div>
+              <button
+                onClick={() => !isDeletingQuestion && setDeletingQuestion(null)}
+                disabled={isDeletingQuestion}
+                className="text-slate-400 hover:text-white text-lg font-bold disabled:opacity-40"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Question Item Summary */}
+            <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-semibold">
+                  {deletingQuestion.groupName || 'Unassigned Group'}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded font-mono font-bold ${
+                    deletingQuestion.difficulty === 'Easy'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                      : deletingQuestion.difficulty === 'Medium'
+                      ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
+                      : 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                  }`}
+                >
+                  {deletingQuestion.difficulty}
+                </span>
+                {deletingQuestion.points != null && (
+                  <span className="text-slate-400 font-mono text-xs">
+                    {deletingQuestion.points} pts
+                  </span>
+                )}
+                {deletingQuestion.timeSeconds != null && (
+                  <span className="text-slate-400 font-mono text-xs">
+                    {deletingQuestion.timeSeconds}s
+                  </span>
+                )}
+              </div>
+
+              <p className="text-sm font-medium text-white border-l-2 border-indigo-500 pl-2.5 py-0.5">
+                "{deletingQuestion.content}"
+              </p>
+
+              {deletingQuestion.options && deletingQuestion.options.length > 0 && (
+                <div className="text-xs text-slate-400">
+                  <span className="text-slate-500 font-semibold">Options:</span>{' '}
+                  {deletingQuestion.options.join(', ')}
+                </div>
+              )}
+
+              {deletingQuestion.correctAnswer != null && String(deletingQuestion.correctAnswer).trim() !== '' && (
+                <div className="text-xs text-emerald-400">
+                  <span className="text-slate-500 font-semibold">Correct Answer:</span>{' '}
+                  {typeof deletingQuestion.correctAnswer === 'object'
+                    ? JSON.stringify(deletingQuestion.correctAnswer)
+                    : String(deletingQuestion.correctAnswer)}
+                </div>
+              )}
+            </div>
+
+            {/* Safety & Warning Information */}
+            <div className="space-y-2 text-xs">
+              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <div>
+                  <strong className="font-semibold text-amber-200">Active Bank Removal:</strong> This question will be permanently deleted from the Question Bank repository and will not be available for new Selected or Random assessment selections.
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                <div>
+                  <strong className="font-semibold text-indigo-200">Historical Protection:</strong> Any existing published assessments, Publish History snapshots, completed/in-progress student attempts, and student reports that used this question remain fully preserved.
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingQuestion(null)}
+                disabled={isDeletingQuestion}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteQuestion}
+                disabled={isDeletingQuestion}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeletingQuestion ? (
+                  <>Deleting Question...</>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Permanently Delete
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
