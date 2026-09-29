@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
+import type { Document } from 'mongoose';
 
 // ==========================================
 // 1. USER SCHEMA & MODEL
@@ -492,6 +493,7 @@ export interface IAssessmentTemplateDocument extends Document {
   name: string;
   publishMode: 'Selected Questions' | 'Random Questions';
   selectedQuestionIds: string[];
+  randomSelectedDifficulties?: string[];
   shuffleQuestions: boolean;
   randomCount: number;
   targets: Array<{
@@ -511,6 +513,7 @@ export const AssessmentTemplateSchema = new Schema<IAssessmentTemplateDocument>(
     name: { type: String, required: true, unique: true, trim: true, index: true },
     publishMode: { type: String, required: true, enum: ['Selected Questions', 'Random Questions'] },
     selectedQuestionIds: { type: [String], default: [] },
+    randomSelectedDifficulties: { type: [String], default: [] },
     shuffleQuestions: { type: Boolean, default: false },
     randomCount: { type: Number, default: 5 },
     targets: {

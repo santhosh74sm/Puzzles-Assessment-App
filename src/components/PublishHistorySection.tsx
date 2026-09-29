@@ -19,6 +19,10 @@ import {
   Play,
   Trash2,
   AlertTriangle,
+  Eye,
+  HelpCircle,
+  Clock,
+  Award,
 } from 'lucide-react';
 
 interface PublishHistorySectionProps {
@@ -987,6 +991,7 @@ function HistoricalAuditDrillDown({
   onClose: () => void;
 }) {
   const [drillDownTab, setDrillDownTab] = useState<'all' | 'completed' | 'not_completed'>('all');
+  const [showQuestionsPreview, setShowQuestionsPreview] = useState(false);
 
   // Filter States: School -> Class -> Section -> Student
   const [selectedSchoolNames, setSelectedSchoolNames] = useState<string[]>(['ALL']);
@@ -998,6 +1003,91 @@ function HistoricalAuditDrillDown({
   const allAssignedStudents: any[] = useMemo(() => {
     return Array.isArray(detail?.studentsStatus) ? detail.studentsStatus : [];
   }, [detail?.studentsStatus]);
+
+  // Grouped question summary breakdown: Group -> Difficulty -> Count
+  const questionSummaryData = useMemo(() => {
+    if (Array.isArray(detail?.questionSummary) && detail.questionSummary.length > 0) {
+      return detail.questionSummary;
+    }
+    if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
+      const map = new Map<string, Map<string, number>>();
+      for (const q of detail.questions) {
+        const g = (q.groupName || 'General').trim();
+        const d = (q.difficulty || 'Medium').trim();
+        if (!map.has(g)) map.set(g, new Map());
+        const diffMap = map.get(g)!;
+        diffMap.set(d, (diffMap.get(d) || 0) + 1);
+      }
+      const standardOrder = ['Easy', 'Medium', 'Hard'];
+      return Array.from(map.entries()).map(([g, diffMap]) => {
+        const diffKeys = Array.from(diffMap.keys());
+        const sortedKeys = [
+          ...standardOrder.filter((d) => diffKeys.includes(d)),
+          ...diffKeys.filter((d) => !standardOrder.includes(d)),
+        ];
+        return {
+          groupName: g,
+          difficulties: sortedKeys.map((d) => ({
+            difficulty: d,
+            count: diffMap.get(d) || 0,
+          })),
+        };
+      });
+    }
+    return [];
+  }, [detail]);
+
+  const totalHistoricalQuestionsCount = useMemo(() => {
+    if (detail?.totalQuestionsCount != null && detail.totalQuestionsCount > 0) {
+      return detail.totalQuestionsCount;
+    }
+    if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
+      return detail.questions.length;
+    }
+    if (questionSummaryData.length > 0) {
+      return questionSummaryData.reduce(
+        (acc: number, g: any) =>
+          acc + g.difficulties.reduce((dAcc: number, d: any) => dAcc + d.count, 0),
+        0
+      );
+    }
+    return detail?.assignedQuestionsCount || 0;
+  }, [detail, questionSummaryData]);
+
+  // Hierarchical question grouping for View-Only Preview Modal (Group -> Difficulty -> Questions)
+  const previewGroupedHierarchy = useMemo(() => {
+    const rawQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
+    if (rawQuestions.length === 0) return [];
+
+    const groupMap = new Map<string, Map<string, any[]>>();
+    for (const q of rawQuestions) {
+      const g = (q.groupName || 'General').trim();
+      const d = (q.difficulty || 'Medium').trim();
+      if (!groupMap.has(g)) groupMap.set(g, new Map());
+      const diffMap = groupMap.get(g)!;
+      if (!diffMap.has(d)) diffMap.set(d, []);
+      diffMap.get(d)!.push(q);
+    }
+
+    const standardOrder = ['Easy', 'Medium', 'Hard'];
+    return Array.from(groupMap.entries()).map(([groupName, diffMap]) => {
+      const diffKeys = Array.from(diffMap.keys());
+      const sortedKeys = [
+        ...standardOrder.filter((d) => diffKeys.includes(d)),
+        ...diffKeys.filter((d) => !standardOrder.includes(d)),
+      ];
+      const diffs = sortedKeys.map((diffName) => ({
+        difficulty: diffName,
+        questions: diffMap.get(diffName) || [],
+      }));
+      const totalCount = diffs.reduce((sum, d) => sum + d.questions.length, 0);
+      return {
+        groupName,
+        difficulties: diffs,
+        totalCount,
+      };
+    });
+  }, [detail?.questions]);
 
   // Target Configuration(s) stored for this publish
   const targetsList: any[] = useMemo(() => {
@@ -1413,7 +1503,98 @@ function HistoricalAuditDrillDown({
       </div>
 
       {/* ======================================================== */}
-      {/* STEP 2: MULTI-SELECT FILTERS (School -> Class -> Sec -> Stu) */}
+      {/* STEP 2: QUESTIONS CONFIGURATION SUMMARY                  */}
+      {/* ======================================================== */}
+      <div className="space-y-3 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
+            Questions ({totalHistoricalQuestionsCount} {totalHistoricalQuestionsCount === 1 ? 'Question' : 'Questions'})
+          </h4>
+          {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowQuestionsPreview(true)}
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Preview</span>
+            </button>
+          )}
+        </div>
+
+        {questionSummaryData.length > 0 ? (
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3.5 shadow-sm">
+            <div className="space-y-3">
+              {questionSummaryData.map((g: any) => (
+                <div
+                  key={g.groupName}
+                  className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
+                >
+                  <div className="font-bold text-slate-200 text-sm">{g.groupName}</div>
+                  <div className="space-y-1 pl-2">
+                    {g.difficulties.map((d: any) => (
+                      <div
+                        key={d.difficulty}
+                        className="text-xs font-mono text-slate-300 flex items-center gap-2"
+                      >
+                        <span
+                          className={`px-2 py-0.5 rounded font-semibold text-[11px] border ${
+                            d.difficulty === 'Easy'
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                              : d.difficulty === 'Hard'
+                              ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                              : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                          }`}
+                        >
+                          {d.difficulty}
+                        </span>
+                        <span className="text-slate-400">&mdash;</span>
+                        <span className="text-indigo-300 font-semibold">
+                          {d.count} {d.count === 1 ? 'Question' : 'Questions'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+              <span className="text-xs font-mono text-slate-400">
+                Total Selected Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
+              </span>
+              {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionsPreview(true)}
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview Published Questions</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400 flex items-center justify-between">
+            <span>Total Assigned Questions: {detail?.assignedQuestionsCount || 'N/A'}</span>
+            {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowQuestionsPreview(true)}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Preview</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ======================================================== */}
+      {/* STEP 3: MULTI-SELECT FILTERS (School -> Class -> Sec -> Stu) */}
       {/* ======================================================== */}
       <div className="space-y-2.5 pt-3 border-t border-slate-800">
         <div className="flex items-center justify-between">
@@ -1615,6 +1796,163 @@ function HistoricalAuditDrillDown({
           )}
         </div>
       </div>
+
+      {/* Historical Questions View-Only Preview Modal */}
+      {showQuestionsPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+          onClick={() => setShowQuestionsPreview(false)}
+        >
+          <div
+            className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-6 max-w-3xl w-full shadow-2xl space-y-5 my-8 max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase tracking-wider">
+                    VIEW ONLY &bull; Historical Snapshot
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    Total: {totalHistoricalQuestionsCount} Questions
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>{detail.publishName}</span>
+                  <span className="text-xs font-normal text-slate-400 font-mono">
+                    ({detail.publishMode})
+                  </span>
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowQuestionsPreview(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer"
+                title="Close Preview"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body: Grouped by Group -> Difficulty -> Questions */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+              {previewGroupedHierarchy.length > 0 ? (
+                previewGroupedHierarchy.map((group) => (
+                  <div
+                    key={group.groupName}
+                    className="rounded-2xl bg-slate-950/60 border border-slate-800 overflow-hidden"
+                  >
+                    {/* Group Title */}
+                    <div className="p-3.5 bg-slate-800/80 border-b border-slate-800 flex items-center justify-between">
+                      <span className="font-bold text-sm text-white">{group.groupName}</span>
+                      <span className="text-xs font-mono text-indigo-400">
+                        {group.totalCount} {group.totalCount === 1 ? 'Question' : 'Questions'}
+                      </span>
+                    </div>
+
+                    {/* Difficulties */}
+                    <div className="p-3.5 space-y-3">
+                      {group.difficulties.map((diff) => (
+                        <div key={diff.difficulty} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs font-semibold px-2.5 py-0.5 rounded border font-mono ${
+                                diff.difficulty === 'Easy'
+                                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                  : diff.difficulty === 'Hard'
+                                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                                  : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                              }`}
+                            >
+                              {diff.difficulty}
+                            </span>
+                            <span className="text-xs font-mono text-slate-400">
+                              ({diff.questions.length} {diff.questions.length === 1 ? 'Question' : 'Questions'})
+                            </span>
+                          </div>
+
+                          {/* Question Items (View Only) */}
+                          <div className="space-y-2 pl-2 border-l-2 border-slate-800">
+                            {diff.questions.map((q: any, qIdx: number) => (
+                              <div
+                                key={q.id || q.questionId || qIdx}
+                                className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2 text-xs"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="space-y-1 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold">
+                                        Q{qIdx + 1}
+                                      </span>
+                                      <span className="font-medium text-slate-200 text-sm">{q.content}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
+                                    {q.timeSeconds != null && q.timeSeconds > 0 && (
+                                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {q.timeSeconds}s
+                                      </span>
+                                    )}
+                                    {q.points != null && q.points > 0 && (
+                                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                                        <Award className="w-3 h-3" />
+                                        {q.points} pts
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Options Preview if any */}
+                                {Array.isArray(q.options) && q.options.length > 0 && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1.5">
+                                    {q.options.map((opt: string, optIdx: number) => (
+                                      <div
+                                        key={optIdx}
+                                        className="px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-300 text-xs flex items-center gap-2"
+                                      >
+                                        <span className="w-4 h-4 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] font-bold">
+                                          {String.fromCharCode(65 + optIdx)}
+                                        </span>
+                                        <span className="truncate">{opt}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-slate-500 text-xs">
+                  No questions recorded for this published assessment snapshot.
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500 font-mono">
+                Preview is read-only. Questions cannot be edited from history.
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowQuestionsPreview(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

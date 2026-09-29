@@ -20,6 +20,53 @@ interface StudentReportsSectionProps {
   schools: any[];
 }
 
+// Helper to format date and time as DD-MM-YYYY | hh:mm A in user's local timezone
+function formatStudentAssessmentDateTime(item: any): string {
+  const isCompleted = item?.status === 'COMPLETED';
+  const rawDate = isCompleted
+    ? (item?.completedAt || item?.updatedAt || item?.createdAt)
+    : (item?.lockedAt || item?.startedAt || item?.updatedAt || item?.createdAt || item?.date);
+
+  if (!rawDate) return '—';
+
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) {
+    return String(rawDate);
+  }
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+
+  let hours = d.getHours();
+  const minutes = pad(d.getMinutes());
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hoursStr = pad(hours);
+
+  return `${day}-${month}-${year} | ${hoursStr}:${minutes} ${ampm}`;
+}
+
+// Helper to format published/created date and time as DD-MM-YYYY • hh:mm A in user's local timezone
+function formatPublishedDateTime(rawDateVal?: Date | string | null): string {
+  if (!rawDateVal) return '—';
+  const d = new Date(rawDateVal);
+  if (isNaN(d.getTime())) return String(rawDateVal);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = pad(d.getMinutes());
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hoursStr = pad(hours);
+  return `${day}-${month}-${year} • ${hoursStr}:${minutes} ${ampm}`;
+}
+
 export function StudentReportsSection({ token, schools }: StudentReportsSectionProps) {
   // Alphabetically sorted schools (A -> Z, case-insensitive)
   const sortedSchools = [...schools].sort((a, b) =>
@@ -552,12 +599,22 @@ export function StudentReportsSection({ token, schools }: StudentReportsSectionP
                       key={idx}
                       className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700/60 space-y-4"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div>
-                          <span className="text-xs text-indigo-400 font-mono">{item.date}</span>
-                          <h5 className="font-bold text-base text-white">{item.testName}</h5>
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <h5 className="font-bold text-base text-white leading-snug">
+                            {(() => {
+                              const num = item.assessmentNumber || idx + 1;
+                              const baseTitle = item.assessmentName || item.originalPublishName || item.publishName || item.testName || 'Assessment';
+                              return (/^\d+\./.test(baseTitle) || baseTitle.startsWith('Assessment -')) ? baseTitle : `${num}. ${baseTitle}`;
+                            })()}
+                          </h5>
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400 font-mono">
+                            <span>{item.publishMode || 'Selected Questions'}</span>
+                            <span className="text-slate-600">&bull;</span>
+                            <span>{formatPublishedDateTime(item.publishedCreatedAt || item.createdAt)}</span>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2.5">
+                        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                           <div className="flex items-center gap-1 font-mono text-xs">
                             <span className="text-slate-400">Status:</span>
                             <span
@@ -571,44 +628,74 @@ export function StudentReportsSection({ token, schools }: StudentReportsSectionP
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1 font-mono text-xs">
-                            <span className="text-slate-400">Exit Type:</span>
-                            <span
-                              className={`font-semibold ${
-                                item.status === 'COMPLETED'
-                                  ? 'text-slate-500'
-                                  : item.exitType === 'EXIT'
-                                  ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
-                                  : item.exitType === 'LOGOUT'
-                                  ? 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
-                                  : 'text-slate-500'
-                              }`}
-                            >
-                              {item.status === 'COMPLETED' ? '—' : (item.exitType || '—')}
-                            </span>
-                          </div>
-
-                          <span className="font-mono text-base font-bold text-white bg-slate-900 px-2.5 py-0.5 rounded-xl border border-slate-700">
-                            {item.scoreOutOf100} / 100
-                          </span>
+                          {/* Exit Type Badge - Only display when a valid Exit Type exists */}
+                          {item.exitType && item.status !== 'COMPLETED' && (
+                            <div className="flex items-center gap-1 font-mono text-xs">
+                              <span className="text-slate-400">Exit Type:</span>
+                              <span
+                                className={`font-semibold ${
+                                  item.exitType === 'EXIT'
+                                    ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
+                                    : item.exitType === 'LOGOUT'
+                                    ? 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
+                                    : 'text-slate-300'
+                                }`}
+                              >
+                                {item.exitType}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Question Level Breakdown: answers, correct/wrong, points, time taken */}
+                      {/* Completion / Submission Date & Time (Directly below header before Question Breakdown) */}
+                      {item.status === 'COMPLETED' && (
+                        <div className="text-xs text-slate-300 font-mono">
+                          <span>Completed: {formatPublishedDateTime(item.completedAt || item.updatedAt || item.createdAt)}</span>
+                        </div>
+                      )}
+
+                      {/* Question Level Breakdown: Group, Level, content, answers, points, time taken */}
                       <div className="pt-3 border-t border-slate-700/60 space-y-2">
-                        <span className="text-xs font-semibold text-slate-400 block">
-                          Question-Level Evaluation Breakdown:
-                        </span>
+                        <div className="text-xs font-semibold text-slate-400">
+                          <span>Question-Level Evaluation Breakdown:</span>
+                        </div>
                         <div className="space-y-2">
                           {item.questions && item.questions.length > 0 ? (
                             item.questions.map((q: any, qIdx: number) => (
                               <div
                                 key={qIdx}
-                                className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                                className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-700/80 transition-colors"
                               >
-                                <div className="space-y-1">
-                                  <p className="font-medium text-slate-200">{q.content}</p>
-                                  <div className="flex flex-wrap items-center gap-2 text-slate-400">
+                                <div className="space-y-1.5 flex-1 min-w-0">
+                                  {/* Question Group & Difficulty Level */}
+                                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                                    <span className="text-slate-400">
+                                      Group: <strong className="text-indigo-300 font-sans font-semibold">{q.groupName || 'General'}</strong>
+                                    </span>
+                                    <span className="text-slate-600">&bull;</span>
+                                    <span className="text-slate-400 flex items-center gap-1">
+                                      Level:
+                                      <span
+                                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                                          String(q.difficulty || '').toLowerCase() === 'easy'
+                                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
+                                            : String(q.difficulty || '').toLowerCase() === 'hard'
+                                            ? 'bg-rose-950/80 text-rose-400 border border-rose-800/60'
+                                            : 'bg-amber-950/80 text-amber-400 border border-amber-800/60'
+                                        }`}
+                                      >
+                                        {q.difficulty || 'Medium'}
+                                      </span>
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-start gap-2">
+                                    <span className="font-mono text-[11px] text-slate-500 font-bold shrink-0 mt-0.5">Q{qIdx + 1} &mdash;</span>
+                                    <p className="font-medium text-slate-200 leading-relaxed">{q.content}</p>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2 text-slate-400 pl-6 sm:pl-7">
                                     <span>
                                       Student Ans:{' '}
                                       <strong className="text-white">
@@ -633,7 +720,7 @@ export function StudentReportsSection({ token, schools }: StudentReportsSectionP
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 shrink-0 font-mono">
+                                <div className="flex items-center gap-3 shrink-0 font-mono self-end sm:self-auto">
                                   <span className="text-slate-400 flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
                                     {q.timeAllowedSeconds != null && q.timeAllowedSeconds > 0

@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types.ts';
+import type { UserRole } from '../types.ts';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'puzzles-school-assessment-jwt-secret-key-2026';
 

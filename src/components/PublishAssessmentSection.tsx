@@ -11,8 +11,11 @@ import {
   Plus,
   Trash2,
   ChevronDown,
+  ChevronRight,
   Check,
+  Minus,
   AlertTriangle,
+  AlertCircle,
   X,
   Users,
   Search,
@@ -57,13 +60,17 @@ export interface PublishAssessmentFormState {
   publishMode: 'Selected Questions' | 'Random Questions';
   targets: TargetItem[];
   selectedQuestionsForPublish: string[];
+  randomSelectedDifficulties?: string[];
   shuffleQuestions: boolean;
-  randomCount: number;
+  randomCount: number | '';
   startDate: string;
   startTime: string;
   endDate: string;
   endTime: string;
   editingPublishId?: string | null;
+  expandedGroups?: string[];
+  expandedDifficulties?: string[];
+  questionPickerSearch?: string;
 }
 
 export interface PublishAssessmentSectionProps {
@@ -76,6 +83,66 @@ export interface PublishAssessmentSectionProps {
   onResetFormState?: () => void;
   editingPublishId?: string | null;
   onCancelEdit?: () => void;
+}
+
+// -------------------------------------------------------------
+// Tri-State Checkbox Component (Supports Checked, Unchecked, Indeterminate)
+// -------------------------------------------------------------
+function TriStateCheckbox({
+  checked,
+  indeterminate,
+  onChange,
+  disabled,
+  title,
+  ariaLabel,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: (e: React.MouseEvent) => void;
+  disabled?: boolean;
+  title?: string;
+  ariaLabel?: string;
+}) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = Boolean(indeterminate && !checked);
+    }
+  }, [indeterminate, checked]);
+
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={ariaLabel || title}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled) onChange(e);
+      }}
+      className={`w-4 h-4 rounded flex items-center justify-center transition-all border shrink-0 cursor-pointer ${
+        disabled ? 'opacity-40 cursor-not-allowed' : ''
+      } ${
+        checked
+          ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30'
+          : indeterminate
+          ? 'bg-indigo-600/90 border-indigo-500 text-white'
+          : 'bg-slate-800 border-slate-600 hover:border-slate-500'
+      }`}
+    >
+      <input
+        ref={checkboxRef}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        readOnly
+        className="sr-only"
+      />
+      {checked && <Check className="w-3 h-3 stroke-[3]" />}
+      {!checked && indeterminate && <Minus className="w-3 h-3 stroke-[3]" />}
+    </button>
+  );
 }
 
 // -------------------------------------------------------------
@@ -1557,7 +1624,9 @@ export function PublishAssessmentSection({
     formState?.selectedQuestionsForPublish ?? []
   );
   const [shuffleQuestions, setShuffleQuestions] = useState(formState?.shuffleQuestions ?? false);
-  const [randomCount, setRandomCount] = useState(formState?.randomCount ?? 5);
+  const [randomCount, setRandomCount] = useState<number | ''>(
+    formState?.randomCount != null && formState.randomCount !== '' ? formState.randomCount : ''
+  );
   const [startDate, setStartDate] = useState(
     formState?.startDate ?? new Date().toISOString().split('T')[0]
   );
@@ -1579,23 +1648,44 @@ export function PublishAssessmentSection({
     setPublishFeedback({ type: 'error', message });
   };
 
-  // When formState or editingPublishId changes (e.g. from clicking Edit), update all local states
+  // Question Picker Hierarchical State (Group -> Difficulty -> Questions)
+  const [questionPickerSearch, setQuestionPickerSearch] = useState(formState?.questionPickerSearch ?? '');
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => (formState?.expandedGroups ? new Set(formState.expandedGroups) : new Set())
+  );
+  const [expandedDifficulties, setExpandedDifficulties] = useState<Set<string>>(
+    () => (formState?.expandedDifficulties ? new Set(formState.expandedDifficulties) : new Set())
+  );
+
+  // Random Questions mode selected difficulties (stores `${groupName}::${diffName}`)
+  const [randomSelectedDifficulties, setRandomSelectedDifficulties] = useState<Set<string>>(
+    () => (formState?.randomSelectedDifficulties ? new Set(formState.randomSelectedDifficulties) : new Set<string>())
+  );
+
+  // When formState or editingPublishId changes from external trigger (e.g. from clicking Edit), update all local states
+  const prevEditIdRef = useRef<string | null | undefined>(editingPublishId);
   useEffect(() => {
-    if (formState) {
-      setPublishName(formState.publishName ?? '');
-      setPublishMode(formState.publishMode ?? 'Selected Questions');
-      if (formState.targets && formState.targets.length > 0) {
-        setTargets(formState.targets);
+    if (editingPublishId && editingPublishId !== prevEditIdRef.current) {
+      prevEditIdRef.current = editingPublishId;
+      if (formState) {
+        setPublishName(formState.publishName ?? '');
+        setPublishMode(formState.publishMode ?? 'Selected Questions');
+        if (formState.targets && formState.targets.length > 0) {
+          setTargets(formState.targets);
+        }
+        setSelectedQuestionsForPublish(formState.selectedQuestionsForPublish ?? []);
+        setShuffleQuestions(formState.shuffleQuestions ?? false);
+        setRandomCount(formState.randomCount != null && formState.randomCount !== '' ? formState.randomCount : '');
+        setStartDate(formState.startDate ?? new Date().toISOString().split('T')[0]);
+        setStartTime(formState.startTime ?? '00:00');
+        setEndDate(formState.endDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        setEndTime(formState.endTime ?? '23:59');
+        if (formState.randomSelectedDifficulties) {
+          setRandomSelectedDifficulties(new Set(formState.randomSelectedDifficulties));
+        }
       }
-      setSelectedQuestionsForPublish(formState.selectedQuestionsForPublish ?? []);
-      setShuffleQuestions(formState.shuffleQuestions ?? false);
-      setRandomCount(formState.randomCount ?? 5);
-      setStartDate(formState.startDate ?? new Date().toISOString().split('T')[0]);
-      setStartTime(formState.startTime ?? '00:00');
-      setEndDate(formState.endDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-      setEndTime(formState.endTime ?? '23:59');
     }
-  }, [formState?.editingPublishId, formState?.publishName]);
+  }, [editingPublishId, formState]);
 
   // Sync state back to parent container so it is preserved across page navigation
   useEffect(() => {
@@ -1605,6 +1695,7 @@ export function PublishAssessmentSection({
         publishMode,
         targets,
         selectedQuestionsForPublish,
+        randomSelectedDifficulties: Array.from(randomSelectedDifficulties),
         shuffleQuestions,
         randomCount,
         startDate,
@@ -1612,6 +1703,9 @@ export function PublishAssessmentSection({
         endDate,
         endTime,
         editingPublishId: currentEditId,
+        expandedGroups: Array.from(expandedGroups),
+        expandedDifficulties: Array.from(expandedDifficulties),
+        questionPickerSearch,
       });
     }
   }, [
@@ -1619,6 +1713,7 @@ export function PublishAssessmentSection({
     publishMode,
     targets,
     selectedQuestionsForPublish,
+    randomSelectedDifficulties,
     shuffleQuestions,
     randomCount,
     startDate,
@@ -1626,6 +1721,9 @@ export function PublishAssessmentSection({
     endDate,
     endTime,
     currentEditId,
+    expandedGroups,
+    expandedDifficulties,
+    questionPickerSearch,
     onFormStateChange,
   ]);
 
@@ -1646,6 +1744,400 @@ export function PublishAssessmentSection({
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateToDelete, setTemplateToDelete] = useState<{ id: string; name: string } | null>(null);
   const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
+
+  // Dynamically group allQuestions into Group -> Difficulty -> Questions hierarchy
+  const groupsHierarchy = React.useMemo(() => {
+    const groupMap = new Map<
+      string,
+      {
+        groupName: string;
+        groupId: string;
+        difficultyMap: Map<string, any[]>;
+        allQuestions: any[];
+      }
+    >();
+
+    for (const q of allQuestions) {
+      const gName = (q.groupName || 'General').trim();
+      const gId = q.groupId ? String(q.groupId) : gName;
+      if (!groupMap.has(gName)) {
+        groupMap.set(gName, {
+          groupName: gName,
+          groupId: gId,
+          difficultyMap: new Map<string, any[]>(),
+          allQuestions: [],
+        });
+      }
+      const gEntry = groupMap.get(gName)!;
+      gEntry.allQuestions.push(q);
+
+      const rawDiff = (q.difficulty || 'Medium').trim();
+      const normalizedDiff =
+        rawDiff.charAt(0).toUpperCase() + rawDiff.slice(1).toLowerCase();
+      const diffKey = ['Easy', 'Medium', 'Hard'].includes(normalizedDiff)
+        ? normalizedDiff
+        : rawDiff;
+
+      if (!gEntry.difficultyMap.has(diffKey)) {
+        gEntry.difficultyMap.set(diffKey, []);
+      }
+      gEntry.difficultyMap.get(diffKey)!.push(q);
+    }
+
+    const standardOrder = ['Easy', 'Medium', 'Hard'];
+
+    return Array.from(groupMap.values()).map((g) => {
+      const presentDiffs = Array.from(g.difficultyMap.keys());
+      const sortedDiffKeys = [
+        ...standardOrder.filter((d) => presentDiffs.includes(d)),
+        ...presentDiffs.filter((d) => !standardOrder.includes(d)),
+      ];
+
+      const difficulties = sortedDiffKeys.map((diffName) => ({
+        difficulty: diffName,
+        questions: g.difficultyMap.get(diffName) || [],
+      }));
+
+      return {
+        groupName: g.groupName,
+        groupId: g.groupId,
+        difficulties,
+        allGroupQuestions: g.allQuestions,
+      };
+    });
+  }, [allQuestions]);
+
+  // Synchronize randomSelectedDifficulties if in edit mode or formState has initial question IDs
+  useEffect(() => {
+    if (
+      publishMode === 'Random Questions' &&
+      randomSelectedDifficulties.size === 0 &&
+      selectedQuestionsForPublish.length > 0 &&
+      allQuestions.length > 0
+    ) {
+      const inferred = new Set<string>();
+      for (const qId of selectedQuestionsForPublish) {
+        const q = allQuestions.find((item) => item.id === qId);
+        if (q) {
+          const g = (q.groupName || 'General').trim();
+          const d = (q.difficulty || 'Medium').trim();
+          const norm = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
+          inferred.add(`${g}::${norm}`);
+        }
+      }
+      if (inferred.size > 0) {
+        setRandomSelectedDifficulties(inferred);
+      }
+    }
+  }, [publishMode, selectedQuestionsForPublish, allQuestions]);
+
+  // Calculate eligible question pool for Random Questions mode strictly from selected difficulties
+  const randomEligibleQuestions = React.useMemo(() => {
+    if (randomSelectedDifficulties.size === 0) return [];
+    return allQuestions.filter((q) => {
+      const gName = (q.groupName || 'General').trim();
+      const rawDiff = (q.difficulty || 'Medium').trim();
+      const normalizedDiff = rawDiff.charAt(0).toUpperCase() + rawDiff.slice(1).toLowerCase();
+      const diffKey = ['Easy', 'Medium', 'Hard'].includes(normalizedDiff) ? normalizedDiff : rawDiff;
+      return (
+        randomSelectedDifficulties.has(`${gName}::${diffKey}`) ||
+        randomSelectedDifficulties.has(`${gName}::${rawDiff}`)
+      );
+    });
+  }, [allQuestions, randomSelectedDifficulties]);
+
+  const randomEligiblePoolCount = randomEligibleQuestions.length;
+
+  // Immediate validation warning for Random Questions mode
+  const randomValidationWarning = React.useMemo(() => {
+    if (publishMode !== 'Random Questions') return null;
+    if (randomEligiblePoolCount === 0) {
+      return '0 eligible questions are available. Select at least one Group and Difficulty.';
+    }
+    if (randomCount === '' || randomCount == null) {
+      return null;
+    }
+    const count = Number(randomCount);
+    if (isNaN(count) || count <= 0) {
+      return 'Number of questions per student must be at least 1.';
+    }
+    if (count > randomEligiblePoolCount) {
+      return `Only ${randomEligiblePoolCount} eligible questions are available. You cannot assign ${count} questions per student.`;
+    }
+    return null;
+  }, [publishMode, randomEligiblePoolCount, randomCount]);
+
+  // Random Questions mode hierarchy selection helpers
+  const isRandomAllGroupsChecked = React.useMemo(() => {
+    const allDiffKeys = groupsHierarchy.flatMap((g) =>
+      g.difficulties.map((d) => `${g.groupName}::${d.difficulty}`)
+    );
+    return allDiffKeys.length > 0 && allDiffKeys.every((k) => randomSelectedDifficulties.has(k));
+  }, [groupsHierarchy, randomSelectedDifficulties]);
+
+  const isRandomAllGroupsIndeterminate = React.useMemo(() => {
+    if (isRandomAllGroupsChecked) return false;
+    const allDiffKeys = groupsHierarchy.flatMap((g) =>
+      g.difficulties.map((d) => `${g.groupName}::${d.difficulty}`)
+    );
+    return allDiffKeys.some((k) => randomSelectedDifficulties.has(k));
+  }, [groupsHierarchy, randomSelectedDifficulties, isRandomAllGroupsChecked]);
+
+  const handleToggleRandomAllGroups = () => {
+    const allDiffKeys = groupsHierarchy.flatMap((g) =>
+      g.difficulties.map((d) => `${g.groupName}::${d.difficulty}`)
+    );
+    if (isRandomAllGroupsChecked) {
+      setRandomSelectedDifficulties(new Set());
+    } else {
+      setRandomSelectedDifficulties(new Set(allDiffKeys));
+    }
+  };
+
+  const handleToggleRandomGroup = (group: any) => {
+    const groupDiffKeys = group.difficulties.map((d: any) => `${group.groupName}::${d.difficulty}`);
+    const isGroupAllSelected =
+      groupDiffKeys.length > 0 && groupDiffKeys.every((k: string) => randomSelectedDifficulties.has(k));
+
+    setRandomSelectedDifficulties((prev) => {
+      const next = new Set(prev);
+      if (isGroupAllSelected) {
+        groupDiffKeys.forEach((k: string) => next.delete(k));
+      } else {
+        groupDiffKeys.forEach((k: string) => next.add(k));
+      }
+      return next;
+    });
+  };
+
+  const handleToggleRandomDifficulty = (diffKey: string) => {
+    setRandomSelectedDifficulties((prev) => {
+      const next = new Set(prev);
+      if (next.has(diffKey)) {
+        next.delete(diffKey);
+      } else {
+        next.add(diffKey);
+      }
+      return next;
+    });
+  };
+
+  // Structured summaries for Selected and Random modes
+  const selectedSummaryData = React.useMemo(() => {
+    const result: Array<{
+      groupName: string;
+      difficulties: Array<{ difficulty: string; count: number }>;
+    }> = [];
+
+    groupsHierarchy.forEach((g) => {
+      const diffs: Array<{ difficulty: string; count: number }> = [];
+      g.difficulties.forEach((d) => {
+        const count = d.questions.filter((q) => selectedQuestionsForPublish.includes(q.id)).length;
+        if (count > 0) {
+          diffs.push({ difficulty: d.difficulty, count });
+        }
+      });
+      if (diffs.length > 0) {
+        result.push({ groupName: g.groupName, difficulties: diffs });
+      }
+    });
+
+    return result;
+  }, [groupsHierarchy, selectedQuestionsForPublish]);
+
+  const randomSummaryData = React.useMemo(() => {
+    const result: Array<{
+      groupName: string;
+      difficulties: Array<{ difficulty: string; count: number }>;
+    }> = [];
+
+    groupsHierarchy.forEach((g) => {
+      const diffs: Array<{ difficulty: string; count: number }> = [];
+      g.difficulties.forEach((d) => {
+        const diffKey = `${g.groupName}::${d.difficulty}`;
+        if (randomSelectedDifficulties.has(diffKey)) {
+          diffs.push({ difficulty: d.difficulty, count: d.questions.length });
+        }
+      });
+      if (diffs.length > 0) {
+        result.push({ groupName: g.groupName, difficulties: diffs });
+      }
+    });
+
+    return result;
+  }, [groupsHierarchy, randomSelectedDifficulties]);
+
+  // Expand all groups and difficulties on initial question load
+  useEffect(() => {
+    if (groupsHierarchy.length > 0) {
+      setExpandedGroups((prev) => {
+        if (prev.size === 0) {
+          return new Set(groupsHierarchy.map((g) => g.groupName));
+        }
+        return prev;
+      });
+      setExpandedDifficulties((prev) => {
+        if (prev.size === 0) {
+          const initialDiffs = new Set<string>();
+          groupsHierarchy.forEach((g) => {
+            g.difficulties.forEach((d) => {
+              initialDiffs.add(`${g.groupName}::${d.difficulty}`);
+            });
+          });
+          return initialDiffs;
+        }
+        return prev;
+      });
+    }
+  }, [groupsHierarchy]);
+
+  // When search query is active, auto-expand matching groups and difficulties
+  useEffect(() => {
+    if (questionPickerSearch.trim()) {
+      setExpandedGroups(new Set(groupsHierarchy.map((g) => g.groupName)));
+      const matchingDiffs = new Set<string>();
+      groupsHierarchy.forEach((g) => {
+        g.difficulties.forEach((d) => {
+          matchingDiffs.add(`${g.groupName}::${d.difficulty}`);
+        });
+      });
+      setExpandedDifficulties(matchingDiffs);
+    }
+  }, [questionPickerSearch, groupsHierarchy]);
+
+  const toggleGroupExpand = (gName: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(gName)) {
+        next.delete(gName);
+      } else {
+        next.add(gName);
+      }
+      return next;
+    });
+  };
+
+  const toggleDifficultyExpand = (key: string) => {
+    setExpandedDifficulties((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const handleExpandAll = () => {
+    setExpandedGroups(new Set(groupsHierarchy.map((g) => g.groupName)));
+    const allDiffKeys = new Set<string>();
+    groupsHierarchy.forEach((g) => {
+      g.difficulties.forEach((d) => {
+        allDiffKeys.add(`${g.groupName}::${d.difficulty}`);
+      });
+    });
+    setExpandedDifficulties(allDiffKeys);
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedGroups(new Set());
+    setExpandedDifficulties(new Set());
+  };
+
+  // Search filtered hierarchy
+  const filteredGroupsHierarchy = React.useMemo(() => {
+    const term = questionPickerSearch.trim().toLowerCase();
+    if (!term) return groupsHierarchy;
+
+    return groupsHierarchy
+      .map((g) => {
+        const matchesGroup = g.groupName.toLowerCase().includes(term);
+
+        const filteredDiffs = g.difficulties
+          .map((d) => {
+            const matchesDiff = d.difficulty.toLowerCase().includes(term);
+            const filteredQs = d.questions.filter(
+              (q) =>
+                matchesGroup ||
+                matchesDiff ||
+                (q.content && q.content.toLowerCase().includes(term))
+            );
+            return {
+              ...d,
+              questions: filteredQs,
+            };
+          })
+          .filter((d) => d.questions.length > 0);
+
+        const allMatchingQs = filteredDiffs.flatMap((d) => d.questions);
+
+        return {
+          ...g,
+          difficulties: filteredDiffs,
+          allGroupQuestions: allMatchingQs,
+        };
+      })
+      .filter((g) => g.allGroupQuestions.length > 0);
+  }, [groupsHierarchy, questionPickerSearch]);
+
+  const allVisibleQuestionIds = React.useMemo(() => {
+    return filteredGroupsHierarchy.flatMap((g) => g.allGroupQuestions.map((q) => q.id));
+  }, [filteredGroupsHierarchy]);
+
+  const isAllGroupsChecked =
+    allVisibleQuestionIds.length > 0 &&
+    allVisibleQuestionIds.every((id) => selectedQuestionsForPublish.includes(id));
+
+  const isAllGroupsIndeterminate =
+    !isAllGroupsChecked &&
+    allVisibleQuestionIds.some((id) => selectedQuestionsForPublish.includes(id));
+
+  const handleToggleAllGroups = () => {
+    if (isAllGroupsChecked) {
+      const toRemove = new Set(allVisibleQuestionIds);
+      setSelectedQuestionsForPublish((prev) => prev.filter((id) => !toRemove.has(id)));
+    } else {
+      const newSelected = new Set([...selectedQuestionsForPublish, ...allVisibleQuestionIds]);
+      setSelectedQuestionsForPublish(Array.from(newSelected));
+    }
+  };
+
+  const handleToggleGroup = (groupQuestions: any[]) => {
+    const groupQIds = groupQuestions.map((q) => q.id);
+    const isGroupAllSelected =
+      groupQIds.length > 0 && groupQIds.every((id) => selectedQuestionsForPublish.includes(id));
+
+    if (isGroupAllSelected) {
+      const toRemove = new Set(groupQIds);
+      setSelectedQuestionsForPublish((prev) => prev.filter((id) => !toRemove.has(id)));
+    } else {
+      const newSelected = new Set([...selectedQuestionsForPublish, ...groupQIds]);
+      setSelectedQuestionsForPublish(Array.from(newSelected));
+    }
+  };
+
+  const handleToggleDifficulty = (diffQuestions: any[]) => {
+    const diffQIds = diffQuestions.map((q) => q.id);
+    const isDiffAllSelected =
+      diffQIds.length > 0 && diffQIds.every((id) => selectedQuestionsForPublish.includes(id));
+
+    if (isDiffAllSelected) {
+      const toRemove = new Set(diffQIds);
+      setSelectedQuestionsForPublish((prev) => prev.filter((id) => !toRemove.has(id)));
+    } else {
+      const newSelected = new Set([...selectedQuestionsForPublish, ...diffQIds]);
+      setSelectedQuestionsForPublish(Array.from(newSelected));
+    }
+  };
+
+  const handleToggleQuestion = (qId: string) => {
+    if (selectedQuestionsForPublish.includes(qId)) {
+      setSelectedQuestionsForPublish((prev) => prev.filter((id) => id !== qId));
+    } else {
+      setSelectedQuestionsForPublish((prev) => [...prev, qId]);
+    }
+  };
 
   const headers = {
     'Content-Type': 'application/json',
@@ -1676,6 +2168,10 @@ export function PublishAssessmentSection({
   const handleOpenSaveTemplateModal = () => {
     if (publishMode === 'Selected Questions' && selectedQuestionsForPublish.length === 0) {
       showErrorFeedback('Please select at least 1 question before saving a template.');
+      return;
+    }
+    if (publishMode === 'Random Questions' && randomSelectedDifficulties.size === 0) {
+      showErrorFeedback('Please select at least 1 Question Group and Difficulty before saving a template.');
       return;
     }
     setTemplateNameInput('');
@@ -1711,15 +2207,22 @@ export function PublishAssessmentSection({
         selectedStudentIds: Array.isArray(t.selectedStudentIds) ? t.selectedStudentIds : [],
       }));
 
+      const qIdsToSend =
+        publishMode === 'Selected Questions'
+          ? selectedQuestionsForPublish
+          : randomEligibleQuestions.map((q) => q.id);
+
       const res = await fetch('/api/templates', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           name: trimmed,
           publishMode,
-          selectedQuestionIds: selectedQuestionsForPublish,
-          shuffleQuestions,
-          randomCount: Number(randomCount) || 5,
+          selectedQuestionIds: qIdsToSend,
+          randomSelectedDifficulties:
+            publishMode === 'Random Questions' ? Array.from(randomSelectedDifficulties) : [],
+          shuffleQuestions: publishMode === 'Selected Questions' ? shuffleQuestions : false,
+          randomCount: randomCount !== '' ? Number(randomCount) : undefined,
           targets: cleanTargets,
         }),
       });
@@ -1742,7 +2245,8 @@ export function PublishAssessmentSection({
 
   const hasCurrentSelections = () => {
     if (publishName.trim() !== '') return true;
-    if (selectedQuestionsForPublish.length > 0) return true;
+    if (publishMode === 'Selected Questions' && selectedQuestionsForPublish.length > 0) return true;
+    if (publishMode === 'Random Questions' && randomSelectedDifficulties.size > 0) return true;
     if (targets.length > 1) return true;
     if (targets.length === 1) {
       const t = targets[0];
@@ -1792,10 +2296,40 @@ export function PublishAssessmentSection({
       isLoadingStudents: false,
     }));
 
-    setPublishMode(tpl.publishMode || 'Selected Questions');
-    setSelectedQuestionsForPublish(Array.isArray(tpl.selectedQuestionIds) ? [...tpl.selectedQuestionIds] : []);
-    setShuffleQuestions(Boolean(tpl.shuffleQuestions));
-    setRandomCount(Number(tpl.randomCount) || 5);
+    const targetMode = tpl.publishMode || 'Selected Questions';
+    setPublishMode(targetMode);
+
+    if (targetMode === 'Selected Questions') {
+      const validQIds = Array.isArray(tpl.selectedQuestionIds)
+        ? tpl.selectedQuestionIds.filter((id: string) => allQuestions.some((q) => q.id === id))
+        : [];
+      setSelectedQuestionsForPublish(validQIds);
+      setShuffleQuestions(Boolean(tpl.shuffleQuestions));
+      setRandomSelectedDifficulties(new Set());
+      setRandomCount('');
+    } else {
+      setRandomCount(tpl.randomCount != null && tpl.randomCount !== '' ? Number(tpl.randomCount) : '');
+      if (Array.isArray(tpl.randomSelectedDifficulties) && tpl.randomSelectedDifficulties.length > 0) {
+        setRandomSelectedDifficulties(new Set(tpl.randomSelectedDifficulties));
+      } else if (Array.isArray(tpl.selectedQuestionIds) && tpl.selectedQuestionIds.length > 0) {
+        // Legacy template migration: infer group::difficulty from saved question IDs
+        const inferred = new Set<string>();
+        for (const qId of tpl.selectedQuestionIds) {
+          const q = allQuestions.find((item) => item.id === qId);
+          if (q) {
+            const g = (q.groupName || 'General').trim();
+            const d = (q.difficulty || 'Medium').trim();
+            const norm = d.charAt(0).toUpperCase() + d.slice(1).toLowerCase();
+            inferred.add(`${g}::${norm}`);
+          }
+        }
+        setRandomSelectedDifficulties(inferred);
+      } else {
+        setRandomSelectedDifficulties(new Set());
+      }
+      setSelectedQuestionsForPublish([]);
+    }
+
     setTargets(clonedTargets);
 
     // Keep publishName empty and dates at fresh defaults
@@ -1928,6 +2462,21 @@ export function PublishAssessmentSection({
       return;
     }
 
+    if (publishMode === 'Random Questions') {
+      if (randomEligiblePoolCount === 0) {
+        showErrorFeedback('0 eligible questions are available. Select at least one Group and Difficulty.');
+        return;
+      }
+      if (randomCount === '' || randomCount == null || isNaN(Number(randomCount)) || Number(randomCount) <= 0) {
+        showErrorFeedback('Please enter the number of questions per student.');
+        return;
+      }
+      if (randomValidationWarning) {
+        showErrorFeedback(randomValidationWarning);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const normalizedTargetsForApi = targets.map((t) => {
@@ -2023,7 +2572,10 @@ export function PublishAssessmentSection({
           startTime,
           endDate,
           endTime,
-          selectedQuestionIds: selectedQuestionsForPublish,
+          selectedQuestionIds:
+            publishMode === 'Random Questions'
+              ? randomEligibleQuestions.map((q) => q.id)
+              : selectedQuestionsForPublish,
           randomCount: Number(randomCount),
           shuffle: shuffleQuestions,
         }),
@@ -2321,7 +2873,8 @@ export function PublishAssessmentSection({
         {/* Selected Questions vs Random Questions Configuration */}
         {publishMode === 'Selected Questions' ? (
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Header: Title, Selected Count, Shuffle Toggle & Preview Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
               <div>
                 <h3 className="font-bold text-base text-white">Selected Questions Bank Picker</h3>
                 <p className="text-xs text-slate-400">
@@ -2329,8 +2882,8 @@ export function PublishAssessmentSection({
                 </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-300">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-300 select-none">
                   <input
                     type="checkbox"
                     checked={shuffleQuestions}
@@ -2347,7 +2900,7 @@ export function PublishAssessmentSection({
                     setPreviewActiveIndex(0);
                     setShowPreviewModal(true);
                   }}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40"
+                  className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40 cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5" />
                   Preview with Test ({selectedQuestionsForPublish.length})
@@ -2355,90 +2908,537 @@ export function PublishAssessmentSection({
               </div>
             </div>
 
-            {/* List of selectable questions */}
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {allQuestions.length > 0 ? (
-                allQuestions.map((q) => {
-                  const isChecked = selectedQuestionsForPublish.includes(q.id);
+            {/* Search Bar + Expand / Collapse Controls */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search questions by content, group, or difficulty..."
+                  value={questionPickerSearch}
+                  onChange={(e) => setQuestionPickerSearch(e.target.value)}
+                  className="w-full pl-10 pr-8 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+                {questionPickerSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setQuestionPickerSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExpandAll}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:border-slate-600 transition-colors text-[11px] font-medium cursor-pointer"
+                >
+                  Expand All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCollapseAll}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:border-slate-600 transition-colors text-[11px] font-medium cursor-pointer"
+                >
+                  Collapse All
+                </button>
+              </div>
+            </div>
+
+            {/* Select All Groups Header Bar */}
+            <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/80 flex items-center justify-between">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-white select-none">
+                <TriStateCheckbox
+                  checked={isAllGroupsChecked}
+                  indeterminate={isAllGroupsIndeterminate}
+                  onChange={handleToggleAllGroups}
+                  title="Select / Deselect All Groups"
+                />
+                <span>Select All Groups</span>
+                {allVisibleQuestionIds.length > 0 && (
+                  <span className="text-[11px] font-mono text-slate-400 font-normal">
+                    ({allVisibleQuestionIds.length} Questions Available)
+                  </span>
+                )}
+              </label>
+              <span className="text-xs font-mono text-indigo-400">
+                {selectedQuestionsForPublish.length} Selected
+              </span>
+            </div>
+
+            {/* Hierarchical Group -> Difficulty -> Questions Tree */}
+            <div className="space-y-3">
+              {filteredGroupsHierarchy.length > 0 ? (
+                filteredGroupsHierarchy.map((group) => {
+                  const isGroupExpanded = expandedGroups.has(group.groupName);
+                  const groupQIds = group.allGroupQuestions.map((q) => q.id);
+                  const selectedInGroupCount = groupQIds.filter((id) =>
+                    selectedQuestionsForPublish.includes(id)
+                  ).length;
+                  const isGroupChecked =
+                    groupQIds.length > 0 && selectedInGroupCount === groupQIds.length;
+                  const isGroupIndeterminate =
+                    selectedInGroupCount > 0 && selectedInGroupCount < groupQIds.length;
+
                   return (
                     <div
-                      key={q.id}
-                      onClick={() => {
-                        if (isChecked) {
-                          setSelectedQuestionsForPublish(
-                            selectedQuestionsForPublish.filter((id) => id !== q.id)
-                          );
-                        } else {
-                          setSelectedQuestionsForPublish([...selectedQuestionsForPublish, q.id]);
-                        }
-                      }}
-                      className={`p-3.5 rounded-xl border text-sm flex items-center justify-between cursor-pointer transition-all ${
-                        isChecked
-                          ? 'bg-indigo-950/40 border-indigo-500 text-white ring-1 ring-indigo-500/50'
-                          : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:border-slate-600'
-                      }`}
+                      key={group.groupName}
+                      className="rounded-xl bg-slate-800/40 border border-slate-700/60 overflow-hidden"
                     >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          readOnly
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
-                        />
-                        <div>
-                          <p className="font-medium text-white">{q.content}</p>
-                          <span className="text-xs text-indigo-400">
-                            {q.groupName} &bull; {q.difficulty}
+                      {/* Group Header */}
+                      <div className="p-3 bg-slate-800/80 hover:bg-slate-800 flex items-center justify-between gap-3 border-b border-slate-700/50">
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          {/* Expand/Collapse Toggle */}
+                          <button
+                            type="button"
+                            onClick={() => toggleGroupExpand(group.groupName)}
+                            className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            title={isGroupExpanded ? 'Collapse Group' : 'Expand Group'}
+                          >
+                            {isGroupExpanded ? (
+                              <ChevronDown className="w-4 h-4 text-indigo-400" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-slate-400" />
+                            )}
+                          </button>
+
+                          {/* Group Checkbox */}
+                          <TriStateCheckbox
+                            checked={isGroupChecked}
+                            indeterminate={isGroupIndeterminate}
+                            onChange={() => handleToggleGroup(group.allGroupQuestions)}
+                            title={`Select All in ${group.groupName}`}
+                          />
+
+                          {/* Group Name & Count */}
+                          <span
+                            onClick={() => toggleGroupExpand(group.groupName)}
+                            className="font-bold text-sm text-white cursor-pointer truncate hover:text-indigo-300 transition-colors"
+                          >
+                            {group.groupName}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-700">
+                            {selectedInGroupCount} / {groupQIds.length} Selected
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
-                        {q.timeSeconds != null && q.timeSeconds > 0 && (
-                          <span className="px-2 py-1 rounded bg-slate-700 text-slate-300">
-                            {q.timeSeconds}s
-                          </span>
-                        )}
-                        {q.points != null && q.points > 0 && (
-                          <span className="px-2 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                            {q.points} pts
-                          </span>
-                        )}
-                      </div>
+
+                      {/* Group Difficulties Container */}
+                      {isGroupExpanded && (
+                        <div className="p-3 space-y-2.5 bg-slate-900/40">
+                          {group.difficulties.map((diff) => {
+                            const diffKey = `${group.groupName}::${diff.difficulty}`;
+                            const isDiffExpanded = expandedDifficulties.has(diffKey);
+                            const diffQIds = diff.questions.map((q) => q.id);
+                            const selectedInDiffCount = diffQIds.filter((id) =>
+                              selectedQuestionsForPublish.includes(id)
+                            ).length;
+                            const isDiffChecked =
+                              diffQIds.length > 0 && selectedInDiffCount === diffQIds.length;
+                            const isDiffIndeterminate =
+                              selectedInDiffCount > 0 && selectedInDiffCount < diffQIds.length;
+
+                            const diffBadgeClass =
+                              diff.difficulty === 'Easy'
+                                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                : diff.difficulty === 'Hard'
+                                ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                                : 'bg-amber-950/80 text-amber-300 border-amber-800';
+
+                            return (
+                              <div
+                                key={diffKey}
+                                className="rounded-lg bg-slate-800/30 border border-slate-700/40 overflow-hidden ml-2 sm:ml-4"
+                              >
+                                {/* Difficulty Header */}
+                                <div className="p-2.5 bg-slate-800/50 hover:bg-slate-800/70 flex items-center justify-between gap-2.5">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleDifficultyExpand(diffKey)}
+                                      className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                      title={isDiffExpanded ? 'Collapse Difficulty' : 'Expand Difficulty'}
+                                    >
+                                      {isDiffExpanded ? (
+                                        <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                                      ) : (
+                                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                                      )}
+                                    </button>
+
+                                    <TriStateCheckbox
+                                      checked={isDiffChecked}
+                                      indeterminate={isDiffIndeterminate}
+                                      onChange={() => handleToggleDifficulty(diff.questions)}
+                                      title={`Select All ${diff.difficulty} in ${group.groupName}`}
+                                    />
+
+                                    <span
+                                      onClick={() => toggleDifficultyExpand(diffKey)}
+                                      className={`text-xs font-semibold px-2 py-0.5 rounded border cursor-pointer ${diffBadgeClass}`}
+                                    >
+                                      {diff.difficulty}
+                                    </span>
+                                  </div>
+
+                                  <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                                    {selectedInDiffCount} / {diffQIds.length} Selected
+                                  </span>
+                                </div>
+
+                                {/* Individual Questions List (Selected Questions Mode Only) */}
+                                {isDiffExpanded && (
+                                  <div className="p-2.5 space-y-1.5 bg-slate-950/30 ml-3 border-t border-slate-700/30">
+                                    {diff.questions.map((q) => {
+                                      const isQuestionSelected = selectedQuestionsForPublish.includes(q.id);
+
+                                      return (
+                                        <div
+                                          key={q.id}
+                                          onClick={() => handleToggleQuestion(q.id)}
+                                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                                            isQuestionSelected
+                                              ? 'bg-indigo-950/40 border-indigo-500/80 text-white ring-1 ring-indigo-500/40'
+                                              : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:border-slate-600 hover:bg-slate-800/50'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                            <input
+                                              type="checkbox"
+                                              checked={isQuestionSelected}
+                                              onChange={() => handleToggleQuestion(q.id)}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                                            />
+                                            <span className="font-medium truncate">{q.content}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
+                                            {q.timeSeconds != null && q.timeSeconds > 0 && (
+                                              <span className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+                                                {q.timeSeconds}s
+                                              </span>
+                                            )}
+                                            {q.points != null && q.points > 0 && (
+                                              <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                                {q.points} pts
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })
               ) : (
                 <div className="p-6 rounded-xl bg-slate-800/40 border border-slate-700/60 text-center py-8">
                   <HelpCircle className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                  <h4 className="text-sm font-semibold text-slate-300">No questions available</h4>
+                  <h4 className="text-sm font-semibold text-slate-300">
+                    {questionPickerSearch ? 'No matching questions found' : 'No questions available'}
+                  </h4>
                   <p className="text-xs text-slate-500 mt-1">
-                    No questions added to the Question Bank yet. Please add questions before publishing.
+                    {questionPickerSearch
+                      ? `No questions found matching "${questionPickerSearch}". Try a different keyword.`
+                      : 'No questions added to the Question Bank yet.'}
                   </p>
                 </div>
               )}
             </div>
+
+            {/* Question Selection Configuration Summary */}
+            {selectedSummaryData.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-400">
+                    Question Selection Configuration
+                  </h4>
+                  <span className="text-xs font-mono text-slate-300">
+                    Total Selected Questions: <strong className="text-white">{selectedQuestionsForPublish.length}</strong>
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {selectedSummaryData.map((g) => (
+                    <div
+                      key={g.groupName}
+                      className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
+                    >
+                      <div className="font-bold text-slate-200">{g.groupName}</div>
+                      <div className="flex flex-wrap gap-2 pl-1">
+                        {g.difficulties.map((d) => (
+                          <div
+                            key={d.difficulty}
+                            className="px-2.5 py-1 rounded bg-slate-700/60 border border-slate-600/70 text-slate-300 font-mono text-[11px] flex items-center gap-1.5"
+                          >
+                            <span className="font-semibold text-white">{d.difficulty}</span>
+                            <span className="text-indigo-300 font-medium">
+                              &mdash; {d.count} {d.count === 1 ? 'Question' : 'Questions'} Selected
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-            <h3 className="font-bold text-base text-white">Random Adaptive Engine Settings</h3>
-            <p className="text-xs text-slate-400">
-              Super Admin specifies the number of questions. The rule-based engine dynamically determines
-              question difficulty (Easy &rarr; Medium &rarr; Hard) and enforces anti-repetition exclusion for each student.
-            </p>
-            <div className="max-w-xs">
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Number of Questions per Student
-              </label>
-              <input
-                type="number"
-                required
-                min={1}
-                max={50}
-                value={randomCount}
-                onChange={(e) => setRandomCount(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="font-bold text-base text-white">Random Adaptive Engine Settings</h3>
+                <p className="text-xs text-slate-400">
+                  Select eligible Groups and Difficulties for the candidate pool. The rule-based engine dynamically determines question difficulty and anti-repetition for each student.
+                </p>
+              </div>
+              <div className="text-xs font-mono text-indigo-300 px-3 py-1.5 rounded-xl bg-indigo-950 border border-indigo-800 shrink-0">
+                Eligible Question Pool: <strong className="text-white">{randomEligiblePoolCount}</strong> questions
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <div className="max-w-xs">
+                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  Number of Questions per Student *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  max={50}
+                  placeholder="Enter question count..."
+                  value={randomCount === '' ? '' : randomCount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setRandomCount('');
+                    } else {
+                      const num = parseInt(val, 10);
+                      setRandomCount(isNaN(num) ? '' : num);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              {/* Immediate Validation Warning Banner */}
+              {randomValidationWarning && (
+                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-200 text-xs flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span className="font-medium">{randomValidationWarning}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Hierarchical Group -> Difficulty Selection (No Individual Question Checkboxes in Random Mode) */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700/80">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-white select-none">
+                  <TriStateCheckbox
+                    checked={isRandomAllGroupsChecked}
+                    indeterminate={isRandomAllGroupsIndeterminate}
+                    onChange={handleToggleRandomAllGroups}
+                    title="Select / Deselect All Groups & Difficulties"
+                  />
+                  <span>Select All Groups</span>
+                  {allQuestions.length > 0 && (
+                    <span className="text-[11px] font-mono text-slate-400 font-normal">
+                      ({allQuestions.length} Total Questions in Bank)
+                    </span>
+                  )}
+                </label>
+                <div className="flex items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleExpandAll}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-medium cursor-pointer"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCollapseAll}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-medium cursor-pointer"
+                  >
+                    Collapse All
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                {groupsHierarchy.length > 0 ? (
+                  groupsHierarchy.map((group) => {
+                    const isGroupExpanded = expandedGroups.has(group.groupName);
+                    const groupDiffKeys = group.difficulties.map(
+                      (d) => `${group.groupName}::${d.difficulty}`
+                    );
+                    const selectedDiffsCount = groupDiffKeys.filter((k) =>
+                      randomSelectedDifficulties.has(k)
+                    ).length;
+                    const isGroupChecked =
+                      groupDiffKeys.length > 0 && selectedDiffsCount === groupDiffKeys.length;
+                    const isGroupIndeterminate =
+                      selectedDiffsCount > 0 && selectedDiffsCount < groupDiffKeys.length;
+
+                    const eligibleInGroupCount = group.difficulties.reduce((sum, d) => {
+                      const k = `${group.groupName}::${d.difficulty}`;
+                      return randomSelectedDifficulties.has(k) ? sum + d.questions.length : sum;
+                    }, 0);
+                    const totalInGroupCount = group.allGroupQuestions.length;
+
+                    return (
+                      <div
+                        key={group.groupName}
+                        className="rounded-xl bg-slate-800/40 border border-slate-700/60 overflow-hidden"
+                      >
+                        {/* Group Header */}
+                        <div className="p-2.5 bg-slate-800/80 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => toggleGroupExpand(group.groupName)}
+                              className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                              title={isGroupExpanded ? 'Collapse Group' : 'Expand Group'}
+                            >
+                              {isGroupExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-indigo-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                            </button>
+                            <TriStateCheckbox
+                              checked={isGroupChecked}
+                              indeterminate={isGroupIndeterminate}
+                              onChange={() => handleToggleRandomGroup(group)}
+                              title={`Select all difficulties in ${group.groupName}`}
+                            />
+                            <span
+                              onClick={() => toggleGroupExpand(group.groupName)}
+                              className="font-bold text-sm text-white cursor-pointer truncate hover:text-indigo-300 transition-colors"
+                            >
+                              {group.groupName}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            {eligibleInGroupCount > 0 ? (
+                              <span className="text-indigo-300 font-semibold">
+                                {eligibleInGroupCount} / {totalInGroupCount} Questions Eligible
+                              </span>
+                            ) : (
+                              <span>0 / {totalInGroupCount} Questions</span>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Difficulties in Random mode */}
+                        {isGroupExpanded && (
+                          <div className="p-2.5 space-y-2 bg-slate-900/40 pl-6">
+                            {group.difficulties.map((diff) => {
+                              const diffKey = `${group.groupName}::${diff.difficulty}`;
+                              const isDiffChecked = randomSelectedDifficulties.has(diffKey);
+
+                              const diffBadgeClass =
+                                diff.difficulty === 'Easy'
+                                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                  : diff.difficulty === 'Hard'
+                                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                                  : 'bg-amber-950/80 text-amber-300 border-amber-800';
+
+                              return (
+                                <div
+                                  key={diffKey}
+                                  className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
+                                    isDiffChecked
+                                      ? 'bg-indigo-950/30 border-indigo-500/50'
+                                      : 'bg-slate-800/30 border-slate-700/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <TriStateCheckbox
+                                      checked={isDiffChecked}
+                                      indeterminate={false}
+                                      onChange={() => handleToggleRandomDifficulty(diffKey)}
+                                      title={`Select ${diff.difficulty} in ${group.groupName}`}
+                                    />
+                                    <span
+                                      onClick={() => handleToggleRandomDifficulty(diffKey)}
+                                      className={`text-xs font-semibold px-2 py-0.5 rounded border cursor-pointer ${diffBadgeClass}`}
+                                    >
+                                      {diff.difficulty}
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] font-mono text-slate-400">
+                                    {diff.questions.length} questions available
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs text-slate-500">No question groups available.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Random Question Configuration Summary */}
+            {randomSummaryData.length > 0 && (
+              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-400">
+                    Random Question Configuration
+                  </h4>
+                  <span className="text-xs font-mono text-slate-300">
+                    Total Eligible Questions: <strong className="text-white">{randomEligiblePoolCount}</strong>
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {randomSummaryData.map((g) => (
+                    <div
+                      key={g.groupName}
+                      className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
+                    >
+                      <div className="font-bold text-slate-200">{g.groupName}</div>
+                      <div className="flex flex-wrap gap-2 pl-1">
+                        {g.difficulties.map((d) => (
+                          <div
+                            key={d.difficulty}
+                            className="px-2.5 py-1 rounded bg-slate-700/60 border border-slate-600/70 text-slate-300 font-mono text-[11px] flex items-center gap-1.5"
+                          >
+                            <span className="font-semibold text-white">{d.difficulty}</span>
+                            <span className="text-indigo-300 font-medium">({d.count} questions available)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-700/60 text-xs">
+                  <span className="text-slate-400 font-medium">Questions Per Student:</span>
+                  <span className="font-bold text-indigo-300 font-mono text-sm">
+                    {randomCount !== '' ? randomCount : '—'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 space-y-1">
               <p className="font-semibold text-indigo-300">Engine Rule Pipeline:</p>
               <p>&bull; Fresh student &rarr; Easy difficulty tier</p>
@@ -2612,7 +3612,7 @@ export function PublishAssessmentSection({
                   <span className="font-mono font-semibold text-indigo-400">
                     {publishMode === 'Selected Questions'
                       ? `${selectedQuestionsForPublish.length} questions`
-                      : `${randomCount} questions / student`}
+                      : `${randomCount !== '' ? randomCount : 'Not set'} questions / student`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-400">

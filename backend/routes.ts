@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import {
@@ -16,7 +17,7 @@ import {
   computeStudentInsights,
   selectRandomQuestionsForRuleEngine,
 } from './services/randomEngine.ts';
-import { Question, QuestionAttemptLog } from './types.ts';
+import type { Question, QuestionAttemptLog } from './types.ts';
 
 const router = express.Router();
 
@@ -1363,6 +1364,22 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       return res.status(400).json({ error: 'Please select at least 1 question for Selected Questions mode.' });
     }
 
+    if (publishMode === 'Random Questions') {
+      const allQDocs = await QuestionModel.find();
+      const allQList: Question[] = formatDocs(allQDocs);
+      const eligiblePool = allQList.filter((q) => (selectedQuestionIds || []).includes(q.id));
+      if (eligiblePool.length === 0) {
+        return res.status(400).json({ error: '0 eligible questions are available. Select at least one Group and Difficulty.' });
+      }
+      const count = Number(randomCount) || 0;
+      if (count <= 0) {
+        return res.status(400).json({ error: 'Please specify a valid number of questions per student.' });
+      }
+      if (count > eligiblePool.length) {
+        return res.status(400).json({ error: `Only ${eligiblePool.length} eligible questions are available. You cannot assign ${count} questions per student.` });
+      }
+    }
+
     // Validate duplicate & overlapping targets across the assessment
     const validation = await validatePublishTargets(targetList);
     if (!validation.valid) {
@@ -1471,9 +1488,10 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         }
       } else {
         const insights = computeStudentInsights(student.uniqueStudentId!, pastAssignments);
+        const candidatePool = allQuestions.filter((q) => (selectedQuestionIds || []).includes(q.id));
         studentQuestionList = selectRandomQuestionsForRuleEngine(
           Number(randomCount) || 5,
-          allQuestions,
+          candidatePool.length > 0 ? candidatePool : allQuestions,
           insights
         );
       }
@@ -1628,6 +1646,22 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Please select at least 1 question for Selected Questions mode.' });
     }
 
+    if (publishMode === 'Random Questions') {
+      const allQDocs = await QuestionModel.find();
+      const allQList: Question[] = formatDocs(allQDocs);
+      const eligiblePool = allQList.filter((q) => (selectedQuestionIds || []).includes(q.id));
+      if (eligiblePool.length === 0) {
+        return res.status(400).json({ error: '0 eligible questions are available. Select at least one Group and Difficulty.' });
+      }
+      const count = Number(randomCount) || 0;
+      if (count <= 0) {
+        return res.status(400).json({ error: 'Please specify a valid number of questions per student.' });
+      }
+      if (count > eligiblePool.length) {
+        return res.status(400).json({ error: `Only ${eligiblePool.length} eligible questions are available. You cannot assign ${count} questions per student.` });
+      }
+    }
+
     // Validate duplicate & overlapping targets across the assessment
     const validation = await validatePublishTargets(targetList);
     if (!validation.valid) {
@@ -1771,9 +1805,10 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
           }
         } else {
           const insights = computeStudentInsights(sId, pastAssignments);
+          const candidatePool = allQuestions.filter((q) => (selectedQuestionIds || []).includes(q.id));
           studentQuestionList = selectRandomQuestionsForRuleEngine(
             Number(randomCount) || 5,
-            allQuestions,
+            candidatePool.length > 0 ? candidatePool : allQuestions,
             insights
           );
         }
@@ -2749,6 +2784,86 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
     const completedStudents = studentsStatus.filter((s: any) => s.status === 'COMPLETED');
     const notCompletedStudents = studentsStatus.filter((s: any) => s.status !== 'COMPLETED');
 
+    // Extract historical questions snapshot from live assignments, fallback to QuestionModel
+    const questionMap = new Map<string, any>();
+    for (const a of liveAssignments) {
+      if (Array.isArray(a.questions)) {
+        for (const q of a.questions) {
+          const qId = q.questionId || q.id || q._id;
+          if (qId && !questionMap.has(String(qId))) {
+            questionMap.set(String(qId), {
+              id: String(qId),
+              questionId: String(qId),
+              groupName: (q.groupName || 'General').trim(),
+              difficulty: (q.difficulty || 'Medium').trim(),
+              content: q.content || 'Question',
+              points: q.points != null ? Number(q.points) : null,
+              timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
+              timeSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
+              options: q.options || [],
+              metadata: q.metadata || {},
+              pairs: q.pairs || q.metadata?.pairs || [],
+            });
+          }
+        }
+      }
+    }
+
+    if (questionMap.size === 0 && pubTest?.questionIds && pubTest.questionIds.length > 0) {
+      const qDocs = await QuestionModel.find({ _id: { $in: pubTest.questionIds } });
+      for (const q of qDocs) {
+        const qId = q._id.toString();
+        questionMap.set(qId, {
+          id: qId,
+          questionId: qId,
+          groupName: (q.groupName || 'General').trim(),
+          difficulty: (q.difficulty || 'Medium').trim(),
+          content: q.content,
+          points: q.points != null ? Number(q.points) : null,
+          timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+          timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+          options: q.options || [],
+          metadata: q.metadata || {},
+          pairs: q.metadata?.pairs || [],
+        });
+      }
+    }
+
+    const historicalQuestions = Array.from(questionMap.values());
+
+    // Build question summary breakdown: Group -> Difficulty -> count
+    const questionSummaryMap = new Map<string, Map<string, number>>();
+    for (const q of historicalQuestions) {
+      const g = q.groupName || 'General';
+      const d = q.difficulty || 'Medium';
+      if (!questionSummaryMap.has(g)) {
+        questionSummaryMap.set(g, new Map());
+      }
+      const diffMap = questionSummaryMap.get(g)!;
+      diffMap.set(d, (diffMap.get(d) || 0) + 1);
+    }
+
+    const questionSummary: Array<{
+      groupName: string;
+      difficulties: Array<{ difficulty: string; count: number }>;
+    }> = [];
+
+    for (const [g, diffMap] of questionSummaryMap.entries()) {
+      const standardOrder = ['Easy', 'Medium', 'Hard'];
+      const diffKeys = Array.from(diffMap.keys());
+      const sortedKeys = [
+        ...standardOrder.filter((d) => diffKeys.includes(d)),
+        ...diffKeys.filter((d) => !standardOrder.includes(d)),
+      ];
+      questionSummary.push({
+        groupName: g,
+        difficulties: sortedKeys.map((d) => ({
+          difficulty: d,
+          count: diffMap.get(d) || 0,
+        })),
+      });
+    }
+
     // School counts summary
     const schoolCountsMap = new Map<string, number>();
     for (const st of studentsStatus) {
@@ -2774,6 +2889,9 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       studentsStatus,
       completedStudents,
       notCompletedStudents,
+      questions: historicalQuestions,
+      questionSummary,
+      totalQuestionsCount: historicalQuestions.length,
     });
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch publish history detail', details: err.message });
@@ -2976,6 +3094,24 @@ router.get('/reports/schools/:schoolId/students', authenticate, requireRole('sup
   }
 });
 
+// Helper to format date and time as DD-MM-YYYY | hh:mm A
+function formatAssessmentDateTime(dateVal?: Date | string | null): string {
+  if (!dateVal) return '—';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return String(dateVal);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = pad(d.getMinutes());
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hoursStr = pad(hours);
+  return `${day}-${month}-${year} | ${hoursStr}:${minutes} ${ampm}`;
+}
+
 // Student Individual Report & Timeline
 router.get('/reports/students/:studentId', authenticate, async (req: Request, res: Response) => {
   try {
@@ -3001,23 +3137,85 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         { studentId: targetStudentId },
         { studentId },
       ],
-    }).sort({ createdAt: 1 });
+    });
+
+    // Sort assignments chronologically (oldest attempt first = Assessment - 1, then Assessment - 2, etc.)
+    const sortedAssignments = [...assignments].sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.startedAt || a.completedAt || 0).getTime();
+      const timeB = new Date(b.createdAt || b.startedAt || b.completedAt || 0).getTime();
+      return timeA - timeB;
+    });
+
+    // Fetch published tests and publish histories to get exact assessment name, mode, and published timestamp
+    const publishIds = Array.from(new Set(sortedAssignments.map((a) => a.publishedTestId).filter(Boolean)));
+    const publishedTests = await PublishedTestModel.find({ _id: { $in: publishIds } }).lean();
+    const pubMap = new Map<string, any>(publishedTests.map((pt: any) => [pt._id.toString(), pt]));
+    const publishHistories = await PublishHistoryModel.find({ publishId: { $in: publishIds } }).lean();
+    const histMap = new Map<string, any>(publishHistories.map((ph: any) => [ph.publishId, ph]));
+
+    // Fetch all questions and groups in case any legacy record is missing groupName or difficulty
+    const allQuestions = await QuestionModel.find().lean();
+    const qMap = new Map<string, any>(allQuestions.map((q: any) => [q._id.toString(), q]));
+    const groups = await QuestionGroupModel.find().lean();
+    const gMap = new Map<string, any>(groups.map((g: any) => [g._id.toString(), g]));
 
     // Timeline entries
-    const timeline = assignments.map((a) => ({
-      assignmentId: a._id.toString(),
-      publishedTestId: a.publishedTestId,
-      testName: a.publishName,
-      status: a.status,
-      exitType: a.status === 'COMPLETED' ? null : (a.exitType || null),
-      date: a.completedAt ? a.completedAt.toISOString().split('T')[0] : a.startedAt ? a.startedAt.toISOString().split('T')[0] : 'Assigned',
-      scoreOutOf100: a.scoreOutOf100,
-      totalPointsEarned: a.totalPointsEarned,
-      correctCount: a.correctCount,
-      wrongCount: a.wrongCount,
-      totalTimeTakenSeconds: a.totalTimeTakenSeconds,
-      questions: a.questions, // Full question-level details: answers, time taken, points, correct/wrong
-    }));
+    const timeline = sortedAssignments.map((a, idx) => {
+      const assessmentNumber = idx + 1;
+      const assessmentTitle = `Assessment - ${assessmentNumber}`;
+      const effectiveDateObj =
+        a.status === 'COMPLETED'
+          ? a.completedAt || a.updatedAt || a.startedAt || a.createdAt
+          : a.lockedAt || a.startedAt || a.updatedAt || a.createdAt;
+
+      const formattedDate = formatAssessmentDateTime(effectiveDateObj);
+
+      const pubTest = pubMap.get(a.publishedTestId);
+      const hist = histMap.get(a.publishedTestId);
+      const assessmentName = pubTest?.publishName || hist?.publishName || a.publishName || assessmentTitle;
+      const publishMode = pubTest?.publishMode || hist?.publishMode || 'Selected Questions';
+      const publishedCreatedAt = pubTest?.createdAt || hist?.createdAt || pubTest?.publishedAt || hist?.publishedAt || a.createdAt;
+
+      return {
+        assignmentId: a._id.toString(),
+        publishedTestId: a.publishedTestId,
+        assessmentNumber,
+        assessmentTitle,
+        testName: assessmentTitle,
+        assessmentName,
+        publishName: assessmentName,
+        publishMode,
+        publishedCreatedAt: publishedCreatedAt ? new Date(publishedCreatedAt).toISOString() : null,
+        originalPublishName: a.publishName,
+        status: a.status,
+        exitType: a.status === 'COMPLETED' ? null : (a.exitType || null),
+        completedAt: a.completedAt,
+        startedAt: a.startedAt,
+        lockedAt: a.lockedAt,
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+        date: formattedDate,
+        formattedDateTime: formattedDate,
+        scoreOutOf100: a.scoreOutOf100,
+        totalPointsEarned: a.totalPointsEarned,
+        correctCount: a.correctCount,
+        wrongCount: a.wrongCount,
+        totalTimeTakenSeconds: a.totalTimeTakenSeconds,
+        questions: (a.questions || []).map((q: any) => {
+          const fullQ = q.questionId ? qMap.get(String(q.questionId)) : null;
+          const groupFromId = q.groupId ? gMap.get(String(q.groupId))?.name : (fullQ?.groupId ? gMap.get(String(fullQ.groupId))?.name : null);
+          return {
+            ...q,
+            groupName: q.groupName || groupFromId || fullQ?.groupName || 'General',
+            difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
+            content: q.content || fullQ?.content || 'Question',
+            points: q.points != null ? q.points : (fullQ?.points != null ? fullQ.points : null),
+            timeAllowedSeconds: q.timeAllowedSeconds != null ? q.timeAllowedSeconds : (fullQ?.timeSeconds != null ? fullQ.timeSeconds : null),
+            options: q.options || fullQ?.options || [],
+          };
+        }),
+      };
+    });
 
     return res.json({
       student: student ? {
@@ -3057,6 +3255,7 @@ router.post('/templates', authenticate, requireRole('super_admin'), async (req: 
       name,
       publishMode,
       selectedQuestionIds = [],
+      randomSelectedDifficulties = [],
       shuffleQuestions = false,
       randomCount = 5,
       targets = [],
@@ -3086,6 +3285,12 @@ router.post('/templates', authenticate, requireRole('super_admin'), async (req: 
       return res.status(400).json({ error: 'Please select at least 1 question before saving the template.' });
     }
 
+    if (publishMode === 'Random Questions') {
+      if ((!selectedQuestionIds || selectedQuestionIds.length === 0) && (!randomSelectedDifficulties || randomSelectedDifficulties.length === 0)) {
+        return res.status(400).json({ error: 'Please select at least 1 Group and Difficulty for Random Questions mode.' });
+      }
+    }
+
     const cleanTargets = Array.isArray(targets)
       ? targets.map((t: any, idx: number) => ({
           id: t.id || `target-${Date.now()}-${idx}`,
@@ -3100,6 +3305,7 @@ router.post('/templates', authenticate, requireRole('super_admin'), async (req: 
       name: trimmedName,
       publishMode,
       selectedQuestionIds: Array.isArray(selectedQuestionIds) ? selectedQuestionIds : [],
+      randomSelectedDifficulties: Array.isArray(randomSelectedDifficulties) ? randomSelectedDifficulties : [],
       shuffleQuestions: Boolean(shuffleQuestions),
       randomCount: Number(randomCount) || 5,
       targets: cleanTargets,

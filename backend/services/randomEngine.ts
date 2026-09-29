@@ -1,4 +1,4 @@
-import { Question, StudentTestAssignment, QuestionDifficulty } from '../types.ts';
+import type { Question, StudentTestAssignment, QuestionDifficulty } from '../types.ts';
 
 export interface StudentHistoryInsight {
   totalCompletedTests: number;
