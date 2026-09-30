@@ -145,16 +145,11 @@ export function FlameMiniGameCanvas({
       <div className="relative z-10 flex items-center justify-between border-b border-slate-800/80 pb-4 mb-6">
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            Interactive Arena
+            Puzzle
           </span>
-          {points != null && points > 0 && (
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              +{points} Points
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2 font-mono text-sm">
-          <span className="text-slate-400">Flame Interactive Arena</span>
+          <span className="text-slate-400">Puzzle Area</span>
         </div>
       </div>
 
@@ -166,7 +161,7 @@ export function FlameMiniGameCanvas({
             <div className="text-center py-1">
               <h3 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">{content}</h3>
               <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
-                Click an item on the left, then connect it to its corresponding match on the right:
+                Choose an item on the left, then pick its match on the right:
               </p>
             </div>
             <div className="grid grid-cols-2 gap-6 max-w-xl mx-auto">
@@ -189,7 +184,7 @@ export function FlameMiniGameCanvas({
                     <div className="flex justify-between items-center">
                       <span>{p.left}</span>
                       {matchState[p.left] && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-400">Linked</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-400">Matched</span>
                       )}
                     </div>
                   </button>
@@ -197,7 +192,7 @@ export function FlameMiniGameCanvas({
               </div>
 
               <div className="space-y-3">
-                <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-2">Target Match</span>
+                <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-2">Match</span>
                 {pairs.map((p, idx) => (
                   <button
                     key={idx}

@@ -1467,7 +1467,7 @@ function TargetCard({
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
           <span className="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700 text-xs font-bold font-mono">
-            Target {index + 1}
+            Group {index + 1}
           </span>
           <span className="text-xs text-slate-400">
             {selectedSchoolIds.length === 0
@@ -1484,7 +1484,7 @@ function TargetCard({
           className="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          Remove Target
+          Remove Group
         </button>
       </div>
 
@@ -1493,7 +1493,7 @@ function TargetCard({
         {/* 1. School Selection -> Multi-Select Dropdown */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase text-slate-400">
-            1. Target School(s) *
+            1. School(s) *
           </label>
           <SchoolMultiSelectDropdown
             schools={schools}
@@ -1504,15 +1504,15 @@ function TargetCard({
             {selectedSchoolIds.length === 0
               ? 'Select one or more schools from dropdown'
               : selectedSchoolIds.includes('ALL')
-              ? `All ${schools.length} school workspace(s) included`
-              : `${selectedSchoolIds.length} school workspace(s) selected`}
+              ? `All ${schools.length} schools included`
+              : `${selectedSchoolIds.length} schools selected`}
           </p>
         </div>
 
         {/* 2. Class Selection -> Multi-Select Dropdown */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase text-slate-400">
-            2. Target Class(es)
+            2. Class(es)
           </label>
           <ClassMultiSelectDropdown
             availableClasses={availableClasses}
@@ -1523,7 +1523,7 @@ function TargetCard({
           />
           <p className="text-[11px] text-slate-400">
             {isLoadingClasses
-              ? 'Fetching classes...'
+              ? 'Loading classes...'
               : availableClasses.length === 0
               ? 'No classes with students found'
               : isAllClasses
@@ -1537,7 +1537,7 @@ function TargetCard({
         {/* 3. Section Selection -> Multi-Select Dropdown (Same UI pattern as Class) */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase text-slate-400">
-            3. Target Section(s)
+            3. Section(s)
           </label>
           <SectionMultiSelectDropdown
             availableSections={availableSections}
@@ -1548,7 +1548,7 @@ function TargetCard({
           />
           <p className="text-[11px] text-slate-400">
             {isLoadingSections
-              ? 'Fetching sections...'
+              ? 'Loading sections...'
               : availableSections.length === 0
               ? 'No sections found'
               : isAllSections
@@ -1562,7 +1562,7 @@ function TargetCard({
         {/* 4. Student Selection -> Multi-Select Dropdown (Same UI pattern as Class) */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold uppercase text-slate-400">
-            4. Target Student(s)
+            4. Student(s)
           </label>
           <StudentMultiSelectDropdown
             availableStudents={availableStudents}
@@ -1573,7 +1573,7 @@ function TargetCard({
           />
           <p className="text-[11px] text-slate-400">
             {isLoadingStudents
-              ? 'Fetching students...'
+              ? 'Loading students...'
               : availableStudents.length === 0
               ? 'No students found'
               : isAllStudents
@@ -2188,11 +2188,11 @@ export function PublishAssessmentSection({
 
   const handleOpenSaveTemplateModal = () => {
     if (publishMode === 'Selected Questions' && selectedQuestionsForPublish.length === 0) {
-      showErrorFeedback('Please select at least 1 question before saving a template.');
+      showErrorFeedback('Please select at least 1 question before saving.');
       return;
     }
     if (publishMode === 'Random Questions' && randomSelectedDifficulties.size === 0) {
-      showErrorFeedback('Please select at least 1 Question Group and Difficulty before saving a template.');
+      showErrorFeedback('Please select at least 1 Question Group and Difficulty before saving.');
       return;
     }
     setTemplateNameInput('');
@@ -2204,7 +2204,7 @@ export function PublishAssessmentSection({
     e.preventDefault();
     const trimmed = templateNameInput.trim();
     if (!trimmed) {
-      setSaveTemplateError('Template Name is required.');
+      setSaveTemplateError('Please enter a name for this saved test.');
       return;
     }
 
@@ -2212,7 +2212,7 @@ export function PublishAssessmentSection({
       (t) => t.name && t.name.trim().toLowerCase() === trimmed.toLowerCase()
     );
     if (exists) {
-      setSaveTemplateError(`A template named '${trimmed}' already exists. Please choose a different unique name.`);
+      setSaveTemplateError(`A saved test named '${trimmed}' already exists. Please choose a different name.`);
       return;
     }
 
@@ -2252,13 +2252,13 @@ export function PublishAssessmentSection({
       if (res.ok) {
         setShowSaveTemplateModal(false);
         setTemplateNameInput('');
-        showSuccessFeedback(`Template '${trimmed}' saved successfully!`);
+        showSuccessFeedback(`Saved test '${trimmed}' saved successfully!`);
         await fetchSavedTemplates();
       } else {
-        setSaveTemplateError(data.error || 'Failed to save template.');
+        setSaveTemplateError(data.error || 'Unable to save test. Please try again.');
       }
     } catch (err: any) {
-      setSaveTemplateError(err.message || 'Network error saving template.');
+      setSaveTemplateError(err.message || 'Unable to save test. Please check your connection and try again.');
     } finally {
       setIsSavingTemplate(false);
     }
@@ -2359,7 +2359,7 @@ export function PublishAssessmentSection({
     setShowSavedTemplatesModal(false);
     setShowOverwriteAlert(false);
     setPendingTemplateToLoad(null);
-    showSuccessFeedback(`Template '${tpl.name}' loaded successfully into Publish Assessment form.`);
+    showSuccessFeedback(`Saved test '${tpl.name}' loaded successfully.`);
   };
 
   const handleConfirmDeleteTemplate = async () => {
@@ -2376,14 +2376,14 @@ export function PublishAssessmentSection({
       if (res.ok) {
         setSavedTemplates((prev) => prev.filter((t) => (t.id || t._id) !== templateId));
         setTemplateToDelete(null);
-        showSuccessFeedback(`Template '${templateName}' deleted successfully.`);
+        showSuccessFeedback(`Saved test '${templateName}' deleted successfully.`);
         await fetchSavedTemplates();
       } else {
         const data = await res.json();
-        showErrorFeedback(data.error || 'Failed to delete template.');
+        showErrorFeedback(data.error || 'Unable to delete saved test. Please try again.');
       }
     } catch (err: any) {
-      showErrorFeedback(err.message || 'Error deleting template.');
+      showErrorFeedback(err.message || 'Unable to delete saved test. Please try again.');
     } finally {
       setIsDeletingTemplate(false);
     }
@@ -2437,12 +2437,12 @@ export function PublishAssessmentSection({
     setPublishFeedback(null);
 
     if (targets.length === 0) {
-      showErrorFeedback('Please add at least one target configuration before publishing.');
+      showErrorFeedback('Please choose at least one group of students before publishing.');
       return;
     }
 
     if (!publishName.trim()) {
-      showErrorFeedback('Please specify a Publish Name (e.g. Class 7 Reasoning Test - September)');
+      showErrorFeedback('Please enter a Test Name (e.g. Class 7 Reasoning Test - September)');
       return;
     }
 
@@ -2450,7 +2450,7 @@ export function PublishAssessmentSection({
     for (let i = 0; i < targets.length; i++) {
       const resolvedIds = resolveTargetSchoolIds(targets[i].selectedSchoolIds);
       if (resolvedIds.length === 0) {
-        showErrorFeedback(`Target ${i + 1}: Please select at least one target school workspace.`);
+        showErrorFeedback(`Group ${i + 1}: Please select at least one school.`);
         return;
       }
     }
@@ -2471,7 +2471,7 @@ export function PublishAssessmentSection({
 
         if (s1 === s2 && c1 === c2 && sec1 === sec2 && stu1 === stu2) {
           showErrorFeedback(
-            `Duplicate Target Detected: Target ${i + 1} and Target ${j + 1} are exact duplicates with identical School(s), Class(es), Section(s), and Student(s). Please remove or edit one of the duplicate targets.`
+            `Duplicate Group: Group ${i + 1} and Group ${j + 1} have the same school, class, section, and student selections. Please remove or change one of them.`
           );
           return;
         }
@@ -2479,13 +2479,13 @@ export function PublishAssessmentSection({
     }
 
     if (publishMode === 'Selected Questions' && selectedQuestionsForPublish.length === 0) {
-      showErrorFeedback('Please select at least 1 question from Question Bank.');
+      showErrorFeedback('Please select at least 1 question from the Question Bank.');
       return;
     }
 
     if (publishMode === 'Random Questions') {
       if (randomEligiblePoolCount === 0) {
-        showErrorFeedback('0 eligible questions are available. Select at least one Group and Difficulty.');
+        showErrorFeedback('No matching questions available. Please select at least one Group and Difficulty.');
         return;
       }
       if (randomCount === '' || randomCount == null || isNaN(Number(randomCount)) || Number(randomCount) <= 0) {
@@ -2537,7 +2537,7 @@ export function PublishAssessmentSection({
 
       const valData = await valRes.json();
       if (!valRes.ok || !valData.valid) {
-        showErrorFeedback(valData.error || 'Target configuration validation failed.');
+        showErrorFeedback(valData.error || 'Unable to verify student groups. Please try again.');
         setIsSubmitting(false);
         return;
       }
@@ -2654,7 +2654,7 @@ export function PublishAssessmentSection({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">
-              {isEditMode ? 'Assessment Management' : 'Assessment Dispatch'}
+              {isEditMode ? 'Edit Test' : 'Create & Publish Test'}
             </span>
             {isEditMode && (
               <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide">
@@ -2663,12 +2663,12 @@ export function PublishAssessmentSection({
             )}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">
-            {isEditMode ? 'Edit Assessment' : 'Publish Assessment'}
+            {isEditMode ? 'Edit Test' : 'Publish Test'}
           </h2>
           <p className="text-sm text-slate-400">
             {isEditMode
-              ? `Editing published assessment '${publishName}'. Modify target configurations, questions, or dates and click "Update Assessment" to save changes.`
-              : `Configure publication options: choose between Selected Questions or Random Questions, define student targets, and schedule availability.`}
+              ? `Editing test '${publishName}'. Update who can take the test, questions, or dates, then click "Update Test" to save changes.`
+              : `Choose between Selected Questions or Random Questions, choose who can take this test, and set test dates and times.`}
           </p>
         </div>
 
@@ -2682,10 +2682,10 @@ export function PublishAssessmentSection({
               setShowSavedTemplatesModal(true);
             }}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-2 shadow-sm hover:border-slate-600 transition-all cursor-pointer"
-            title="Saved Templates"
+            title="Saved Tests"
           >
             <Bookmark className="w-4 h-4 text-indigo-400" />
-            <span>Saved Templates</span>
+            <span>Saved Tests</span>
             {savedTemplates.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-800">
                 {savedTemplates.length}
@@ -2698,12 +2698,12 @@ export function PublishAssessmentSection({
             type="button"
             onClick={handleOpenSaveTemplateModal}
             className="w-9 h-9 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group relative flex items-center justify-center border border-indigo-400/40"
-            title="Save Template"
-            aria-label="Save Template"
+            title="Save Test"
+            aria-label="Save Test"
           >
             <BookmarkPlus className="w-4 h-4" />
             <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 shadow-xl border border-slate-700 transition-opacity group-hover:opacity-100 z-30">
-              Save Template
+              Save Test
             </span>
           </button>
         </div>
@@ -2735,7 +2735,7 @@ export function PublishAssessmentSection({
         {/* Publish Name */}
         <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
           <label className="block text-xs font-semibold uppercase text-slate-400">
-            Publish Name (Permanently Saved in History & Student Logs)
+            Test Name
           </label>
           <input
             type="text"
@@ -2763,7 +2763,7 @@ export function PublishAssessmentSection({
               <Layers className="w-5 h-5 text-indigo-400" />
             </div>
             <p className="text-xs text-slate-400">
-              Hand-pick questions from Question Bank. Supports question order shuffling and interactive test preview.
+              Choose specific questions from the Question Bank. You can shuffle question order and preview questions.
             </p>
           </button>
 
@@ -2781,7 +2781,7 @@ export function PublishAssessmentSection({
               <Shuffle className="w-5 h-5 text-indigo-400" />
             </div>
             <p className="text-xs text-slate-400">
-              Rule-based engine automatically selects questions dynamically matching student past performance and repetition gap.
+              Automatically picks questions based on each student's past performance and prevents repeat questions.
             </p>
           </button>
         </div>
@@ -2792,10 +2792,10 @@ export function PublishAssessmentSection({
             <div>
               <h3 className="font-bold text-base text-white flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-indigo-400" />
-                Target Configuration
+                Targets
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Configure one or more independent student targets for this assessment.
+                Choose schools, classes, sections, or individual students who can take this test.
               </p>
             </div>
             <button
@@ -2812,7 +2812,7 @@ export function PublishAssessmentSection({
           {targets.length === 0 ? (
             <div className="p-8 rounded-xl border border-dashed border-slate-800 text-center bg-slate-950/40 space-y-2">
               <p className="text-xs text-slate-400">
-                No targets currently configured. Click <strong>+ Add Target</strong> below to create a target.
+                No groups added yet. Click <strong>+ Add Group</strong> below to choose who can take this test.
               </p>
             </div>
           ) : (
@@ -2840,7 +2840,7 @@ export function PublishAssessmentSection({
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-indigo-300 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 text-indigo-400" />
-              + Add Target
+              + Add Group
             </button>
           </div>
         </div>
@@ -2849,7 +2849,7 @@ export function PublishAssessmentSection({
         <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
           <h3 className="font-bold text-base text-white flex items-center gap-2">
             <Calendar className="w-4 h-4 text-indigo-400" />
-            Test Availability Window
+            Test Dates & Times
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
@@ -2897,7 +2897,7 @@ export function PublishAssessmentSection({
             {/* Header: Title, Selected Count, Shuffle Toggle & Preview Button */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
               <div>
-                <h3 className="font-bold text-base text-white">Selected Questions Bank Picker</h3>
+                <h3 className="font-bold text-base text-white">Choose Questions</h3>
                 <p className="text-xs text-slate-400">
                   Selected: <strong className="text-indigo-400">{selectedQuestionsForPublish.length}</strong> questions
                 </p>
@@ -2909,9 +2909,9 @@ export function PublishAssessmentSection({
                     type="checkbox"
                     checked={shuffleQuestions}
                     onChange={(e) => setShuffleQuestions(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
                   />
-                  Shuffle Questions for each student
+                  <span>Shuffle Questions</span>
                 </label>
 
                 <button
@@ -2924,7 +2924,7 @@ export function PublishAssessmentSection({
                   className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40 cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5" />
-                  Preview with Test ({selectedQuestionsForPublish.length})
+                  Preview Test ({selectedQuestionsForPublish.length})
                 </button>
               </div>
             </div>
@@ -2935,7 +2935,7 @@ export function PublishAssessmentSection({
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search questions by content, group, or difficulty..."
+                  placeholder="Search questions..."
                   value={questionPickerSearch}
                   onChange={(e) => setQuestionPickerSearch(e.target.value)}
                   className="w-full pl-10 pr-8 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -3221,27 +3221,27 @@ export function PublishAssessmentSection({
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
               <div>
-                <h3 className="font-bold text-base text-white">Random Adaptive Engine Settings</h3>
+                <h3 className="font-bold text-base text-white">Random Test Settings</h3>
                 <p className="text-xs text-slate-400">
-                  Select eligible Groups and Difficulties for the candidate pool. The rule-based engine dynamically determines question difficulty and anti-repetition for each student.
+                  Choose question groups and difficulty levels. The system will automatically select suitable questions for each student.
                 </p>
               </div>
               <div className="text-xs font-mono text-indigo-300 px-3 py-1.5 rounded-xl bg-indigo-950 border border-indigo-800 shrink-0">
-                Eligible Question Pool: <strong className="text-white">{randomEligiblePoolCount}</strong> questions
+                Available Questions: <strong className="text-white">{randomEligiblePoolCount}</strong>
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="max-w-xs">
                 <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Number of Questions per Student *
+                  Questions per Student *
                 </label>
                 <input
                   type="number"
                   required
                   min={1}
                   max={50}
-                  placeholder="Enter question count..."
+                  placeholder="e.g. 10"
                   value={randomCount === '' ? '' : randomCount}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -3273,12 +3273,12 @@ export function PublishAssessmentSection({
                     checked={isRandomAllGroupsChecked}
                     indeterminate={isRandomAllGroupsIndeterminate}
                     onChange={handleToggleRandomAllGroups}
-                    title="Select / Deselect All Groups & Difficulties"
+                    title="Select or deselect all groups and levels"
                   />
                   <span>Select All Groups</span>
                   {allQuestions.length > 0 && (
                     <span className="text-[11px] font-mono text-slate-400 font-normal">
-                      ({allQuestions.length} Total Questions in Bank)
+                      ({allQuestions.length} Total questions in bank)
                     </span>
                   )}
                 </label>
@@ -3357,10 +3357,10 @@ export function PublishAssessmentSection({
                           <span className="text-[11px] font-mono text-slate-400">
                             {eligibleInGroupCount > 0 ? (
                               <span className="text-indigo-300 font-semibold">
-                                {eligibleInGroupCount} / {totalInGroupCount} Questions Eligible
+                                {eligibleInGroupCount} / {totalInGroupCount} questions selected
                               </span>
                             ) : (
-                              <span>0 / {totalInGroupCount} Questions</span>
+                              <span>0 / {totalInGroupCount} questions</span>
                             )}
                           </span>
                         </div>
@@ -3424,10 +3424,10 @@ export function PublishAssessmentSection({
               <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
                   <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-400">
-                    Random Question Configuration
+                    Random Test Summary
                   </h4>
                   <span className="text-xs font-mono text-slate-300">
-                    Total Eligible Questions: <strong className="text-white">{randomEligiblePoolCount}</strong>
+                    Total Questions Available: <strong className="text-white">{randomEligiblePoolCount}</strong>
                   </span>
                 </div>
                 <div className="space-y-2.5">
@@ -3461,12 +3461,12 @@ export function PublishAssessmentSection({
             )}
 
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 space-y-1">
-              <p className="font-semibold text-indigo-300">Engine Rule Pipeline:</p>
-              <p>&bull; Fresh student &rarr; Easy difficulty tier</p>
-              <p>&bull; High Easy performance (&gt;=70%) &rarr; Easy or Easy + Medium</p>
-              <p>&bull; High Medium performance (&gt;=70%) &rarr; Medium or Medium + Hard</p>
-              <p>&bull; Hard is the final difficulty level</p>
-              <p>&bull; Anti-repetition gap prevents recently used questions from repeating</p>
+              <p className="font-semibold text-indigo-300">How Random Questions Work:</p>
+              <p>&bull; New student &rarr; Starts with Easy questions</p>
+              <p>&bull; Score of 70% or more on Easy &rarr; Moves to Medium questions</p>
+              <p>&bull; Score of 70% or more on Medium &rarr; Moves to Hard questions</p>
+              <p>&bull; Hard is the highest difficulty level</p>
+              <p>&bull; Questions used recently will not repeat for the same student</p>
             </div>
           </div>
         )}
@@ -3490,11 +3490,11 @@ export function PublishAssessmentSection({
             <Send className="w-5 h-5" />
             {isSubmitting
               ? isEditMode
-                ? 'Updating Assessment...'
-                : 'Validating & Publishing Assessment...'
+                ? 'Updating Test...'
+                : 'Publishing Test...'
               : isEditMode
-              ? 'Update Assessment'
-              : 'Publish Test to Target'}
+              ? 'Update Test'
+              : 'Publish Test'}
           </button>
         </div>
       </form>
@@ -3505,17 +3505,17 @@ export function PublishAssessmentSection({
           <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
-                <span className="text-xs font-mono uppercase text-indigo-400">Super Admin Preview</span>
-                <h3 className="text-xl font-bold text-white">Preview with Test</h3>
+                <span className="text-xs font-mono uppercase text-indigo-400">Test Preview</span>
+                <h3 className="text-xl font-bold text-white">Preview Test</h3>
                 <p className="text-xs text-slate-400">
-                  Simulating candidate test experience for {selectedQuestionsForPublish.length} selected questions.
+                  Preview what students will see for these {selectedQuestionsForPublish.length} questions.
                 </p>
               </div>
               <button
                 onClick={() => setShowPreviewModal(false)}
                 className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-all cursor-pointer"
               >
-                &times; Close Preview
+                &times; Close
               </button>
             </div>
 
@@ -3588,9 +3588,9 @@ export function PublishAssessmentSection({
                   <BookmarkPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Save Template</h3>
+                  <h3 className="text-lg font-bold text-white">Save Test</h3>
                   <p className="text-xs text-slate-400">
-                    Save current questions & targets configuration
+                    Save your current questions and student settings for later use
                   </p>
                 </div>
               </div>
@@ -3606,7 +3606,7 @@ export function PublishAssessmentSection({
             <form onSubmit={handleSaveTemplate} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold uppercase text-slate-300">
-                  Template Name <span className="text-rose-400">*</span>
+                  Saved Test Name <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -3625,7 +3625,7 @@ export function PublishAssessmentSection({
               {/* Template Configuration Preview */}
               <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
                 <div className="flex items-center justify-between text-slate-400">
-                  <span>Publish Mode:</span>
+                  <span>Test Type:</span>
                   <span className="font-semibold text-white">{publishMode}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-400">
@@ -3637,15 +3637,15 @@ export function PublishAssessmentSection({
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-400">
-                  <span>Target Configurations:</span>
-                  <span className="font-semibold text-white">{targets.length} target(s)</span>
+                  <span>Groups:</span>
+                  <span className="font-semibold text-white">{targets.length} group(s)</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-400">
                   <span>Shuffle Questions:</span>
                   <span className="font-semibold text-white">{shuffleQuestions ? 'Enabled' : 'Disabled'}</span>
                 </div>
                 <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-500 italic">
-                  Note: Publish Name, Availability Dates/Times, and Student attempt records are NEVER saved in templates.
+                  Note: Test name, dates, and times are not saved in this template.
                 </div>
               </div>
 
@@ -3677,7 +3677,7 @@ export function PublishAssessmentSection({
                   ) : (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>Save Template</span>
+                      <span>Save Test</span>
                     </>
                   )}
                 </button>
@@ -3697,9 +3697,9 @@ export function PublishAssessmentSection({
                   <Bookmark className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Saved Templates</h3>
+                  <h3 className="text-lg font-bold text-white">Saved Tests</h3>
                   <p className="text-xs text-slate-400">
-                    Select a template to load its questions and targets into the form
+                    Choose a saved test to load questions and groups into the form
                   </p>
                 </div>
               </div>
@@ -3718,7 +3718,7 @@ export function PublishAssessmentSection({
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search saved templates..."
+                  placeholder="Search saved tests..."
                   value={templateSearch}
                   onChange={(e) => setTemplateSearch(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -3731,15 +3731,15 @@ export function PublishAssessmentSection({
               {isLoadingTemplates ? (
                 <div className="py-12 text-center text-slate-400 space-y-2">
                   <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-xs">Loading templates...</p>
+                  <p className="text-xs">Loading saved tests...</p>
                 </div>
               ) : savedTemplates.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 space-y-3">
                   <Bookmark className="w-10 h-10 text-slate-600 mx-auto" />
                   <div>
-                    <p className="text-sm font-semibold text-slate-300">No Saved Templates</p>
+                    <p className="text-sm font-semibold text-slate-300">No Saved Tests</p>
                     <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                      Configure your questions and target recipients, then click the Save Template button to save them for future assessments.
+                      Choose questions and students, then click Save Test to save them for later.
                     </p>
                   </div>
                 </div>
@@ -3750,7 +3750,7 @@ export function PublishAssessmentSection({
                 if (filtered.length === 0) {
                   return (
                     <div className="py-8 text-center text-xs text-slate-500">
-                      No templates match "{templateSearch}"
+                      No saved tests match "{templateSearch}"
                     </div>
                   );
                 }
@@ -3780,7 +3780,7 @@ export function PublishAssessmentSection({
                                 : `${tpl.randomCount || 5} Random Questions`}
                             </span>
                             <span>&bull;</span>
-                            <span>{targetCount} Target Config(s)</span>
+                            <span>{targetCount} Group(s)</span>
                             {tpl.shuffleQuestions && (
                               <>
                                 <span>&bull;</span>
@@ -3795,7 +3795,7 @@ export function PublishAssessmentSection({
                             type="button"
                             onClick={() => setTemplateToDelete({ id: tplId, name: tpl.name })}
                             className="p-2 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 border border-slate-700 hover:border-rose-800 transition-all cursor-pointer"
-                            title="Delete Template"
+                            title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -3805,7 +3805,7 @@ export function PublishAssessmentSection({
                             className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                           >
                             <FolderDown className="w-3.5 h-3.5" />
-                            <span>Load Template</span>
+                            <span>Load Test</span>
                           </button>
                         </div>
                       </div>
@@ -3864,9 +3864,9 @@ export function PublishAssessmentSection({
                 <Trash2 className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">Delete Template?</h3>
+                <h3 className="text-base font-bold text-white">Delete Saved Test?</h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Are you sure you want to permanently delete template <strong className="text-white">'{templateToDelete.name}'</strong>? This action cannot be undone.
+                  Are you sure you want to delete the saved test <strong className="text-white">'{templateToDelete.name}'</strong>? This cannot be undone.
                 </p>
               </div>
             </div>
@@ -3894,7 +3894,7 @@ export function PublishAssessmentSection({
                 ) : (
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Delete Template</span>
+                    <span>Yes, Delete Test</span>
                   </>
                 )}
               </button>
@@ -3912,15 +3912,15 @@ export function PublishAssessmentSection({
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">Replace Current Selections?</h3>
+                <h3 className="text-base font-bold text-white">Replace Current Choices?</h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  You already have selections in the Publish Assessment form. Loading this template will replace the current Questions and Target Configuration. Do you want to continue?
+                  You already have choices selected. Loading this test will replace your current questions and student groups. Do you want to continue?
                 </p>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-              <div className="text-slate-400">Template to load:</div>
+              <div className="text-slate-400">Test to load:</div>
               <div className="font-semibold text-white">{pendingTemplateToLoad.name}</div>
             </div>
 
@@ -3940,7 +3940,7 @@ export function PublishAssessmentSection({
                 onClick={() => applyTemplate(pendingTemplateToLoad)}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer shadow-lg shadow-indigo-600/30"
               >
-                Load Template
+                Load Test
               </button>
             </div>
           </div>

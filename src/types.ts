@@ -159,6 +159,7 @@ export interface PublishHistoryRecord {
   totalRecipients: number;
   targets?: TargetConfig[];
   publishMode: PublishMode;
+  shuffle?: boolean;
   assignedQuestionsCount: number;
   completedCount: number;
   incompleteCount: number;

@@ -85,7 +85,7 @@ export function QuestionBankSection({
       if (res.ok) {
         setFeedbackMessage({
           type: 'success',
-          text: `Question deleted from Question Bank successfully. Historical assessments and attempt reports remain preserved.`,
+          text: `Question deleted successfully. Past test results will not be affected.`,
         });
         setDeletingQuestion(null);
         // If viewGroupModal is open, close it or refresh it
@@ -96,13 +96,13 @@ export function QuestionBankSection({
       } else {
         setFeedbackMessage({
           type: 'error',
-          text: data.error || 'Failed to delete question from Question Bank',
+          text: data.error || 'Unable to delete question. Please try again.',
         });
       }
     } catch (e: any) {
       setFeedbackMessage({
         type: 'error',
-        text: e.message || 'Error occurred while deleting question',
+        text: e.message || 'Something went wrong. Please try again.',
       });
     } finally {
       setIsDeletingQuestion(false);
@@ -124,13 +124,13 @@ export function QuestionBankSection({
       if (res.ok) {
         setNewGroupName('');
         setNewGroupDesc('');
-        setFeedbackMessage({ type: 'success', text: `Question Group "${data.name}" created successfully!` });
+        setFeedbackMessage({ type: 'success', text: `Question group "${data.name}" created successfully.` });
         await onRefreshData();
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to create group' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to create question group. Please try again.' });
       }
     } catch (e: any) {
-      setFeedbackMessage({ type: 'error', text: e.message || 'Error creating group' });
+      setFeedbackMessage({ type: 'error', text: e.message || 'Unable to create question group. Please try again.' });
     } finally {
       setIsSubmittingGroup(false);
     }
@@ -139,7 +139,7 @@ export function QuestionBankSection({
   const handleCreateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionForm.groupId) {
-      setFeedbackMessage({ type: 'error', text: 'Please select a Question Group' });
+      setFeedbackMessage({ type: 'error', text: 'Please select a question group.' });
       return;
     }
     const opts = questionForm.options
@@ -173,13 +173,13 @@ export function QuestionBankSection({
           options: '',
           correctAnswer: '',
         }));
-        setFeedbackMessage({ type: 'success', text: 'Question added to bank successfully!' });
+        setFeedbackMessage({ type: 'success', text: 'Question saved successfully.' });
         await onRefreshData();
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to add question' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to save question. Please try again.' });
       }
     } catch (e: any) {
-      setFeedbackMessage({ type: 'error', text: e.message || 'Error creating question' });
+      setFeedbackMessage({ type: 'error', text: e.message || 'Unable to save question. Please try again.' });
     } finally {
       setIsSubmittingQuestion(false);
     }
@@ -263,10 +263,10 @@ export function QuestionBankSection({
     <div className="space-y-8 max-w-7xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Assessment Content</span>
+        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Questions</span>
         <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Question Bank & Groups</h2>
         <p className="text-sm text-slate-400">
-          Create question groups (e.g. Creativity, Thinking, Reasoning, Aptitude), configure difficulty tiers (Easy, Medium, Hard), and build question items.
+          Create question groups (such as Creativity, Thinking, Reasoning, Aptitude), set difficulty levels (Easy, Medium, Hard), and add questions.
         </p>
       </div>
 
@@ -313,7 +313,7 @@ export function QuestionBankSection({
               </label>
               <textarea
                 rows={3}
-                placeholder="Brief domain explanation"
+                placeholder="Short description of this group"
                 value={newGroupDesc}
                 onChange={(e) => setNewGroupDesc(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
@@ -333,7 +333,7 @@ export function QuestionBankSection({
         <div className="lg:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
           <h3 className="font-bold text-lg text-white flex items-center gap-2">
             <PlusCircle className="w-5 h-5 text-indigo-400" />
-            Add Question to Group & Difficulty
+            Add Question
           </h3>
           <form onSubmit={handleCreateQuestion} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -359,7 +359,7 @@ export function QuestionBankSection({
 
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Difficulty Level
+                Difficulty
               </label>
               <select
                 value={questionForm.difficulty}
@@ -374,7 +374,7 @@ export function QuestionBankSection({
 
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Time Allowed (Seconds) <span className="text-slate-500 normal-case">(Optional)</span>
+                Time Limit in Seconds <span className="text-slate-500 normal-case">(Optional)</span>
               </label>
               <input
                 type="number"
@@ -388,7 +388,7 @@ export function QuestionBankSection({
 
             <div className="sm:col-span-2 md:col-span-3">
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Question Content / Prompt
+                Question Text
               </label>
               <input
                 type="text"
@@ -429,7 +429,7 @@ export function QuestionBankSection({
 
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Options <span className="text-slate-500 normal-case">(Optional, comma-separated)</span>
+                Answer Choices <span className="text-slate-500 normal-case">(Optional, comma-separated)</span>
               </label>
               <input
                 type="text"
@@ -446,7 +446,7 @@ export function QuestionBankSection({
                 disabled={isSubmittingQuestion || questionGroups.length === 0}
                 className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
               >
-                {isSubmittingQuestion ? 'Saving...' : '+ Save to Question Bank'}
+                {isSubmittingQuestion ? 'Saving...' : '+ Save Question'}
               </button>
             </div>
           </form>
@@ -455,7 +455,7 @@ export function QuestionBankSection({
 
       {/* Question Groups Breakdown (View Mode) */}
       <div className="space-y-4">
-        <h3 className="font-bold text-lg text-white">Question Groups Breakdown (View Mode)</h3>
+        <h3 className="font-bold text-lg text-white">Question Groups Summary</h3>
         {questionGroups.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {questionGroups.map((grp) => {
@@ -473,7 +473,7 @@ export function QuestionBankSection({
                         className="text-xs px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center gap-1 transition-all"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        View Mode
+                        View Questions
                       </button>
                     </div>
                     <p className="text-xs text-slate-400 mt-1 line-clamp-1">{grp.description || 'No description'}</p>
@@ -500,9 +500,9 @@ export function QuestionBankSection({
         ) : (
           <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-center py-12">
             <Layers className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <h4 className="text-base font-semibold text-slate-300">No question groups</h4>
+            <h4 className="text-base font-semibold text-slate-300">No question groups yet</h4>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Create question groups using the form above to organize questions by domain.
+              Use the form above to create your first question group.
             </p>
           </div>
         )}
@@ -513,9 +513,9 @@ export function QuestionBankSection({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h3 className="font-bold text-lg text-white">
-              Questions Repository ({filteredQuestions.length} of {allQuestions.length})
+              Questions ({filteredQuestions.length} of {allQuestions.length})
             </h3>
-            <p className="text-xs text-slate-400">All questions configured across groups and difficulty tiers</p>
+            <p className="text-xs text-slate-400">All questions saved across your groups and difficulty levels</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -523,7 +523,7 @@ export function QuestionBankSection({
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
               <input
                 type="text"
-                placeholder="Search question text..."
+                placeholder="Search questions..."
                 value={questionSearch}
                 onChange={(e) => setQuestionSearch(e.target.value)}
                 className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none w-56"
@@ -548,7 +548,7 @@ export function QuestionBankSection({
               onChange={(e) => setSelectedDifficultyFilter(e.target.value)}
               className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
             >
-              <option value="">All Difficulties</option>
+              <option value="">All Difficulty Levels</option>
               <option value="Easy">Easy</option>
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
@@ -606,7 +606,7 @@ export function QuestionBankSection({
                     )}
                     <button
                       onClick={() => setDeletingQuestion(q)}
-                      title="Delete question from active Question Bank"
+                      title="Delete question"
                       className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 transition-all ml-1 flex items-center gap-1 font-sans"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -628,7 +628,7 @@ export function QuestionBankSection({
                     onClick={() => setVisibleQuestionsCount((prev) => prev + 50)}
                     className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 font-semibold border border-slate-700 transition-all cursor-pointer"
                   >
-                    + Load More ({filteredQuestions.length - visibleQuestionsCount} remaining)
+                    + Show More ({filteredQuestions.length - visibleQuestionsCount} left)
                   </button>
                   <button
                     type="button"
@@ -647,8 +647,8 @@ export function QuestionBankSection({
             <h5 className="text-sm font-semibold text-slate-300">No questions found</h5>
             <p className="text-xs text-slate-500 mt-1">
               {allQuestions.length === 0
-                ? 'No questions added to the Question Bank yet. Use the form above to add questions.'
-                : 'No questions match the current filter selection.'}
+                ? 'No questions added yet. Use the form above to add questions.'
+                : 'No questions match your search or filter.'}
             </p>
           </div>
         )}
@@ -660,7 +660,7 @@ export function QuestionBankSection({
           <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
               <div>
-                <span className="text-xs font-mono uppercase text-indigo-400">Read-Only View</span>
+                <span className="text-xs font-mono uppercase text-indigo-400">View Questions</span>
                 <h3 className="text-xl font-bold text-white">{viewGroupModal.name} Group</h3>
               </div>
               <button
@@ -686,7 +686,7 @@ export function QuestionBankSection({
                             : 'text-rose-400'
                         }`}
                       >
-                        {diff} Tier ({tier?.count || 0} questions)
+                        {diff} ({tier?.count || 0} questions)
                       </h4>
                     </div>
 
@@ -716,7 +716,7 @@ export function QuestionBankSection({
                               )}
                               <button
                                 onClick={() => setDeletingQuestion(q)}
-                                title="Delete question from active Question Bank"
+                                title="Delete question"
                                 className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white transition-all ml-1"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -726,7 +726,7 @@ export function QuestionBankSection({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-slate-500 italic">No questions currently in this difficulty.</p>
+                      <p className="text-xs text-slate-500 italic">No questions in this difficulty level yet.</p>
                     )}
                   </div>
                 );
@@ -747,9 +747,9 @@ export function QuestionBankSection({
               </div>
               <div className="flex-1">
                 <span className="text-xs font-mono uppercase text-rose-400 tracking-wider font-semibold">
-                  Confirm Question Deletion
+                  Delete Question
                 </span>
-                <h3 className="text-lg font-bold text-white mt-0.5">Delete Question from Bank</h3>
+                <h3 className="text-lg font-bold text-white mt-0.5">Delete this Question?</h3>
               </div>
               <button
                 onClick={() => !isDeletingQuestion && setDeletingQuestion(null)}
@@ -815,14 +815,14 @@ export function QuestionBankSection({
               <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
                 <div>
-                  <strong className="font-semibold text-amber-200">Active Bank Removal:</strong> This question will be permanently deleted from the Question Bank repository and will not be available for new Selected or Random assessment selections.
+                  <strong className="font-semibold text-amber-200">Delete Question:</strong> This question will be permanently removed and cannot be used in future tests.
                 </div>
               </div>
 
               <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
                 <div>
-                  <strong className="font-semibold text-indigo-200">Historical Protection:</strong> Any existing published assessments, Publish History snapshots, completed/in-progress student attempts, and student reports that used this question remain fully preserved.
+                  <strong className="font-semibold text-indigo-200">Past Tests Safe:</strong> Any tests already created, student attempts, and past reports that used this question will stay saved.
                 </div>
               </div>
             </div>
@@ -848,7 +848,7 @@ export function QuestionBankSection({
                 ) : (
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
-                    Permanently Delete
+                    Yes, Delete Question
                   </>
                 )}
               </button>

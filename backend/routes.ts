@@ -61,7 +61,7 @@ router.post('/auth/setup-first-admin', async (req: Request, res: Response) => {
 
     const count = await UserModel.countDocuments();
     if (count > 0) {
-      return res.status(403).json({ error: 'Database already has registered users. Initial setup is closed.' });
+      return res.status(403).json({ error: 'Setup is already completed. Please sign in.' });
     }
 
     const salt = bcrypt.genSaltSync(10);
@@ -89,7 +89,7 @@ router.post('/auth/setup-first-admin', async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create initial Super Admin', details: err.message });
+    return res.status(500).json({ error: 'Unable to create administrator account. Please try again.', details: err.message });
   }
 });
 
@@ -116,7 +116,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       const failMsg = `[Auth] ${new Date().toISOString()} Login failed: User "${trimmedUsername}" not found in database.\n`;
       try { fs.appendFileSync('/tmp/auth.log', failMsg); } catch (_) {}
       console.warn(failMsg.trim());
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: 'Username or password is incorrect.' });
     }
 
     const isMatch =
@@ -133,7 +133,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       const mismatchMsg = `[Auth] ${new Date().toISOString()} Login failed: Password mismatch for user "${user.username}".\n`;
       try { fs.appendFileSync('/tmp/auth.log', mismatchMsg); } catch (_) {}
       console.warn(mismatchMsg.trim());
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: 'Username or password is incorrect.' });
     }
 
     const token = generateToken({
@@ -165,7 +165,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Login failed', details: err.message });
+    return res.status(500).json({ error: 'Username or password is incorrect.', details: err.message });
   }
 });
 
@@ -174,7 +174,7 @@ router.post('/auth/change-password', authenticate, async (req: Request, res: Res
   try {
     const { newPassword } = req.body;
     if (!newPassword || newPassword.trim().length < 4) {
-      return res.status(400).json({ error: 'New password must be at least 4 characters long' });
+      return res.status(400).json({ error: 'Password must be at least 4 characters long' });
     }
 
     const user = await UserModel.findById(req.user!.userId);
@@ -184,7 +184,7 @@ router.post('/auth/change-password', authenticate, async (req: Request, res: Res
 
     // Prevent setting password identical to username
     if (newPassword.toLowerCase() === user.username.toLowerCase()) {
-      return res.status(400).json({ error: 'New password cannot be identical to your ID/username' });
+      return res.status(400).json({ error: 'Please choose a password different from your username or ID' });
     }
 
     const salt = bcrypt.genSaltSync(10);
@@ -194,7 +194,7 @@ router.post('/auth/change-password', authenticate, async (req: Request, res: Res
 
     return res.json({ success: true, message: 'Password updated successfully' });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update password', details: err.message });
+    return res.status(500).json({ error: 'Unable to update password. Please try again.', details: err.message });
   }
 });
 
@@ -1633,10 +1633,19 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       let studentQuestionList: Question[] = [];
 
       if (publishMode === 'Selected Questions') {
-        const pool = allQuestions.filter((q) => selectedQuestionIds.includes(q.id));
-        studentQuestionList = [...pool];
+        const qMap = new Map(allQuestions.map((q) => [q.id, q]));
+        const orderedQuestions = (selectedQuestionIds || [])
+          .map((id: string) => qMap.get(id))
+          .filter(Boolean) as Question[];
+
         if (shuffle) {
-          studentQuestionList.sort(() => 0.5 - Math.random());
+          studentQuestionList = [...orderedQuestions];
+          for (let i = studentQuestionList.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [studentQuestionList[i], studentQuestionList[j]] = [studentQuestionList[j], studentQuestionList[i]];
+          }
+        } else {
+          studentQuestionList = [...orderedQuestions];
         }
       } else {
         const insights = computeStudentInsights(student.uniqueStudentId!, pastAssignments);
@@ -1977,7 +1986,11 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
         let studentQuestionList = [...selectedQuestionsDocs];
         if (publishMode === 'Selected Questions') {
           if (shuffle) {
-            studentQuestionList.sort(() => 0.5 - Math.random());
+            studentQuestionList = [...selectedQuestionsDocs];
+            for (let i = studentQuestionList.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [studentQuestionList[i], studentQuestionList[j]] = [studentQuestionList[j], studentQuestionList[i]];
+            }
           }
         } else {
           const insights = computeStudentInsights(sId, pastAssignments);
@@ -2035,7 +2048,10 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
           if (publishMode === 'Selected Questions') {
             let updatedList = [...selectedQuestionsDocs];
             if (shuffle) {
-              updatedList.sort(() => 0.5 - Math.random());
+              for (let i = updatedList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [updatedList[i], updatedList[j]] = [updatedList[j], updatedList[i]];
+              }
             }
             const questionLogs: QuestionAttemptLog[] = updatedList.map((q) => ({
               questionId: q.id,
@@ -2308,16 +2324,16 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     const studentId = req.user!.studentId || req.user!.username;
 
     const assignment = await StudentTestAssignmentModel.findById(assignmentId);
-    if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
-    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+    if (!assignment) return res.status(404).json({ error: 'Test not found' });
+    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access denied' });
 
     // Block start if assessment is paused by admin or not found
     const pubTest = await PublishedTestModel.findById(assignment.publishedTestId);
     if (!pubTest) {
-      return res.status(404).json({ error: 'Assessment not found' });
+      return res.status(404).json({ error: 'Test not found' });
     }
     if (pubTest?.isPaused || pubTest?.status === 'PAUSED') {
-      return res.status(403).json({ error: 'This assessment is temporarily paused. Please check back later.' });
+      return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
     // Verify student is still targeted under updated target configuration
@@ -2331,7 +2347,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
         }).lean();
       if (studentUser && !isStudentTargetedByPublishedTest(studentUser, pubTest)) {
         await StudentTestAssignmentModel.deleteOne({ _id: assignment._id });
-        return res.status(403).json({ error: 'You are no longer assigned to this assessment.' });
+        return res.status(403).json({ error: 'You are no longer assigned to this test.' });
       }
     }
 
@@ -2339,16 +2355,16 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     // Only NOT_STARTED can be started.
     // If IN_PROGRESS, COMPLETED, or LOCKED_INCOMPLETE, reject restart.
     if (assignment.status === 'COMPLETED') {
-      return res.status(400).json({ error: 'You have already completed this assessment. Re-attempts are not permitted.' });
+      return res.status(400).json({ error: 'You have already completed this test.' });
     }
     if (assignment.status === 'LOCKED_INCOMPLETE' || assignment.status === 'INCOMPLETE') {
-      return res.status(400).json({ error: 'This assessment is incomplete and locked. Re-attempts are not permitted under the one-time attempt security policy.' });
+      return res.status(400).json({ error: 'This test ended early and cannot be reopened.' });
     }
     if (assignment.status === 'IN_PROGRESS') {
-      return res.status(400).json({ error: 'This assessment has already been started. Re-attempts or restarts are not permitted under the one-time attempt security policy.' });
+      return res.status(400).json({ error: 'This test has already been started. You can only take this test once.' });
     }
     if (assignment.status !== 'NOT_STARTED') {
-      return res.status(400).json({ error: 'Only unstarted assessments can be started.' });
+      return res.status(400).json({ error: 'Only unstarted tests can be started.' });
     }
 
     // Defensive active question check:
@@ -2367,7 +2383,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       assignment.totalQuestions = 0;
       await assignment.save();
       return res.status(400).json({
-        error: 'This assessment cannot be started because its questions have been removed from the active Question Bank.',
+        error: 'This test cannot be started because its questions are no longer available in the Question Bank.',
       });
     }
 
@@ -2416,7 +2432,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       questions: sanitizedQuestions,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to start assessment', details: err.message });
+    return res.status(500).json({ error: 'Unable to start test. Please try again.', details: err.message });
   }
 });
 
@@ -2578,21 +2594,21 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
     const studentId = req.user!.studentId || req.user!.username;
 
     const assignment = await StudentTestAssignmentModel.findById(assignmentId);
-    if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
-    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+    if (!assignment) return res.status(404).json({ error: 'Test not found' });
+    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access denied' });
 
     // Block answers if assessment is temporarily paused
     const pubTest = await PublishedTestModel.findById(assignment.publishedTestId);
     if (pubTest?.isPaused || pubTest?.status === 'PAUSED') {
-      return res.status(403).json({ error: 'This assessment is temporarily paused. Answers cannot be submitted while paused.' });
+      return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
     if (assignment.status === 'COMPLETED' || assignment.status === 'LOCKED_INCOMPLETE') {
-      return res.status(400).json({ error: 'Assessment is no longer accepting answers' });
+      return res.status(400).json({ error: 'This test is no longer accepting answers' });
     }
 
     const questionIndex = assignment.questions.findIndex((q: any) => q.questionId === questionId);
-    if (questionIndex === -1) return res.status(404).json({ error: 'Question not found in this assessment' });
+    if (questionIndex === -1) return res.status(404).json({ error: 'Question not found in this test' });
 
     const qItem = assignment.questions[questionIndex];
 
@@ -2645,26 +2661,26 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
     const studentId = req.user!.studentId || req.user!.username;
 
     const assignment = await StudentTestAssignmentModel.findById(assignmentId);
-    if (!assignment) return res.status(404).json({ error: 'Assessment not found' });
-    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access forbidden' });
+    if (!assignment) return res.status(404).json({ error: 'Test not found' });
+    if (assignment.studentId !== studentId) return res.status(403).json({ error: 'Access denied' });
 
     // Block submit if assessment is temporarily paused
     const pubTest = await PublishedTestModel.findById(assignment.publishedTestId);
     if (pubTest?.isPaused || pubTest?.status === 'PAUSED') {
-      return res.status(403).json({ error: 'This assessment is temporarily paused. Submissions cannot be made while paused.' });
+      return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
     if (assignment.status === 'COMPLETED') {
       return res.json({
         status: 'COMPLETED',
-        message: 'Assessment is already submitted.',
+        message: 'This test is already submitted.',
         scoreOutOf100: assignment.scoreOutOf100,
         totalPointsEarned: assignment.totalPointsEarned,
       });
     }
 
     if (assignment.status === 'LOCKED_INCOMPLETE') {
-      return res.status(400).json({ error: 'This assessment is locked and can no longer be submitted.' });
+      return res.status(400).json({ error: 'This test has ended and can no longer be submitted.' });
     }
 
     // Process answers payload if sent from frontend
@@ -2788,7 +2804,7 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
       totalTimeTakenSeconds: totalTime,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to submit assessment', details: err.message });
+    return res.status(500).json({ error: 'Unable to submit test. Please try again.', details: err.message });
   }
 });
 
@@ -2804,7 +2820,7 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
     const publishIds = history.map((h) => h.publishId).filter(Boolean);
     const pubTests = await PublishedTestModel.find(
       { _id: { $in: publishIds } },
-      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1, publishedAt: 1, updatedAt: 1, status: 1, isPaused: 1 }
+      { startDate: 1, startTime: 1, endDate: 1, endTime: 1, createdAt: 1, publishedAt: 1, updatedAt: 1, status: 1, isPaused: 1, shuffle: 1 }
     ).lean();
     const pubTestMap = new Map<string, any>(pubTests.map((pt: any) => [pt._id.toString(), pt]));
 
@@ -2856,6 +2872,7 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
       const effectivePublishTime = h.publishedAt || h.updatedAt || h.createdAt || pub?.publishedAt || pub?.updatedAt || pub?.createdAt;
       return {
         ...h,
+        shuffle: Boolean(pub?.shuffle ?? h.shuffle),
         schoolCounts,
         startDate: h.startDate || pub?.startDate || h.date,
         startTime: h.startTime || pub?.startTime || h.time,
@@ -2899,7 +2916,11 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       processedStudentIds.add(sId);
       const live = assignMap.get(sId);
       const effectiveStatus = live ? live.status : s.status;
-      const effectiveExitType = effectiveStatus === 'COMPLETED' ? null : (live ? live.exitType : s.exitType);
+      const effectiveExitType = (effectiveStatus === 'COMPLETED' || effectiveStatus === 'NOT_STARTED')
+        ? null
+        : (live && (live.exitType === 'EXIT' || live.exitType === 'LOGOUT')
+          ? live.exitType
+          : (s.exitType === 'EXIT' || s.exitType === 'LOGOUT' ? s.exitType : null));
       const effectiveScore = live ? live.scoreOutOf100 : s.scoreOutOf100;
       return {
         ...s,
@@ -2927,7 +2948,9 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
           section: live.section || '',
           assessmentName: history.publishName,
           status: live.status,
-          exitType: live.exitType || null,
+          exitType: (live.status === 'COMPLETED' || live.status === 'NOT_STARTED')
+            ? null
+            : (live.exitType === 'EXIT' || live.exitType === 'LOGOUT' ? live.exitType : null),
           scoreOutOf100: live.scoreOutOf100 != null ? live.scoreOutOf100 : 0,
         });
       }
@@ -3160,6 +3183,7 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
     const effectivePublishTime = history.publishedAt || history.updatedAt || history.createdAt || pubTest?.publishedAt || pubTest?.updatedAt || pubTest?.createdAt;
     return res.json({
       ...history,
+      shuffle: Boolean(pubTest?.shuffle ?? history.shuffle),
       startDate: history.startDate || pubTest?.startDate || history.date,
       startTime: history.startTime || pubTest?.startTime || history.time,
       endDate: history.endDate || pubTest?.endDate || '',
@@ -3491,7 +3515,7 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         publishedCreatedAt: publishedCreatedAt ? new Date(publishedCreatedAt).toISOString() : null,
         originalPublishName: a.publishName,
         status: a.status,
-        exitType: a.status === 'COMPLETED' ? null : (a.exitType || null),
+        exitType: (a.status === 'COMPLETED' || a.status === 'NOT_STARTED') ? null : (a.exitType === 'EXIT' || a.exitType === 'LOGOUT' ? a.exitType : null),
         completedAt: a.completedAt,
         startedAt: a.startedAt,
         lockedAt: a.lockedAt,

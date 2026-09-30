@@ -178,18 +178,18 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row font-sans">
       {/* Sidebar Navigation - Strictly the 5 specified items */}
-      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 p-4 shrink-0 flex flex-col justify-between">
+      <aside className="w-full md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 shrink-0 flex flex-col justify-between">
         <div>
           {/* Brand Header */}
-          <div className="flex items-center gap-3 px-3 py-4 border-b border-slate-800 mb-6">
+          <div className="flex items-center gap-3 px-3 py-4 border-b border-slate-200 dark:border-slate-800 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-base leading-tight text-white">Super Admin</h1>
-              <p className="text-xs text-indigo-400 font-mono">Workspace Director</p>
+              <h1 className="font-bold text-base leading-tight text-slate-900 dark:text-white">Super Admin</h1>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">Main Administrator</p>
             </div>
           </div>
 
@@ -199,10 +199,10 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
             <button
               type="button"
               onClick={() => setActiveTab('schools')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                 activeTab === 'schools'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <Building2 className="w-4 h-4 shrink-0" />
@@ -213,10 +213,10 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
             <button
               type="button"
               onClick={() => setActiveTab('question_bank')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                 activeTab === 'question_bank'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <Layers className="w-4 h-4 shrink-0" />
@@ -227,57 +227,57 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
             <button
               type="button"
               onClick={() => setActiveTab('publish')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                 activeTab === 'publish'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <Send className="w-4 h-4 shrink-0" />
               <span className="truncate">Publish Assessment</span>
             </button>
 
-            {/* 4. Publish History */}
+            {/* 4. Test History */}
             <button
               type="button"
               onClick={() => {
                 setSelectedHistoryDetail(null);
                 setActiveTab('history');
               }}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                 activeTab === 'history'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
               <History className="w-4 h-4 shrink-0" />
-              <span className="truncate">Publish History</span>
+              <span className="truncate">Test History</span>
             </button>
           </nav>
         </div>
 
         {/* Sidebar Footer */}
-        <div className="pt-4 border-t border-slate-800/80 text-xs text-slate-500 space-y-1">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 text-xs text-slate-500 space-y-1">
           <div className="flex items-center justify-between">
             <span>Role: Super Admin</span>
-            <span className="text-emerald-500 text-[11px] font-medium flex items-center gap-1">
+            <span className="text-emerald-600 dark:text-emerald-500 text-[11px] font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
             </span>
           </div>
-          <p className="text-[10px] text-slate-600">Puzzles Assessment Engine v2.0</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-600">Puzzles Learning & Assessment</p>
         </div>
       </aside>
 
       {/* Main Workspace Column */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Main Authenticated Header with Profile Menu */}
-        <header className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
               {activeTab === 'schools' && 'Schools & Students'}
               {activeTab === 'question_bank' && 'Question Bank & Groups'}
               {activeTab === 'publish' && 'Publish Assessment'}
-              {activeTab === 'history' && 'Publish History'}
+              {activeTab === 'history' && 'Test History'}
             </h2>
           </div>
           <ProfileMenu 
@@ -287,7 +287,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </header>
 
         {/* Main Content Area - Renders ONLY the selected section */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-950">
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
         {activeTab === 'schools' && (
           <SchoolsSection
             token={token}

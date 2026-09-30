@@ -1321,11 +1321,11 @@ function HistoricalAuditDrillDown({
       <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-semibold block">
-            Assessment Audit
+            Test Details
           </span>
           <h3 className="font-bold text-base text-white flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            Historical Audit Drill-Down
+            Test Information & Students
           </h3>
         </div>
         <button
@@ -1336,7 +1336,7 @@ function HistoricalAuditDrillDown({
           }}
           className="text-xs text-slate-400 hover:text-white font-medium px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
         >
-          Collapse &uarr;
+          Close &uarr;
         </button>
       </div>
 
@@ -1354,7 +1354,7 @@ function HistoricalAuditDrillDown({
 
         <div className="space-y-1">
           <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
-            Test Availability:
+            Available:
           </span>
           <div className="text-white font-semibold flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
@@ -1364,7 +1364,7 @@ function HistoricalAuditDrillDown({
 
         <div className="space-y-1">
           <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
-            Assessment Status:
+            Status:
           </span>
           <div className="flex items-center gap-1.5 pt-0.5">
             {detail.status === 'PAUSED' || detail.isPaused ? (
@@ -1389,7 +1389,7 @@ function HistoricalAuditDrillDown({
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <Target className="w-3.5 h-3.5 text-indigo-400" />
-            Target Selection Information ({targetsList.length} {targetsList.length === 1 ? 'Target' : 'Targets'})
+            Who Can Take This Test ({targetsList.length} {targetsList.length === 1 ? 'Group' : 'Groups'})
           </h4>
         </div>
 
@@ -1804,22 +1804,20 @@ function HistoricalAuditDrillDown({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-slate-400">Exit Type:</span>
-                      <span
-                        className={`font-semibold font-mono text-xs ${
-                          s.status === 'COMPLETED'
-                            ? 'text-slate-500'
-                            : s.exitType === 'EXIT'
-                            ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
-                            : s.exitType === 'LOGOUT'
-                            ? 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
-                            : 'text-slate-500'
-                        }`}
-                      >
-                        {s.status === 'COMPLETED' ? '—' : (s.exitType || '—')}
-                      </span>
-                    </div>
+                    {(s.status === 'INCOMPLETE' || s.status === 'LOCKED_INCOMPLETE') && (s.exitType === 'EXIT' || s.exitType === 'LOGOUT') && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-400">Exit Type:</span>
+                        <span
+                          className={`font-semibold font-mono text-xs ${
+                            s.exitType === 'EXIT'
+                              ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
+                              : 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
+                          }`}
+                        >
+                          {s.exitType}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1873,7 +1871,7 @@ function HistoricalAuditDrillDown({
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase tracking-wider">
-                    VIEW ONLY &bull; Historical Snapshot
+                    View Only &bull; Saved Record
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
                     Total: {totalHistoricalQuestionsCount} Questions
@@ -1882,7 +1880,7 @@ function HistoricalAuditDrillDown({
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <span>{detail.publishName}</span>
                   <span className="text-xs font-normal text-slate-400 font-mono">
-                    ({detail.publishMode})
+                    ({detail.publishMode}{detail.publishMode === 'Selected Questions' && (detail.shuffle || detail.shuffleQuestions) ? ' · Shuffled' : ''})
                   </span>
                 </h3>
               </div>
@@ -2192,10 +2190,10 @@ export function PublishHistorySection({
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Historical Auditing</span>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Publish History</h2>
+        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Past Tests</span>
+        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Test History</h2>
         <p className="text-sm text-slate-400">
-          Permanent records of all published assessments showing real-time completion status, candidate participation, and score metrics.
+          Records of all published tests with student completion and scores.
         </p>
       </div>
 
@@ -2228,7 +2226,7 @@ export function PublishHistorySection({
       {/* Filter / Search bar */}
       <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase text-slate-400">Total Launches:</span>
+          <span className="text-xs font-bold uppercase text-slate-400">Total Tests:</span>
           <span className="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-400 font-mono text-xs font-bold border border-indigo-800">
             {historyList.length}
           </span>
@@ -2238,7 +2236,7 @@ export function PublishHistorySection({
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
           <input
             type="text"
-            placeholder="Search assessment name or school..."
+            placeholder="Search test name or school..."
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
             className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -2274,10 +2272,15 @@ export function PublishHistorySection({
                       <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
                         {hist.publishMode}
                       </span>
+                      {hist.publishMode === 'Selected Questions' && (hist.shuffle || hist.shuffleQuestions) && (
+                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
+                          Shuffled
+                        </span>
+                      )}
                       {isPaused && (
                         <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide flex items-center gap-1">
                           <Pause className="w-3 h-3" />
-                          Status: PAUSED
+                          Paused
                         </span>
                       )}
                       <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
@@ -2317,7 +2320,7 @@ export function PublishHistorySection({
                     >
                       <button
                         type="button"
-                        title="Edit Assessment"
+                        title="Edit Test"
                         onClick={() => onEditAssessment && onEditAssessment(hist.publishId)}
                         className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
                       >
@@ -2327,7 +2330,7 @@ export function PublishHistorySection({
 
                       <button
                         type="button"
-                        title={isPaused ? 'Resume Assessment' : 'Pause Assessment'}
+                        title={isPaused ? 'Resume Test' : 'Pause Test'}
                         onClick={() => {
                           if (isPaused) {
                             setResumeTarget(hist);
@@ -2347,7 +2350,7 @@ export function PublishHistorySection({
 
                       <button
                         type="button"
-                        title="Delete Assessment"
+                        title="Delete Test"
                         onClick={() => setDeleteTarget(hist)}
                         className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 hover:border-rose-600 cursor-pointer"
                       >
@@ -2400,15 +2403,15 @@ export function PublishHistorySection({
               <Pause className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Pause Assessment</h3>
+              <h3 className="text-lg font-bold text-white">Pause Test</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
                 Are you sure you want to pause{' '}
                 <strong className="text-white font-semibold">{pauseTarget.publishName}</strong>?
               </p>
               <div className="text-xs text-amber-300/90 bg-amber-950/60 p-3 rounded-xl border border-amber-800/80 leading-relaxed text-left space-y-1">
-                <p>&bull; Assessment status will become <strong>PAUSED</strong>.</p>
-                <p>&bull; Students will see <em>"Temporarily Paused"</em> and will not be able to start or continue.</p>
-                <p>&bull; Existing completed and incomplete attempts, answers, and scores will be strictly preserved.</p>
+                <p>&bull; Test status will become <strong>PAUSED</strong>.</p>
+                <p>&bull; Students will see <em>"Temporarily Paused"</em> and cannot start or take the test.</p>
+                <p>&bull; All student progress and completed answers are kept safe.</p>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -2426,7 +2429,7 @@ export function PublishHistorySection({
                 onClick={handleConfirmPause}
                 className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-600/30 cursor-pointer transition-all disabled:opacity-50"
               >
-                {isActionLoading ? 'Pausing...' : 'Pause Assessment'}
+                {isActionLoading ? 'Pausing...' : 'Pause Test'}
               </button>
             </div>
           </div>
@@ -2441,14 +2444,14 @@ export function PublishHistorySection({
               <Play className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Resume Assessment</h3>
+              <h3 className="text-lg font-bold text-white">Resume Test</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Resume assessment{' '}
+                Resume test{' '}
                 <strong className="text-white font-semibold">{resumeTarget.publishName}</strong>?
               </p>
               <div className="text-xs text-emerald-300/90 bg-emerald-950/60 p-3 rounded-xl border border-emerald-800/80 leading-relaxed text-left space-y-1">
-                <p>&bull; Assessment will become <strong>ACTIVE</strong> again.</p>
-                <p>&bull; Students can access, start, or continue taking the assessment according to configured availability window rules.</p>
+                <p>&bull; Test will become <strong>ACTIVE</strong> again.</p>
+                <p>&bull; Students can now start or continue taking the test.</p>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -2466,7 +2469,7 @@ export function PublishHistorySection({
                 onClick={handleConfirmResume}
                 className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 cursor-pointer transition-all disabled:opacity-50"
               >
-                {isActionLoading ? 'Resuming...' : 'Resume Assessment'}
+                {isActionLoading ? 'Resuming...' : 'Resume Test'}
               </button>
             </div>
           </div>
@@ -2481,15 +2484,15 @@ export function PublishHistorySection({
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Delete Published Assessment</h3>
+              <h3 className="text-lg font-bold text-white">Delete Test</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Are you sure you want to permanently delete{' '}
+                Are you sure you want to delete{' '}
                 <strong className="text-rose-300 font-semibold">{deleteTarget.publishName}</strong>?
               </p>
               <div className="text-xs text-rose-300/90 bg-rose-950/60 p-3 rounded-xl border border-rose-800/80 leading-relaxed text-left space-y-1">
-                <p>&bull; Deletes only this published assessment record and its associated student assignments.</p>
-                <p>&bull; Unrelated assessments, schools, students, and question banks will not be deleted.</p>
-                <p className="text-rose-400 font-semibold">&bull; This operation is permanent and cannot be undone.</p>
+                <p>&bull; Deletes only this test and student records for it.</p>
+                <p>&bull; Schools, students, and questions in the Question Bank will not be affected.</p>
+                <p className="text-rose-400 font-semibold">&bull; This cannot be undone.</p>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -2507,7 +2510,7 @@ export function PublishHistorySection({
                 onClick={handleConfirmDelete}
                 className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 cursor-pointer transition-all disabled:opacity-50"
               >
-                {isActionLoading ? 'Deleting...' : 'Delete Assessment'}
+                {isActionLoading ? 'Deleting...' : 'Yes, Delete Test'}
               </button>
             </div>
           </div>

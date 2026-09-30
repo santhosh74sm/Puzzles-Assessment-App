@@ -141,15 +141,15 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       if (res.ok) {
         setNewSchoolName('');
         setNewSchoolCode('');
-        setFeedbackMessage({ type: 'success', text: `School workspace "${data.name}" created successfully!` });
+        setFeedbackMessage({ type: 'success', text: `School "${data.name}" added successfully.` });
         await onRefreshSchools();
         setActiveSchoolId(data.id);
         setStudentForm((prev) => ({ ...prev, schoolId: data.id }));
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to create school' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to add school. Please try again.' });
       }
     } catch (e: any) {
-      setFeedbackMessage({ type: 'error', text: e.message || 'Error creating school' });
+      setFeedbackMessage({ type: 'error', text: e.message || 'Unable to add school. Please try again.' });
     } finally {
       setIsSubmittingSchool(false);
     }
@@ -211,10 +211,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           loadSchoolDetails(activeSchoolId);
         }
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to register student' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to add student. Please try again.' });
       }
     } catch (e: any) {
-      setFeedbackMessage({ type: 'error', text: e.message || 'Error registering student' });
+      setFeedbackMessage({ type: 'error', text: e.message || 'Unable to add student. Please try again.' });
     } finally {
       setIsSubmittingStudent(false);
     }
@@ -249,16 +249,16 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedbackMessage({ type: 'success', text: `Student "${data.student?.studentName || editForm.studentName}" updated successfully in MongoDB Atlas.` });
+        setFeedbackMessage({ type: 'success', text: `Student "${data.student?.studentName || editForm.studentName}" updated successfully.` });
         setEditingStudent(null);
         if (activeSchoolId) {
           await loadSchoolDetails(activeSchoolId);
         }
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to update student' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to update student. Please try again.' });
       }
     } catch (err: any) {
-      setFeedbackMessage({ type: 'error', text: err.message || 'Error updating student' });
+      setFeedbackMessage({ type: 'error', text: err.message || 'Unable to update student. Please try again.' });
     } finally {
       setIsSubmittingEdit(false);
     }
@@ -282,10 +282,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           await loadSchoolDetails(activeSchoolId);
         }
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to delete student' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to delete student. Please try again.' });
       }
     } catch (err: any) {
-      setFeedbackMessage({ type: 'error', text: err.message || 'Error deleting student' });
+      setFeedbackMessage({ type: 'error', text: err.message || 'Unable to delete student. Please try again.' });
     } finally {
       setIsSubmittingDelete(false);
     }
@@ -303,14 +303,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedbackMessage({ type: 'success', text: data.message || `School Admin deleted successfully from MongoDB Atlas.` });
+        setFeedbackMessage({ type: 'success', text: data.message || `School admin deleted successfully.` });
         setDeletingAdmin(null);
         await loadSchoolDetails(activeSchoolId);
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to delete school admin' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to delete school admin. Please try again.' });
       }
     } catch (err: any) {
-      setFeedbackMessage({ type: 'error', text: err.message || 'Error deleting school admin' });
+      setFeedbackMessage({ type: 'error', text: err.message || 'Unable to delete school admin. Please try again.' });
     } finally {
       setIsSubmittingDeleteAdmin(false);
     }
@@ -330,7 +330,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       if (res.ok) {
         setFeedbackMessage({
           type: 'success',
-          text: data.message || `School Workspace "${deletingSchool.name}" deleted successfully. Historical assessment data has been preserved.`,
+          text: data.message || `School "${deletingSchool.name}" deleted successfully. Past test records have been saved.`,
         });
         const deletedId = schoolId;
         setDeletingSchool(null);
@@ -340,10 +340,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           setActiveSchoolId(remaining.length > 0 ? remaining[0].id : '');
         }
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Failed to delete school workspace' });
+        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to delete school. Please try again.' });
       }
     } catch (err: any) {
-      setFeedbackMessage({ type: 'error', text: err.message || 'Error deleting school workspace' });
+      setFeedbackMessage({ type: 'error', text: err.message || 'Unable to delete school. Please try again.' });
     } finally {
       setIsSubmittingDeleteSchool(false);
     }
@@ -427,10 +427,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
     <div className="space-y-8 max-w-7xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Institution Directory</span>
+        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Schools & Students</span>
         <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Schools & Students</h2>
         <p className="text-sm text-slate-400">
-          Manage partner schools, provision School Admin accounts, register students, and view student rosters.
+          Add schools, create school admin logins, add students, and view student lists.
         </p>
       </div>
 
@@ -455,7 +455,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono uppercase text-indigo-400 font-bold flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              School Admin Credentials Generated
+              School Admin Login Created
             </span>
             <button
               onClick={() => setCreatedAdminResult(null)}
@@ -465,24 +465,24 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             </button>
           </div>
           <p className="text-sm text-slate-300">
-            Assigned to: <strong className="text-white">{createdAdminResult.schoolName}</strong>
+            School: <strong className="text-white">{createdAdminResult.schoolName}</strong>
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Username / Admin ID</span>
+              <span className="text-xs text-slate-400 block font-mono">Username</span>
               <span className="text-sm font-bold text-emerald-400 font-mono select-all">
                 {createdAdminResult.username}
               </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Initial Password</span>
+              <span className="text-xs text-slate-400 block font-mono">Temporary Password</span>
               <span className="text-sm font-bold text-amber-400 font-mono select-all">
                 {createdAdminResult.initialPassword}
               </span>
             </div>
           </div>
           <p className="text-xs text-slate-400 italic">
-            * The school admin must change this password upon first login.
+            * The school admin must choose a new password when they first sign in.
           </p>
         </div>
       )}
@@ -493,7 +493,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono uppercase text-emerald-400 font-bold flex items-center gap-1.5">
               <CheckCircle className="w-4 h-4 text-emerald-400" />
-              Student Successfully Registered
+              Student Added Successfully
             </span>
             <button
               onClick={() => setCreatedStudentResult(null)}
@@ -503,25 +503,25 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             </button>
           </div>
           <div className="text-sm text-slate-200">
-            Registered: <strong className="text-white">{createdStudentResult.student?.studentName}</strong> (
+            Student: <strong className="text-white">{createdStudentResult.student?.studentName}</strong> (
             {createdStudentResult.student?.className} - {createdStudentResult.student?.section})
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Unique Student App ID</span>
+              <span className="text-xs text-slate-400 block font-mono">Student ID</span>
               <span className="text-sm font-bold text-emerald-400 font-mono select-all">
                 {createdStudentResult.credentials?.username}
               </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Initial Password</span>
+              <span className="text-xs text-slate-400 block font-mono">Temporary Password</span>
               <span className="text-sm font-bold text-amber-400 font-mono select-all">
                 {createdStudentResult.credentials?.initialPassword}
               </span>
             </div>
           </div>
           <p className="text-xs text-slate-400 italic">
-            * Initial password equals their App ID. Student will be prompted to reset upon first login.
+            * The student will use this password to sign in and will be asked to choose a new one.
           </p>
         </div>
       )}
@@ -532,12 +532,12 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
         <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
           <h3 className="font-bold text-lg text-white flex items-center gap-2">
             <Building2 className="w-5 h-5 text-indigo-400" />
-            Add School Workspace
+            Add School
           </h3>
           <form onSubmit={handleCreateSchool} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                School Full Name
+                School Name
               </label>
               <input
                 type="text"
@@ -550,7 +550,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                School Code (Unique Prefix)
+                School Short Code
               </label>
               <input
                 type="text"
@@ -560,14 +560,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 onChange={(e) => setNewSchoolCode(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
               />
-              <p className="text-[11px] text-slate-500 mt-1">Used to generate unique Admin & Student IDs.</p>
+              <p className="text-[11px] text-slate-500 mt-1">Short code used at the start of admin and student IDs (e.g. GVPS).</p>
             </div>
             <button
               type="submit"
               disabled={isSubmittingSchool}
               className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
             >
-              {isSubmittingSchool ? 'Creating Workspace...' : '+ Create School Workspace'}
+              {isSubmittingSchool ? 'Adding School...' : '+ Add School'}
             </button>
           </form>
         </div>
@@ -575,8 +575,8 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
         {/* Active School Workspaces List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg text-white">Active School Workspaces ({schools.length})</h3>
-            <span className="text-xs text-slate-400">Click a school to view its roster below</span>
+            <h3 className="font-bold text-lg text-white">Schools ({schools.length})</h3>
+            <span className="text-xs text-slate-400">Select a school to view its students below</span>
           </div>
 
           {sortedSchools.length > 0 ? (
@@ -589,47 +589,47 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                     onClick={() => setActiveSchoolId(sch.id)}
                     className={`p-5 rounded-2xl border flex flex-col justify-between cursor-pointer transition-all ${
                       isSelected
-                        ? 'bg-indigo-950/40 border-indigo-500 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500'
-                        : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                        ? 'bg-indigo-50 border-indigo-500 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500 dark:bg-indigo-950/40 dark:border-indigo-500'
+                        : 'bg-white border-slate-200 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700'
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs px-2.5 py-1 rounded-md bg-indigo-950 text-indigo-400 border border-indigo-800/60 font-mono font-bold">
+                        <span className="text-xs px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-bold dark:bg-indigo-950 dark:text-indigo-400 dark:border-indigo-800/60">
                           {sch.code}
                         </span>
                         {isSelected ? (
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-600 text-white font-medium">
-                            Viewing Roster
+                            Selected
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-500">Workspace</span>
+                          <span className="text-xs text-slate-500">School</span>
                         )}
                       </div>
-                      <h4 className="font-bold text-base mt-2 text-white">{sch.name}</h4>
+                      <h4 className="font-bold text-base mt-2 text-slate-900 dark:text-white">{sch.name}</h4>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-slate-400">
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
                         {sch.createdAt ? new Date(sch.createdAt).toLocaleDateString() : 'Active'}
                       </span>
                       <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
-                          title="Create School Admin"
+                          title="Add School Admin"
                           onClick={() => handleCreateSchoolAdmin(sch.id)}
-                          className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 font-medium transition-all flex items-center gap-1 border border-slate-700/60 cursor-pointer"
+                          className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-indigo-300 dark:border-slate-700/60 font-medium transition-all flex items-center gap-1 cursor-pointer"
                         >
-                          <Key className="w-3 h-3 text-indigo-400" />
+                          <Key className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                           <span>+ Admin</span>
                         </button>
                         <button
                           type="button"
-                          title="Delete School Workspace"
+                          title="Delete School"
                           onClick={() => setDeletingSchool(sch)}
-                          className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 font-medium transition-all flex items-center gap-1 border border-slate-700/60 hover:border-rose-600 cursor-pointer"
+                          className="text-xs px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 dark:bg-slate-800 dark:hover:bg-rose-600 dark:hover:text-white dark:text-rose-400 dark:border-slate-700/60 dark:hover:border-rose-600 font-medium transition-all flex items-center gap-1 cursor-pointer"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3 h-3 text-rose-600 dark:text-rose-400" />
                           <span>Delete</span>
                         </button>
                       </div>
@@ -643,7 +643,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
               <h4 className="text-base font-semibold text-slate-300">No schools added yet</h4>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Use the form on the left to create your first school workspace.
+                Use the form on the left to add your first school.
               </p>
             </div>
           )}
@@ -654,7 +654,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
         <h3 className="font-bold text-lg text-white flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-indigo-400" />
-          Register New Student (School Roster)
+          Add Student
         </h3>
         <form onSubmit={handleCreateStudent} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="sm:col-span-2">
@@ -678,7 +678,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
           <div className="sm:col-span-2">
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-              Student Full Name
+              Student Name
             </label>
             <input
               type="text"
@@ -692,7 +692,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
           <div className="sm:col-span-2">
             <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-              School Admission Number
+              Admission Number
             </label>
             <input
               type="text"
@@ -754,7 +754,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               disabled={isSubmittingStudent || schools.length === 0}
               className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
             >
-              {isSubmittingStudent ? 'Registering...' : '+ Register Student & Issue ID'}
+              {isSubmittingStudent ? 'Adding Student...' : '+ Add Student'}
             </button>
           </div>
         </form>
@@ -772,7 +772,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                School Workspace Roster &bull; {adminsList.length} Admins &bull; {studentsList.length} Students Registered
+                {adminsList.length} Admins &bull; {studentsList.length} Students
               </p>
             </div>
             <button
@@ -780,7 +780,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               className="text-xs px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-all flex items-center gap-1.5 w-fit"
             >
               <Key className="w-3.5 h-3.5" />
-              + Issue New Admin ID
+              + Add School Admin
             </button>
           </div>
 
@@ -789,9 +789,9 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-sm text-white flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                School Administrators ({adminsList.length})
+                School Admins ({adminsList.length})
               </h4>
-              <span className="text-xs text-slate-500">School Admin credentials for this school</span>
+              <span className="text-xs text-slate-500">Admin logins for this school</span>
             </div>
 
             {adminsList.length > 0 ? (
@@ -802,7 +802,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                       <div className="flex items-center justify-between">
                         <span className="font-mono font-bold text-indigo-300">{adm.username}</span>
                         <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono text-[10px]">
-                          {adm.mustChangePassword ? 'PW Reset Required' : 'Active'}
+                          {adm.mustChangePassword ? 'Needs Password Change' : 'Active'}
                         </span>
                       </div>
                       <p className="text-slate-400 text-[11px] mt-0.5">
@@ -810,22 +810,22 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-700/50 flex items-center justify-end">
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-end">
                       <button
                         type="button"
                         onClick={() => setDeletingAdmin(adm)}
-                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/50 text-[11px] font-medium transition-all flex items-center gap-1"
+                        className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 dark:bg-slate-800 dark:hover:bg-rose-600/30 dark:text-slate-400 dark:hover:text-rose-400 dark:border-slate-700 dark:hover:border-rose-500/50 text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer"
                         title="Delete School Admin"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        Delete Admin
+                        <Trash2 className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                        <span>Delete Admin</span>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-500 italic">No admin credentials issued yet. Click "+ Issue New Admin ID" above.</p>
+              <p className="text-xs text-slate-500 italic">No admin logins created yet. Click "+ Add School Admin" above.</p>
             )}
           </div>
 
@@ -835,9 +835,9 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               <div>
                 <h4 className="font-bold text-base text-white flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-indigo-400" />
-                  Student Roster ({filteredStudents.length} of {studentsList.length})
+                  Students ({filteredStudents.length} of {studentsList.length})
                 </h4>
-                <p className="text-xs text-slate-400">All registered students in {activeSchool.name}</p>
+                <p className="text-xs text-slate-400">All students in {activeSchool.name}</p>
               </div>
 
               {/* Filters */}
@@ -846,7 +846,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="text"
-                    placeholder="Search name, App ID, admission..."
+                    placeholder="Search by name, ID, or admission..."
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
                     className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none w-52"
@@ -885,29 +885,29 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             </div>
 
             {loadingData ? (
-              <div className="py-8 text-center text-xs text-slate-400">Loading student roster...</div>
+              <div className="py-8 text-center text-xs text-slate-400">Loading students...</div>
             ) : filteredStudents.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
                         <th className="py-2.5 px-3">Student Name</th>
-                        <th className="py-2.5 px-3">Unique App ID</th>
-                        <th className="py-2.5 px-3">Admission #</th>
-                        <th className="py-2.5 px-3">Class & Sec</th>
-                        <th className="py-2.5 px-3">Password Status</th>
+                        <th className="py-2.5 px-3">Student ID</th>
+                        <th className="py-2.5 px-3">Admission Number</th>
+                        <th className="py-2.5 px-3">Class & Section</th>
+                        <th className="py-2.5 px-3">Password</th>
                         <th className="py-2.5 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                       {filteredStudents.slice(0, rosterVisibleCount).map((stu) => (
-                        <tr key={stu.id || stu.uniqueStudentId} className="hover:bg-slate-800/40 text-slate-200 transition-colors">
-                          <td className="py-2.5 px-3 font-medium text-white">{stu.studentName}</td>
-                          <td className="py-2.5 px-3 font-mono text-indigo-400 font-bold">{stu.uniqueStudentId}</td>
-                          <td className="py-2.5 px-3 font-mono text-slate-400">{stu.schoolAdmissionNumber}</td>
+                        <tr key={stu.id || stu.uniqueStudentId} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-200 transition-colors">
+                          <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{stu.studentName}</td>
+                          <td className="py-2.5 px-3 font-mono text-indigo-600 dark:text-indigo-400 font-bold">{stu.uniqueStudentId}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-400">{stu.schoolAdmissionNumber}</td>
                           <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 font-mono">
                               {stu.className} - {stu.section}
                             </span>
                           </td>
@@ -915,11 +915,11 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-mono ${
                                 stu.mustChangePassword
-                                  ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
-                                  : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/60'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/60'
                               }`}
                             >
-                              {stu.mustChangePassword ? 'Initial PW' : 'Updated'}
+                              {stu.mustChangePassword ? 'Temporary' : 'Set'}
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-right">
@@ -927,27 +927,31 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                               <button
                                 type="button"
                                 onClick={() => setViewingReportStudent(stu)}
-                                className="px-2.5 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-700/70 hover:border-indigo-500 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                                title="View Student Report & Timeline"
+                                className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 border border-indigo-200 dark:bg-indigo-950/80 dark:hover:bg-indigo-900 dark:text-indigo-300 dark:hover:text-white dark:border-indigo-700/70 dark:hover:border-indigo-500 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                title="View Report"
                               >
-                                <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                                <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                                 <span>View Report</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleStartEdit(stu)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-indigo-400 border border-slate-700 hover:border-indigo-500/50 transition-all cursor-pointer"
+                                className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 dark:bg-slate-800 dark:hover:bg-indigo-600/30 dark:text-slate-300 dark:hover:text-indigo-400 dark:border-slate-700 dark:hover:border-indigo-500/50 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
                                 title="Edit Student"
+                                aria-label="Edit Student"
                               >
-                                <Edit className="w-3.5 h-3.5" />
+                                <Edit className="w-3.5 h-3.5 text-slate-600 dark:text-inherit" />
+                                <span>Edit</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setDeletingStudent(stu)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600/30 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-500/50 transition-all cursor-pointer"
+                                className="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200 hover:border-rose-300 dark:bg-slate-800 dark:hover:bg-rose-600/30 dark:text-slate-300 dark:hover:text-rose-400 dark:border-slate-700 dark:hover:border-rose-500/50 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
                                 title="Delete Student"
+                                aria-label="Delete Student"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-inherit" />
+                                <span>Delete</span>
                               </button>
                             </div>
                           </td>
@@ -958,7 +962,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 </div>
 
                 {filteredStudents.length > rosterVisibleCount && (
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                     <span>
                       Showing {rosterVisibleCount} of {filteredStudents.length} students
                     </span>
@@ -966,14 +970,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                       <button
                         type="button"
                         onClick={() => setRosterVisibleCount((prev) => prev + 50)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 font-semibold border border-slate-700 transition-all cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold border border-indigo-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-indigo-400 dark:border-slate-700 transition-all cursor-pointer"
                       >
-                        + Load More ({filteredStudents.length - rosterVisibleCount} remaining)
+                        + Show More ({filteredStudents.length - rosterVisibleCount} left)
                       </button>
                       <button
                         type="button"
                         onClick={() => setRosterVisibleCount(filteredStudents.length)}
-                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer"
+                        className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-white dark:border-slate-700 transition-all cursor-pointer"
                       >
                         Show All
                       </button>
@@ -987,8 +991,8 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 <h5 className="text-sm font-semibold text-slate-300">No students found</h5>
                 <p className="text-xs text-slate-500 mt-1">
                   {studentsList.length === 0
-                    ? 'No students registered for this school yet. Use the form above to add students.'
-                    : 'No students match the selected filter criteria.'}
+                    ? 'No students added to this school yet. Use the form above to add students.'
+                    : 'No students match your search or filter.'}
                 </p>
               </div>
             )}
@@ -1006,9 +1010,9 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                   <Edit className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white text-base">Edit Student Details</h3>
+                  <h3 className="font-semibold text-white text-base">Edit Student</h3>
                   <p className="text-xs text-slate-400 font-mono">
-                    App ID: <span className="text-indigo-400 font-bold">{editingStudent.uniqueStudentId}</span>
+                    Student ID: <span className="text-indigo-400 font-bold">{editingStudent.uniqueStudentId}</span>
                   </p>
                 </div>
               </div>
@@ -1023,7 +1027,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  Student Full Name
+                  Student Name
                 </label>
                 <input
                   type="text"
@@ -1037,7 +1041,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                  School Admission Number
+                  Admission Number
                 </label>
                 <input
                   type="text"
@@ -1122,7 +1126,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               </div>
               <div>
                 <h3 className="text-base font-semibold text-white">Delete Student</h3>
-                <p className="text-xs text-slate-400">Confirmation required</p>
+                <p className="text-xs text-slate-400">Please confirm</p>
               </div>
             </div>
 
@@ -1132,9 +1136,9 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-1">
               <div><span className="text-slate-400">Name:</span> <span className="font-semibold text-white">{deletingStudent.studentName}</span></div>
-              <div><span className="text-slate-400">App ID:</span> <span className="font-mono text-indigo-400 font-bold">{deletingStudent.uniqueStudentId}</span></div>
+              <div><span className="text-slate-400">Student ID:</span> <span className="font-mono text-indigo-400 font-bold">{deletingStudent.uniqueStudentId}</span></div>
               <div><span className="text-slate-400">Class & Section:</span> <span className="text-slate-200">{deletingStudent.className} - {deletingStudent.section}</span></div>
-              <div><span className="text-slate-400">Admission #:</span> <span className="font-mono text-slate-300">{deletingStudent.schoolAdmissionNumber}</span></div>
+              <div><span className="text-slate-400">Admission Number:</span> <span className="font-mono text-slate-300">{deletingStudent.schoolAdmissionNumber}</span></div>
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -1169,21 +1173,21 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               </div>
               <div>
                 <h3 className="text-base font-semibold text-white">Delete School Admin</h3>
-                <p className="text-xs text-slate-400">Confirmation required</p>
+                <p className="text-xs text-slate-400">Please confirm</p>
               </div>
             </div>
 
             <p className="text-sm text-slate-300 font-medium">
-              Are you sure you want to delete this School Admin?
+              Are you sure you want to delete this school admin?
             </p>
 
             <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-1">
               <div>
-                <span className="text-slate-400">Admin Username / ID:</span>{' '}
+                <span className="text-slate-400">Admin Username:</span>{' '}
                 <span className="font-mono text-indigo-400 font-bold">{deletingAdmin.username}</span>
               </div>
               <div>
-                <span className="text-slate-400">School Workspace:</span>{' '}
+                <span className="text-slate-400">School:</span>{' '}
                 <span className="text-slate-200">{activeSchool?.name || deletingAdmin.schoolName}</span>
               </div>
               <div>
@@ -1193,7 +1197,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             </div>
 
             <p className="text-[11px] text-slate-500">
-              This will permanently revoke access for this admin ID. Students, tests, and school records will remain unaffected.
+              This admin will no longer be able to log in. Students, tests, and records will not be affected.
             </p>
 
             <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -1227,36 +1231,36 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Delete School Workspace</h3>
-                <p className="text-xs text-rose-400/90 font-medium">Permanent workspace removal</p>
+                <h3 className="text-base font-bold text-white">Delete School</h3>
+                <p className="text-xs text-rose-400/90 font-medium">This action cannot be undone</p>
               </div>
             </div>
 
             <p className="text-sm text-slate-300">
-              Are you sure you want to permanently delete{' '}
+              Are you sure you want to delete{' '}
               <strong className="text-white font-semibold">{deletingSchool.name}</strong> ({deletingSchool.code})?
             </p>
 
             <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-2">
               <div className="font-semibold text-rose-300 flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                The following records will be permanently deleted:
+                The following will be deleted:
               </div>
               <ul className="list-disc list-inside text-slate-300 space-y-1 pl-1 text-[11px] font-mono">
-                <li>School Workspace ({deletingSchool.name})</li>
-                <li>All School Administrator account(s) for this school</li>
-                <li>All Student account(s) and login credentials for this school</li>
-                <li>Active / unstarted (NOT_STARTED) assessment assignments</li>
+                <li>School ({deletingSchool.name})</li>
+                <li>All admin accounts for this school</li>
+                <li>All student accounts and logins for this school</li>
+                <li>Unstarted tests for this school</li>
               </ul>
             </div>
 
             <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-300 space-y-1">
               <div className="font-semibold flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                Historical Audit Safety:
+                Completed Test Records:
               </div>
               <p className="text-[11px] text-emerald-200/90 leading-relaxed">
-                All <strong>completed assessments, question snapshots, answers, scores, timing data, and publish history</strong> will be strictly preserved for reporting and historical auditing.
+                All <strong>completed tests, answers, scores, and past reports</strong> are kept safely for your records.
               </p>
             </div>
 
@@ -1275,7 +1279,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 disabled={isSubmittingDeleteSchool}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-rose-600/20 cursor-pointer flex items-center gap-1.5"
               >
-                {isSubmittingDeleteSchool ? 'Deleting School...' : 'Yes, Delete School Workspace'}
+                {isSubmittingDeleteSchool ? 'Deleting School...' : 'Yes, Delete School'}
               </button>
             </div>
           </div>

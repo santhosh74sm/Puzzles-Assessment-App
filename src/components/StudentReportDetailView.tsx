@@ -87,7 +87,7 @@ export function StudentReportDetailView({
 
   const fetchStudentReport = async () => {
     if (!studentId) {
-      setLoadError('No student identifier provided.');
+      setLoadError('Student not found.');
       setIsLoading(false);
       return;
     }
@@ -97,13 +97,13 @@ export function StudentReportDetailView({
       const res = await fetch(`/api/reports/students/${encodeURIComponent(studentId)}`, { headers });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Failed to fetch report (Status ${res.status})`);
+        throw new Error(errData.error || 'Unable to load student report.');
       }
       const data = await res.json();
       setReport(data);
     } catch (err: any) {
       console.error('Failed to load student report', err);
-      setLoadError(err.message || 'Error loading student performance report.');
+      setLoadError(err.message || 'Unable to load student report. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +127,7 @@ export function StudentReportDetailView({
             className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-indigo-400" />
-            <span>Back to Student Roster</span>
+            <span>Back to Students</span>
           </button>
 
           <span className="text-slate-600 text-xs hidden sm:inline">&bull;</span>
@@ -157,7 +157,7 @@ export function StudentReportDetailView({
           <div className="py-24 text-center space-y-3 font-mono">
             <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
             <p className="text-sm text-slate-400 animate-pulse">
-              Loading student performance report & timeline...
+              Loading student report...
             </p>
           </div>
         ) : loadError ? (
@@ -191,28 +191,28 @@ export function StudentReportDetailView({
                 </div>
                 <p className="text-xs text-slate-400 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{activeStudent.schoolName || schoolName || 'School Workspace'}</span>
+                  <span>{activeStudent.schoolName || schoolName || 'School'}</span>
                 </p>
               </div>
 
               {/* Identity & Reference Codes */}
               <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
                 <div className="px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700">
-                  <span className="text-slate-400 block text-[10px] uppercase font-sans">Unique App ID</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-sans">Student ID</span>
                   <span className="text-indigo-300 font-bold text-sm">
                     {activeStudent.uniqueStudentId || studentId}
                   </span>
                 </div>
 
                 <div className="px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700">
-                  <span className="text-slate-400 block text-[10px] uppercase font-sans">Admission #</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-sans">Admission Number</span>
                   <span className="text-slate-200 font-bold text-sm">
                     {activeStudent.schoolAdmissionNumber || '—'}
                   </span>
                 </div>
 
                 <div className="px-3 py-2 rounded-xl bg-slate-800/90 border border-slate-700">
-                  <span className="text-slate-400 block text-[10px] uppercase font-sans">Total Tests Attempted</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-sans">Tests Taken</span>
                   <span className="text-emerald-400 font-bold text-sm">
                     {timeline.length}
                   </span>
@@ -225,7 +225,7 @@ export function StudentReportDetailView({
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm uppercase tracking-wider text-slate-300 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-indigo-400" />
-                  <span>Student Test History Timeline ({timeline.length} attempts)</span>
+                  <span>Test History ({timeline.length})</span>
                 </h4>
               </div>
 
@@ -241,7 +241,7 @@ export function StudentReportDetailView({
                         <h5 className="font-bold text-base text-white leading-snug">
                           {(() => {
                             const num = item.assessmentNumber || idx + 1;
-                            const baseTitle = item.assessmentName || item.originalPublishName || item.publishName || item.testName || 'Assessment';
+                            const baseTitle = item.assessmentName || item.originalPublishName || item.publishName || item.testName || 'Test';
                             return (/^\d+\./.test(baseTitle) || baseTitle.startsWith('Assessment -')) ? baseTitle : `${num}. ${baseTitle}`;
                           })()}
                         </h5>
@@ -263,21 +263,19 @@ export function StudentReportDetailView({
                                 : 'bg-rose-950 text-rose-400 border border-rose-800'
                             }`}
                           >
-                            {item.status}
+                            {item.status === 'COMPLETED' ? 'Completed' : 'Incomplete'}
                           </span>
                         </div>
 
-                        {/* Exit Type Badge - Only display when a valid Exit Type exists */}
-                        {item.exitType && item.status !== 'COMPLETED' && (
+                        {/* Exit Type Badge - Only display for incomplete/locked attempts when an actual EXIT or LOGOUT event occurred */}
+                        {(item.status === 'INCOMPLETE' || item.status === 'LOCKED_INCOMPLETE') && (item.exitType === 'EXIT' || item.exitType === 'LOGOUT') && (
                           <div className="flex items-center gap-1 font-mono text-xs">
                             <span className="text-slate-400">Exit Type:</span>
                             <span
                               className={`font-semibold ${
                                 item.exitType === 'EXIT'
                                   ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
-                                  : item.exitType === 'LOGOUT'
-                                  ? 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
-                                  : 'text-slate-300'
+                                  : 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
                               }`}
                             >
                               {item.exitType}
@@ -297,7 +295,7 @@ export function StudentReportDetailView({
                     {/* Question Level Evaluation Breakdown */}
                     <div className="pt-3 border-t border-slate-700/60 space-y-2">
                       <div className="text-xs font-semibold text-slate-400">
-                        <span>Question-Level Evaluation Breakdown:</span>
+                        <span>Question Results:</span>
                       </div>
 
                       <div className="space-y-2">
@@ -315,7 +313,7 @@ export function StudentReportDetailView({
                                   </span>
                                   <span className="text-slate-600">&bull;</span>
                                   <span className="text-slate-400 flex items-center gap-1">
-                                    Level:
+                                    Difficulty:
                                     <span
                                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
                                         String(q.difficulty || '').toLowerCase() === 'easy'
@@ -337,7 +335,7 @@ export function StudentReportDetailView({
 
                                 <div className="flex flex-wrap items-center gap-2 text-slate-400 pl-6 sm:pl-7">
                                   <span>
-                                    Student Ans:{' '}
+                                    Student's Answer:{' '}
                                     <strong className="text-white">
                                       {typeof q.studentAnswer === 'object' && q.studentAnswer !== null
                                         ? JSON.stringify(q.studentAnswer)
@@ -348,7 +346,7 @@ export function StudentReportDetailView({
                                     <>
                                       <span>&bull;</span>
                                       <span>
-                                        Correct Ans:{' '}
+                                        Correct Answer:{' '}
                                         <strong className="text-emerald-400">
                                           {typeof q.correctAnswer === 'object'
                                             ? JSON.stringify(q.correctAnswer)
@@ -381,14 +379,14 @@ export function StudentReportDetailView({
                                   </span>
                                 ) : (
                                   <span className="px-2 py-0.5 rounded font-semibold bg-slate-800 text-slate-400 border border-slate-700">
-                                    Answer Recorded
+                                    Saved
                                   </span>
                                 )}
                               </div>
                             </div>
                           ))
                         ) : (
-                          <p className="text-xs text-slate-500 italic p-2">No question-level logs recorded.</p>
+                          <p className="text-xs text-slate-500 italic p-2">No question details recorded.</p>
                         )}
                       </div>
                     </div>
@@ -397,9 +395,9 @@ export function StudentReportDetailView({
               ) : (
                 <div className="p-8 rounded-2xl bg-slate-800/30 border border-slate-800 text-center space-y-2">
                   <HelpCircle className="w-8 h-8 text-slate-600 mx-auto" />
-                  <p className="text-sm font-semibold text-slate-300">No test attempts recorded</p>
+                  <p className="text-sm font-semibold text-slate-300">No tests taken yet</p>
                   <p className="text-xs text-slate-500">
-                    This student has not completed or submitted any published assessments yet.
+                    This student has not taken any tests yet.
                   </p>
                 </div>
               )}

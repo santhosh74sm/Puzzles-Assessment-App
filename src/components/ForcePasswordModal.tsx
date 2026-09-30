@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
+import { Lock, AlertCircle, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 interface ForcePasswordModalProps {
   username: string;
@@ -9,6 +9,8 @@ interface ForcePasswordModalProps {
 export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +19,7 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
     setError(null);
 
     if (newPassword.length < 4) {
-      setError('Password must be at least 4 characters long.');
+      setError('Password must have at least 4 characters.');
       return;
     }
 
@@ -27,7 +29,7 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
     }
 
     if (newPassword.toLowerCase() === 'san' || newPassword === username) {
-      setError('Cannot reuse the default or identity password.');
+      setError('Please choose a different password from your old one or username.');
       return;
     }
 
@@ -45,12 +47,12 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to change password');
+        throw new Error(data.error || 'Unable to update password. Please try again.');
       }
 
       onSuccess();
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -63,9 +65,9 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
           <KeyRound className="w-6 h-6" />
         </div>
 
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">First Login: Password Change Required</h2>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Please Set a New Password</h2>
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-6">
-          For security, default credentials must be replaced immediately before accessing your account.
+          To keep your account safe, please create a new password before you continue.
         </p>
 
         {error && (
@@ -80,28 +82,58 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
               New Password
             </label>
-            <input
-              type="password"
-              required
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Enter new strong password"
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 focus:outline-none focus:text-indigo-500 cursor-pointer"
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                title={showNewPassword ? 'Hide password' : 'Show password'}
+              >
+                {showNewPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
               Confirm New Password
             </label>
-            <input
-              type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter new password"
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Type new password again"
+                className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 focus:outline-none focus:text-indigo-500 cursor-pointer"
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                title={showConfirmPassword ? 'Hide password' : 'Show password'}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           <button
@@ -109,7 +141,7 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
             disabled={loading}
             className="w-full mt-2 py-3 rounded-xl font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
           >
-            {loading ? 'Updating Password...' : 'Save New Password & Continue'}
+            {loading ? 'Saving password...' : 'Save Password & Continue'}
           </button>
         </form>
       </div>
