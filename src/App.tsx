@@ -10,8 +10,17 @@ import { SchoolAdminDashboard } from './components/SchoolAdminDashboard.tsx';
 import { StudentPortal } from './components/StudentPortal.tsx';
 import { ForcePasswordModal } from './components/ForcePasswordModal.tsx';
 import { MongoCompassNotice } from './components/MongoCompassNotice.tsx';
+import { ThemeProvider } from './context/ThemeContext';
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('puzzles_token'));
   const [currentUser, setCurrentUser] = useState<any | null>(() => {
     const saved = localStorage.getItem('puzzles_user');
@@ -112,7 +121,7 @@ export default function App() {
 
         {/* Role-based dashboard */}
         {currentUser.role === 'super_admin' && (
-          <SuperAdminDashboard token={token} onLogout={handleLogout} />
+          <SuperAdminDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />
         )}
 
         {currentUser.role === 'school_admin' && (

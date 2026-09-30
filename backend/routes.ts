@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
 import {
   UserModel,
   SchoolModel,
@@ -96,7 +97,12 @@ router.post('/auth/setup-first-admin', async (req: Request, res: Response) => {
 router.post('/auth/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
+    const logMsg = `[Auth] ${new Date().toISOString()} Incoming login request for username: "${username}" (type: ${typeof username}, length: ${username ? username.length : 0}, passwordLength: ${password ? password.length : 0})\n`;
+    try { fs.appendFileSync('/tmp/auth.log', logMsg); } catch (_) {}
+    console.log(logMsg.trim());
+
     if (!username || !password) {
+      console.warn('[Auth] Login rejected: missing username or password');
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
@@ -107,11 +113,26 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     });
 
     if (!user) {
+      const failMsg = `[Auth] ${new Date().toISOString()} Login failed: User "${trimmedUsername}" not found in database.\n`;
+      try { fs.appendFileSync('/tmp/auth.log', failMsg); } catch (_) {}
+      console.warn(failMsg.trim());
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const isMatch = bcrypt.compareSync(password, user.passwordHash);
+    const isMatch =
+      bcrypt.compareSync(password, user.passwordHash) ||
+      (typeof password === 'string' &&
+        (bcrypt.compareSync(password.trim(), user.passwordHash) ||
+          bcrypt.compareSync(password.trimEnd(), user.passwordHash) ||
+          bcrypt.compareSync(password.trimStart(), user.passwordHash)));
+    const verifyMsg = `[Auth] ${new Date().toISOString()} Password verification for user "${user.username}": isMatch=${isMatch} (role: ${user.role}, mustChangePassword: ${user.mustChangePassword})\n`;
+    try { fs.appendFileSync('/tmp/auth.log', verifyMsg); } catch (_) {}
+    console.log(verifyMsg.trim());
+
     if (!isMatch) {
+      const mismatchMsg = `[Auth] ${new Date().toISOString()} Login failed: Password mismatch for user "${user.username}".\n`;
+      try { fs.appendFileSync('/tmp/auth.log', mismatchMsg); } catch (_) {}
+      console.warn(mismatchMsg.trim());
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
@@ -123,6 +144,10 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       schoolName: user.schoolName,
       studentId: user.uniqueStudentId,
     });
+
+    const successMsg = `[Auth] ${new Date().toISOString()} Login SUCCESS for user "${user.username}" (role: ${user.role}). Token generated.\n`;
+    try { fs.appendFileSync('/tmp/auth.log', successMsg); } catch (_) {}
+    console.log(successMsg.trim());
 
     return res.json({
       token,

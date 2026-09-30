@@ -65,7 +65,9 @@ export function FlameMiniGameCanvas({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Subtle game grid backdrop
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = document.documentElement.classList.contains('light')
+        ? 'rgba(0, 0, 0, 0.08)'
+        : 'rgba(255, 255, 255, 0.05)';
       ctx.lineWidth = 1;
       const step = 30;
       for (let x = 0; x < canvas.width; x += step) {
@@ -130,7 +132,7 @@ export function FlameMiniGameCanvas({
   };
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl p-6 text-white">
+    <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl p-6 text-slate-900 dark:text-white">
       {/* Background Animated Canvas (Flame visual effect engine) */}
       <canvas
         ref={canvasRef}
@@ -162,8 +164,8 @@ export function FlameMiniGameCanvas({
         {pairs && pairs.length > 0 ? (
           <div className="space-y-4">
             <div className="text-center py-1">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-2">{content}</h3>
-              <p className="text-sm text-slate-300 font-medium">
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">{content}</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
                 Click an item on the left, then connect it to its corresponding match on the right:
               </p>
             </div>

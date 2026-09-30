@@ -1,4 +1,5 @@
-import { LogOut, School, ShieldCheck } from 'lucide-react';
+import { School } from 'lucide-react';
+import { ProfileMenu } from './ProfileMenu';
 
 interface SchoolAdminDashboardProps {
   user: any;
@@ -15,18 +16,12 @@ export function SchoolAdminDashboard({ user, onLogout }: SchoolAdminDashboardPro
             <School className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-sm text-white">School Workspace</h1>
-            <p className="text-xs text-emerald-400 font-mono">ID: {user.username}</p>
+            <h1 className="font-bold text-sm text-slate-900 dark:text-white">School Workspace</h1>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">ID: {user.username}</p>
           </div>
         </div>
 
-        <button
-          onClick={onLogout}
-          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
-          title="Log Out"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        <ProfileMenu user={user} onLogout={onLogout} />
       </header>
 
       {/* Main Content (Requirement: After login, Admin can ONLY see: School Name) */}
@@ -40,7 +35,7 @@ export function SchoolAdminDashboard({ user, onLogout }: SchoolAdminDashboardPro
             Assigned School Workspace
           </span>
 
-          <h2 className="text-2xl font-bold tracking-tight text-white">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             {user.schoolName || 'Unassigned School'}
           </h2>
 

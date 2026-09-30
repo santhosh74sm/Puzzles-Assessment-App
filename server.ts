@@ -17,13 +17,12 @@ async function startServer() {
 
   // Establish and verify MongoDB Connection exclusively to puzzles_assessment_dev
   console.log('[System] Initializing MongoDB database connection...');
-  connectMongoDB()
-    .then((dbInfo) => {
-      console.log(`[System] Verified MongoDB connection to: ${dbInfo.dbName} (${dbInfo.uri})`);
-    })
-    .catch((err: any) => {
-      console.warn(`[System] MongoDB connection notice:`, err.message);
-    });
+  try {
+    const dbInfo = await connectMongoDB();
+    console.log(`[System] Verified MongoDB connection to: ${dbInfo.dbName} (${dbInfo.uri})`);
+  } catch (err: any) {
+    console.warn(`[System] MongoDB connection notice:`, err.message);
+  }
 
   // Database status and verification endpoint
   app.get('/api/database/status', (req, res) => {

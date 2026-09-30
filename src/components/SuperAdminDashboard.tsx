@@ -5,8 +5,8 @@ import {
   Send,
   History,
   Sparkles,
-  LogOut,
 } from 'lucide-react';
+import { ProfileMenu } from './ProfileMenu.tsx';
 import { SchoolsSection } from './SchoolsSection.tsx';
 import { QuestionBankSection } from './QuestionBankSection.tsx';
 import {
@@ -17,6 +17,7 @@ import { PublishHistorySection } from './PublishHistorySection.tsx';
 
 interface SuperAdminDashboardProps {
   token: string;
+  currentUser?: any;
   onLogout?: () => void;
 }
 
@@ -26,7 +27,7 @@ export type SuperAdminNavTab =
   | 'publish'
   | 'history';
 
-export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProps) {
+export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdminDashboardProps) {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<SuperAdminNavTab>('schools');
 
@@ -256,26 +257,37 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
         </div>
 
         {/* Sidebar Footer */}
-        <div className="pt-4 border-t border-slate-800/80 text-xs text-slate-500 space-y-2">
+        <div className="pt-4 border-t border-slate-800/80 text-xs text-slate-500 space-y-1">
           <div className="flex items-center justify-between">
             <span>Role: Super Admin</span>
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="flex items-center gap-1 text-slate-400 hover:text-rose-400 text-[11px] transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Logout
-              </button>
-            )}
+            <span className="text-emerald-500 text-[11px] font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+            </span>
           </div>
           <p className="text-[10px] text-slate-600">Puzzles Assessment Engine v2.0</p>
         </div>
       </aside>
 
-      {/* Main Content Area - Renders ONLY the selected section */}
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-950">
+      {/* Main Workspace Column */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Main Authenticated Header with Profile Menu */}
+        <header className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
+              {activeTab === 'schools' && 'Schools & Students'}
+              {activeTab === 'question_bank' && 'Question Bank & Groups'}
+              {activeTab === 'publish' && 'Publish Assessment'}
+              {activeTab === 'history' && 'Publish History'}
+            </h2>
+          </div>
+          <ProfileMenu 
+            user={currentUser || { username: 'Super Admin', role: 'super_admin' }} 
+            onLogout={onLogout || (() => {})} 
+          />
+        </header>
+
+        {/* Main Content Area - Renders ONLY the selected section */}
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-950">
         {activeTab === 'schools' && (
           <SchoolsSection
             token={token}
@@ -326,7 +338,8 @@ export function SuperAdminDashboard({ token, onLogout }: SuperAdminDashboardProp
             onRefreshHistory={loadPublishHistory}
           />
         )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

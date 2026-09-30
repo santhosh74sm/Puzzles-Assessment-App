@@ -101,7 +101,9 @@ export async function ensureCollectionStructures() {
  */
 export async function ensureInitialSuperAdmin() {
   try {
-    const existingSuperAdmin = await UserModel.findOne({ role: 'super_admin' });
+    const existingSuperAdmin = await UserModel.findOne({
+      $or: [{ role: 'super_admin' }, { username: 'san' }],
+    });
     if (!existingSuperAdmin) {
       const username = 'san';
       const password = 'san';
@@ -116,6 +118,8 @@ export async function ensureInitialSuperAdmin() {
       });
 
       console.log(`[Database] Initial Super Admin 'san' initialized in Atlas puzzles_assessment_dev with mustChangePassword: true.`);
+    } else {
+      console.log(`[Database] Verified existing Super Admin '${existingSuperAdmin.username}' in Atlas (mustChangePassword: ${existingSuperAdmin.mustChangePassword}). Existing credentials preserved.`);
     }
   } catch (err: any) {
     console.error('[Database] Failed to verify/initialize initial Super Admin:', err.message);

@@ -7,11 +7,11 @@ import {
   Sparkles,
   Trophy,
   History,
-  LogOut,
   Calendar,
   Lock,
 } from 'lucide-react';
 import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
+import { ProfileMenu } from './ProfileMenu.tsx';
 import confetti from 'canvas-confetti';
 
 interface StudentPortalProps {
@@ -145,7 +145,6 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   };
 
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
-  const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
 
   // Exit / Abandon Test -> Transitions to INCOMPLETE with Exit Type: EXIT
   const executeAbandonTest = async () => {
@@ -169,16 +168,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     setShowExitConfirmModal(true);
   };
 
-  const handleLogoutClick = () => {
-    if (activeTest) {
-      setShowLogoutConfirmModal(true);
-    } else {
-      performLogout();
-    }
-  };
-
   const performLogout = async () => {
-    setShowLogoutConfirmModal(false);
     try {
       if (activeTest) {
         const testId = activeTest.assignmentId || activeTest.id;
@@ -298,8 +288,8 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
             P
           </div>
           <div>
-            <h1 className="font-bold text-sm text-white">{user.studentName || user.username}</h1>
-            <p className="text-xs text-indigo-400 font-mono">
+            <h1 className="font-bold text-sm text-slate-900 dark:text-white">{user.studentName || user.username}</h1>
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">
               {user.className} ({user.section}) &bull; {user.schoolName}
             </p>
           </div>
@@ -309,13 +299,11 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
           <div className="hidden sm:block text-right text-xs font-mono">
             <span className="text-slate-400 block">App ID: {user.uniqueStudentId}</span>
           </div>
-          <button
-            onClick={handleLogoutClick}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
-            title="Log Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <ProfileMenu 
+            user={user} 
+            onLogout={performLogout} 
+            isAssessmentActive={!!activeTest} 
+          />
         </div>
       </header>
 
@@ -334,8 +322,8 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
             <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/30 text-indigo-400 flex items-center justify-center border border-indigo-500/40 shadow-xl">
               <Trophy className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Assessment Completed!</h2>
-            <p className="text-sm text-slate-300">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Assessment Completed!</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Your results have been locked and submitted to your school records.
             </p>
 
@@ -366,7 +354,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 <span className="text-xs font-mono text-indigo-400 uppercase tracking-wider block">
                   {activeTest.publishName}
                 </span>
-                <h3 className="font-bold text-lg text-white">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                   Question {currentQuestionIndex + 1} of {activeTest.questions.length}
                 </h3>
               </div>
@@ -565,10 +553,10 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 })}
               </div>
             ) : (
-              <div className="text-center py-16 bg-slate-900/40 rounded-3xl border border-slate-800/80 p-8">
-                <Sparkles className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
-                <h4 className="font-bold text-lg text-white">No Published Assessments</h4>
-                <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
+              <div className="text-center py-16 bg-slate-100/60 dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8">
+                <Sparkles className="w-10 h-10 text-indigo-500 dark:text-indigo-400 mx-auto mb-3" />
+                <h4 className="font-bold text-lg text-slate-900 dark:text-white">No Published Assessments</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-md mx-auto">
                   Your teachers have not published any assessments yet. Check back soon!
                 </p>
               </div>
@@ -578,14 +566,14 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
         {/* In-app Exit / Abandon Confirmation Modal */}
         {showExitConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-200 dark:border-rose-500/30">
                 <AlertOctagon className="w-6 h-6" />
               </div>
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-bold text-white">Exit Assessment?</h3>
-                <p className="text-xs text-rose-300">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Exit Assessment?</h3>
+                <p className="text-xs text-rose-700 dark:text-rose-300">
                   Assessments have a <strong>STRICT ONE-TIME ATTEMPT POLICY</strong>.
                   If you exit now, your attempt will be permanently marked as <strong>INCOMPLETE</strong> with <strong>Exit Type: EXIT</strong>, and cannot be restarted or reopened.
                 </p>
@@ -594,49 +582,16 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 <button
                   type="button"
                   onClick={() => setShowExitConfirmModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-all"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold text-xs transition-all cursor-pointer"
                 >
                   Continue Test
                 </button>
                 <button
                   type="button"
                   onClick={executeAbandonTest}
-                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all shadow-lg shadow-rose-600/30"
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all shadow-lg shadow-rose-600/30 cursor-pointer"
                 >
                   Confirm Exit
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* In-app Logout Confirmation Modal (Midway Assessment) */}
-        {showLogoutConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
-                <LogOut className="w-6 h-6" />
-              </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-bold text-white">Log Out During Assessment?</h3>
-                <p className="text-xs text-amber-200">
-                  You are currently taking an active assessment. Logging out will permanently mark your attempt as <strong>INCOMPLETE</strong> with <strong>Exit Type: LOGOUT</strong>. You will not be able to restart or resume this assessment.
-                </p>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowLogoutConfirmModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-all"
-                >
-                  Continue Test
-                </button>
-                <button
-                  type="button"
-                  onClick={performLogout}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all shadow-lg shadow-amber-600/30"
-                >
-                  Confirm Log Out
                 </button>
               </div>
             </div>
