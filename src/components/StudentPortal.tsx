@@ -563,8 +563,8 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 })}
               </div>
             ) : (
-              <div className="text-center py-16 bg-slate-100/60 dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8">
-                <Sparkles className="w-10 h-10 text-indigo-500 dark:text-indigo-400 mx-auto mb-3" />
+              <div className="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-xs student-no-tests-empty-card">
+                <Sparkles className="w-10 h-10 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" />
                 <h4 className="font-bold text-lg text-slate-900 dark:text-white">No Tests Assigned</h4>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-md mx-auto">
                   You do not have any tests assigned right now. Please check back later.

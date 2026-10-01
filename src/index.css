@@ -788,6 +788,18 @@ html.light button.unselected-answer-option .option-letter-badge {
   color: #0f172a !important;
 }
 
+/* 5. Student Portal: "No Tests Assigned" empty-state card in Light Theme */
+html.light .student-no-tests-empty-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+html.light .student-no-tests-empty-card h4 {
+  color: #0f172a !important;
+}
+html.light .student-no-tests-empty-card p {
+  color: #475569 !important;
+}
+
 html.light label {
   color: #334155 !important;
 }
