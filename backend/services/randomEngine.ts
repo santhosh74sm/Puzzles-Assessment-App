@@ -8,13 +8,24 @@ export interface StudentHistoryInsight {
   recentlyUsedQuestionIds: Set<string>;
 }
 
+// Helper for unbiased Fisher-Yates / Durstenfeld shuffle
+function fisherYatesShuffle<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export function computeStudentInsights(
   studentId: string,
   allAssignments: StudentTestAssignment[],
   repetitionWindowDays = 21 // Eligible after suitable gap (e.g., 3 weeks)
 ): StudentHistoryInsight {
+  // Finding 4 fix: Include INCOMPLETE along with COMPLETED and LOCKED_INCOMPLETE
   const studentAssignments = allAssignments.filter(
-    (a) => a.studentId === studentId && (a.status === 'COMPLETED' || a.status === 'LOCKED_INCOMPLETE')
+    (a) => a.studentId === studentId && (a.status === 'COMPLETED' || a.status === 'INCOMPLETE' || a.status === 'LOCKED_INCOMPLETE')
   );
 
   let easyTotal = 0;
@@ -29,23 +40,39 @@ export function computeStudentInsights(
   const windowMs = repetitionWindowDays * 24 * 60 * 60 * 1000;
 
   for (const a of studentAssignments) {
-    const testDate = a.completedAt ? new Date(a.completedAt).getTime() : a.startedAt ? new Date(a.startedAt).getTime() : 0;
-    const isRecent = now - testDate < windowMs;
+    const testDate = a.completedAt
+      ? new Date(a.completedAt).getTime()
+      : a.lockedAt
+      ? new Date(a.lockedAt).getTime()
+      : a.startedAt
+      ? new Date(a.startedAt).getTime()
+      : 0;
+    const isRecent = testDate > 0 && (now - testDate < windowMs);
+    const isFullCompleted = a.status === 'COMPLETED';
 
-    for (const q of a.questions) {
-      if (isRecent) {
-        recentlyUsed.add(q.questionId);
+    for (const q of a.questions || []) {
+      // For incomplete assessments, only questions that were genuinely attempted/presented
+      // (student answered or took time on) participate in the 21-day repetition window and accuracy stats.
+      const wasAttempted = isFullCompleted ||
+        (q.studentAnswer !== undefined && q.studentAnswer !== null && String(q.studentAnswer).trim() !== '') ||
+        (q.timeTakenSeconds != null && Number(q.timeTakenSeconds) > 0);
+
+      if (wasAttempted && isRecent && q.questionId) {
+        recentlyUsed.add(String(q.questionId));
       }
 
-      if (q.difficulty === 'Easy') {
-        easyTotal++;
-        if (q.isCorrect) easyCorrect++;
-      } else if (q.difficulty === 'Medium') {
-        mediumTotal++;
-        if (q.isCorrect) mediumCorrect++;
-      } else if (q.difficulty === 'Hard') {
-        hardTotal++;
-        if (q.isCorrect) hardCorrect++;
+      // Only count attempted evaluable questions towards historical difficulty accuracy
+      if (wasAttempted) {
+        if (q.difficulty === 'Easy') {
+          easyTotal++;
+          if (q.isCorrect) easyCorrect++;
+        } else if (q.difficulty === 'Medium') {
+          mediumTotal++;
+          if (q.isCorrect) mediumCorrect++;
+        } else if (q.difficulty === 'Hard') {
+          hardTotal++;
+          if (q.isCorrect) hardCorrect++;
+        }
       }
     }
   }
@@ -75,38 +102,57 @@ export function selectRandomQuestionsForRuleEngine(
   }
 
   // Determine allowed difficulty progression tiers:
-  // Fresh student: -> Easy
-  // Good Easy performance (>= 70%): -> Easy or Easy + Medium
-  // Good Medium performance (>= 70%): -> Medium or Medium + Hard
-  // Hard: -> Final difficulty level
+  // Finding 5 fix:
+  // - Fresh student (0 completed tests and no evaluable attempts): -> Easy
+  // - Good Medium performance (>= 70%): -> Medium + Hard (even if no Easy history)
+  // - Good Easy performance (>= 70%): -> Easy + Medium
+  // - Poor Easy (< 70%): -> Easy
+  // - Medium < 70% with no Easy: -> Easy
   let targetDifficulties: QuestionDifficulty[] = ['Easy'];
 
-  if (insights.totalCompletedTests === 0 || insights.easyAccuracy < 0) {
-    // Fresh student
+  if (insights.totalCompletedTests === 0 && insights.easyAccuracy < 0 && insights.mediumAccuracy < 0) {
+    // Fresh student with zero evaluable attempts
     targetDifficulties = ['Easy'];
   } else if (insights.mediumAccuracy >= 0.7) {
-    // Good Medium performance -> Medium or Medium + Hard
+    // Strong Medium performance -> Medium or Medium + Hard
     targetDifficulties = ['Medium', 'Hard'];
   } else if (insights.easyAccuracy >= 0.7) {
-    // Good Easy performance -> Easy or Easy + Medium
+    // Strong Easy performance -> Easy or Easy + Medium
     targetDifficulties = ['Easy', 'Medium'];
+  } else if (insights.easyAccuracy >= 0) {
+    // Evaluated on Easy but < 70% -> keep in Easy
+    targetDifficulties = ['Easy'];
+  } else if (insights.mediumAccuracy >= 0) {
+    // Had Medium attempts but < 70% -> step down to Easy
+    targetDifficulties = ['Easy'];
   } else {
-    // Low performance -> keep in Easy
     targetDifficulties = ['Easy'];
   }
 
   // Filter pool matching progression difficulty
-  let matchedQuestions = eligibleQuestions.filter((q) =>
+  const matchedQuestions = eligibleQuestions.filter((q) =>
     targetDifficulties.includes(q.difficulty)
   );
 
-  // If matched questions not enough, backfill from remaining pool
-  if (matchedQuestions.length < targetCount) {
-    const remaining = eligibleQuestions.filter((q) => !matchedQuestions.includes(q));
-    matchedQuestions = [...matchedQuestions, ...remaining];
+  let selected: Question[] = [];
+
+  // Finding 14 fix: Prioritize target difficulty questions
+  if (matchedQuestions.length <= targetCount) {
+    // Include ALL available questions matching target difficulty
+    selected = [...matchedQuestions];
+
+    // If there is a shortfall, fill remaining deficit from the fallback pool
+    const neededDeficit = targetCount - matchedQuestions.length;
+    if (neededDeficit > 0) {
+      const remainingPool = eligibleQuestions.filter((q) => !matchedQuestions.some((m) => m.id === q.id));
+      const shuffledRemaining = fisherYatesShuffle(remainingPool);
+      selected = [...selected, ...shuffledRemaining.slice(0, neededDeficit)];
+    }
+  } else {
+    // More questions available than targetCount: pick targetCount using Fisher-Yates
+    selected = fisherYatesShuffle(matchedQuestions).slice(0, targetCount);
   }
 
-  // Shuffle candidate pool
-  const shuffled = [...matchedQuestions].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, targetCount);
+  // Finding 11 fix: Shuffle the final combined selection with Fisher-Yates
+  return fisherYatesShuffle(selected);
 }

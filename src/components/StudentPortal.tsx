@@ -35,6 +35,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   const [testResult, setTestResult] = useState<any | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const pendingAnswerSaveRef = useRef<Promise<any> | null>(null);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -152,6 +153,9 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     const testId = activeTest.assignmentId || activeTest.id;
     setShowExitConfirmModal(false);
     try {
+      if (pendingAnswerSaveRef.current) {
+        await pendingAnswerSaveRef.current;
+      }
       await fetch(`/api/student/tests/${testId}/exit`, {
         method: 'POST',
         headers,
@@ -170,6 +174,9 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
   const performLogout = async () => {
     try {
+      if (pendingAnswerSaveRef.current) {
+        await pendingAnswerSaveRef.current;
+      }
       if (activeTest) {
         const testId = activeTest.assignmentId || activeTest.id;
         await fetch(`/api/student/tests/${testId}/exit`, {
@@ -213,7 +220,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     // The final question submit payload sends all answers in one atomic request,
     // avoiding redundant parallel requests and document version race conditions.
     if (!isFinalQuestion) {
-      fetch(`/api/student/tests/${testId}/answer`, {
+      pendingAnswerSaveRef.current = fetch(`/api/student/tests/${testId}/answer`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -552,10 +559,21 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                         )}
 
                         {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'IN_PROGRESS' && (
-                          <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 font-semibold">
-                            <Clock className="w-4 h-4 shrink-0" />
-                            <span>Test in progress. You cannot restart once started.</span>
-                          </div>
+                          card.canResume ? (
+                            <button
+                              type="button"
+                              onClick={() => handleStartTest(assignmentId)}
+                              className="w-full py-3 rounded-xl font-bold bg-amber-600 hover:bg-amber-500 text-white text-sm transition-all shadow-lg shadow-amber-600/30 cursor-pointer flex items-center justify-center gap-2"
+                            >
+                              <Clock className="w-4 h-4 shrink-0" />
+                              <span>Resume Test</span>
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 font-semibold">
+                              <Clock className="w-4 h-4 shrink-0" />
+                              <span>Test in progress. You cannot restart once started.</span>
+                            </div>
+                          )
                         )}
                       </div>
                     </div>

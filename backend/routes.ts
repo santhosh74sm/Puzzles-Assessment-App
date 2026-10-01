@@ -747,8 +747,30 @@ router.delete('/students/:id', authenticate, async (req: Request, res: Response)
     // Delete student user account document from MongoDB Atlas
     await UserModel.findByIdAndDelete(student._id);
 
-    // If student had test assignments, update their status record or clean up assignments safely without breaking overall history/test records
-    await StudentTestAssignmentModel.deleteMany({ studentId: studentUniqueId });
+    // Finding 7 Fix: Safely clean up unstarted assignments and synchronize PublishHistory,
+    // while preserving completed and incomplete historical audit records.
+    const notStartedAssignments = await StudentTestAssignmentModel.find({
+      studentId: studentUniqueId,
+      status: 'NOT_STARTED',
+    });
+
+    for (const a of notStartedAssignments) {
+      await PublishHistoryModel.updateOne(
+        { publishId: a.publishedTestId },
+        {
+          $pull: { studentsStatus: { studentId: studentUniqueId, status: 'NOT_STARTED' } },
+          $inc: { totalRecipients: -1 },
+        }
+      );
+    }
+    await StudentTestAssignmentModel.deleteMany({ studentId: studentUniqueId, status: 'NOT_STARTED' });
+
+    // For any historical attempts (COMPLETED / INCOMPLETE / IN_PROGRESS), preserve the record for audit integrity
+    // and tag student name with '(Deleted)'
+    await StudentTestAssignmentModel.updateMany(
+      { studentId: studentUniqueId },
+      { $set: { studentName: `${student.studentName || 'Student'} (Deleted)` } }
+    );
 
     return res.json({
       success: true,
@@ -2168,6 +2190,32 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
             }));
             existing.questions = questionLogs;
             existing.totalQuestions = questionLogs.length;
+          } else if (publishMode === 'Random Questions') {
+            // Finding 6 Fix: Regenerate questions for unstarted students in Random Questions mode
+            const insights = computeStudentInsights(sId, pastAssignments);
+            const candidatePool = allQuestions.filter((q) => (selectedQuestionIds || []).includes(q.id));
+            const updatedRandomList = selectRandomQuestionsForRuleEngine(
+              Number(randomCount) || 5,
+              candidatePool.length > 0 ? candidatePool : allQuestions,
+              insights
+            );
+            const questionLogs: QuestionAttemptLog[] = updatedRandomList.map((q) => ({
+              questionId: q.id,
+              groupName: q.groupName,
+              difficulty: q.difficulty,
+              content: q.content,
+              points: q.points != null ? Number(q.points) : null,
+              studentAnswer: null,
+              correctAnswer: q.correctAnswer ?? null,
+              isCorrect: false,
+              timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+              timeTakenSeconds: 0,
+              earnedPoints: 0,
+              options: q.options || [],
+              metadata: q.metadata || {},
+            }));
+            existing.questions = questionLogs;
+            existing.totalQuestions = questionLogs.length;
           }
           await existing.save();
         }
@@ -2370,6 +2418,13 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         }
       }
 
+      // Finding 9 Fix: Clean transition for abandoned/expired in-progress attempts
+      if (a.status === 'IN_PROGRESS' && isExpired) {
+        await markAssignmentIncomplete(a._id.toString(), a.studentId, 'EXIT', 'Assessment testing window has expired');
+        a.status = 'INCOMPLETE';
+        a.exitType = 'EXIT';
+      }
+
       let activeQuestionsCount = (a.questions || []).length;
       if (a.status === 'NOT_STARTED') {
         const validActive = (a.questions || []).filter((q: any) => {
@@ -2382,9 +2437,13 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       const isPaused = pub?.isPaused === true || pub?.status === 'PAUSED';
       const hasActiveQuestions = a.status !== 'NOT_STARTED' || activeQuestionsCount > 0;
       const canStart = a.status === 'NOT_STARTED' && !isUpcoming && !isExpired && !isPaused && hasActiveQuestions;
+      // Finding 15 Fix: Support test resumption for in-progress tests
+      const canResume = a.status === 'IN_PROGRESS' && !isPaused && !isExpired;
 
       result.push({
         ...doc,
+        status: a.status,
+        exitType: a.exitType || null,
         totalQuestions: activeQuestionsCount,
         assignmentId: a._id.toString(),
         id: a._id.toString(),
@@ -2398,6 +2457,7 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         isExpired,
         isPaused,
         canStart,
+        canResume,
       });
     }
 
@@ -2411,7 +2471,7 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
   }
 });
 
-// Start an Assessment (Atomic Lock check: Can ONLY be started once from NOT_STARTED)
+// Start or Resume an Assessment
 router.post('/student/tests/:assignmentId/start', authenticate, async (req: Request, res: Response) => {
   try {
     if (req.user!.role !== 'student') {
@@ -2434,6 +2494,38 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
+    // Finding 3 Fix: Server-side assessment date & time validation
+    const clientDateTimeHeader = req.headers['x-client-now'] as string;
+    let currentDateTimeStr = '';
+    if (clientDateTimeHeader && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clientDateTimeHeader)) {
+      currentDateTimeStr = clientDateTimeHeader.slice(0, 16);
+    } else {
+      const clientOffsetHeader = req.headers['x-timezone-offset'];
+      const clientOffset = clientOffsetHeader !== undefined && clientOffsetHeader !== '' ? Number(clientOffsetHeader) : null;
+      const nowMs = Date.now();
+      const clientNow = clientOffset !== null && !isNaN(clientOffset) ? new Date(nowMs - (clientOffset * 60000)) : new Date(nowMs);
+      const clientYear = clientNow.getUTCFullYear();
+      const clientMonth = String(clientNow.getUTCMonth() + 1).padStart(2, '0');
+      const clientDay = String(clientNow.getUTCDate()).padStart(2, '0');
+      const clientHour = String(clientNow.getUTCHours()).padStart(2, '0');
+      const clientMin = String(clientNow.getUTCMinutes()).padStart(2, '0');
+      currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
+    }
+
+    if (pubTest?.startDate && pubTest.startDate !== 'Today') {
+      const startStr = `${pubTest.startDate}T${pubTest.startTime || '00:00'}`;
+      if (currentDateTimeStr < startStr) {
+        return res.status(400).json({ error: 'This assessment is scheduled for a future date and time and cannot be started yet.' });
+      }
+    }
+
+    if (pubTest?.endDate && pubTest.endDate !== 'Open') {
+      const endStr = `${pubTest.endDate}T${pubTest.endTime || '23:59'}`;
+      if (currentDateTimeStr > endStr) {
+        return res.status(400).json({ error: 'This assessment has expired and can no longer be started.' });
+      }
+    }
+
     // Verify student is still targeted under updated target configuration
     if (assignment.status === 'NOT_STARTED') {
       const studentUser = (req.user!.userId ? await UserModel.findById(req.user!.userId).lean() : null) ||
@@ -2450,17 +2542,47 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     }
 
     // Strict One-Time Attempt Enforcement:
-    // Only NOT_STARTED can be started.
-    // If IN_PROGRESS, COMPLETED, or LOCKED_INCOMPLETE, reject restart.
     if (assignment.status === 'COMPLETED') {
       return res.status(400).json({ error: 'You have already completed this test.' });
     }
     if (assignment.status === 'LOCKED_INCOMPLETE' || assignment.status === 'INCOMPLETE') {
       return res.status(400).json({ error: 'This test ended early and cannot be reopened.' });
     }
+
+    // Finding 15 Fix: If test is already IN_PROGRESS, allow resuming the same attempt without restarting
     if (assignment.status === 'IN_PROGRESS') {
-      return res.status(400).json({ error: 'This test has already been started. You can only take this test once.' });
+      const allQuestionsDocs = await QuestionModel.find();
+      const qMap = new Map<string, any>();
+      for (const q of allQuestionsDocs) {
+        qMap.set(q._id.toString(), q);
+      }
+      const sanitizedQuestions = (assignment.questions || []).map((q: any) => {
+        const fullQ = qMap.get(String(q.questionId || q.id || q._id));
+        return {
+          questionId: q.questionId || q.id || q._id,
+          groupName: q.groupName || fullQ?.groupName || 'General',
+          difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
+          content: q.content || fullQ?.content || 'Question',
+          points: q.points != null ? Number(q.points) : (fullQ?.points != null ? Number(fullQ.points) : null),
+          timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
+          options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
+          metadata: q.metadata || fullQ?.metadata || {},
+          pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
+          timeTakenSeconds: q.timeTakenSeconds || 0,
+          studentAnswer: q.studentAnswer !== undefined ? q.studentAnswer : null,
+        };
+      });
+
+      const doc = formatDoc(assignment);
+      return res.json({
+        ...doc,
+        assignmentId: assignment._id.toString(),
+        id: assignment._id.toString(),
+        questions: sanitizedQuestions,
+        isResumed: true,
+      });
     }
+
     if (assignment.status !== 'NOT_STARTED') {
       return res.status(400).json({ error: 'Only unstarted tests can be started.' });
     }
@@ -2477,9 +2599,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     });
 
     if (activeQuestions.length === 0) {
-      assignment.questions = [];
-      assignment.totalQuestions = 0;
-      await assignment.save();
+      // Finding 13 Fix: Do not destroy the assignment questions array snapshot
       return res.status(400).json({
         error: 'This test cannot be started because its questions are no longer available in the Question Bank.',
       });
@@ -2557,13 +2677,20 @@ async function markAssignmentIncomplete(
   let totalTime = 0;
 
   for (const q of assignment.questions) {
-    possibleTotal += q.points || 0;
+    // Finding 8 Fix: Non-evaluative questions without correctAnswer must not distort possible total
+    const hasCorrectAnswer = q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '';
+    const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
+    if (hasCorrectAnswer && hasPoints) {
+      possibleTotal += Number(q.points);
+    }
     totalTime += q.timeTakenSeconds || 0;
-    if (q.isCorrect) {
-      earnedTotal += q.earnedPoints || q.points;
-      correctCount++;
-    } else {
-      wrongCount++;
+    if (hasCorrectAnswer) {
+      if (q.isCorrect) {
+        earnedTotal += q.earnedPoints || (hasPoints ? Number(q.points) : 0);
+        correctCount++;
+      } else {
+        wrongCount++;
+      }
     }
   }
 
@@ -2730,12 +2857,18 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
     const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
     const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
 
+    // Finding 10 Fix: Server-side validation and constraint on timeTakenSeconds
+    const qAllowedSeconds = qItem.timeAllowedSeconds != null && Number(qItem.timeAllowedSeconds) > 0 ? Number(qItem.timeAllowedSeconds) : null;
+    const rawTime = Number(timeTakenSeconds);
+    const validTime = isNaN(rawTime) || rawTime < 0 ? 0 : rawTime;
+    const sanitizedTime = qAllowedSeconds != null ? Math.min(validTime, qAllowedSeconds) : validTime;
+
     // Use atomic update to prevent Mongoose document version conflicts
     await StudentTestAssignmentModel.findByIdAndUpdate(assignmentId, {
       $set: {
         [`questions.${questionIndex}.studentAnswer`]: answer,
         [`questions.${questionIndex}.isCorrect`]: hasCorrectAnswer ? (isCorrect ?? false) : false,
-        [`questions.${questionIndex}.timeTakenSeconds`]: Math.max(0, Number(timeTakenSeconds) || 0),
+        [`questions.${questionIndex}.timeTakenSeconds`]: sanitizedTime,
         [`questions.${questionIndex}.earnedPoints`]: pointsEarned,
       },
     });
@@ -2743,7 +2876,7 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
     return res.json({
       success: true,
       questionId,
-      timeTakenSeconds,
+      timeTakenSeconds: sanitizedTime,
       isCorrect,
       earnedPoints: pointsEarned,
     });
@@ -2825,12 +2958,13 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
 
     for (const q of assignment.questions) {
       const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
-      if (hasPoints) {
+      const hasCorrectAnswer = q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '';
+      // Finding 8 Fix: Non-evaluative questions without correctAnswer must not distort possible points
+      if (hasCorrectAnswer && hasPoints) {
         possiblePointsTotal += Number(q.points);
       }
       totalTime += Math.max(0, Number(q.timeTakenSeconds) || 0);
 
-      const hasCorrectAnswer = q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '';
       if (hasCorrectAnswer) {
         if (q.isCorrect) {
           earnedPointsTotal += (q.earnedPoints != null && !isNaN(Number(q.earnedPoints)) ? Number(q.earnedPoints) : (hasPoints ? Number(q.points) : 0));
@@ -2846,6 +2980,9 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
     const finalScore = Number.isFinite(calculatedScore) ? calculatedScore : 0;
 
     const completedAt = new Date();
+    // Finding 1 Fix: Check whether THIS specific student was previously incomplete before completing
+    const wasPreviouslyIncomplete = assignment.status === 'INCOMPLETE' || assignment.status === 'LOCKED_INCOMPLETE';
+
     // Atomic direct update in MongoDB Atlas to avoid Mongoose VersionError and parallel save issues
     await StudentTestAssignmentModel.findByIdAndUpdate(assignmentId, {
       $set: {
@@ -2864,15 +3001,12 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
     try {
       const publishHistory = await PublishHistoryModel.findOne({ publishId: assignment.publishedTestId });
       if (publishHistory) {
-        const currentIncomplete = Number(publishHistory.incompleteCount) || 0;
-        const decIncomplete = currentIncomplete > 0 ? -1 : 0;
-
         await PublishHistoryModel.updateOne(
           { publishId: assignment.publishedTestId },
           {
             $inc: {
               completedCount: 1,
-              ...(decIncomplete !== 0 ? { incompleteCount: decIncomplete } : {}),
+              ...(wasPreviouslyIncomplete ? { incompleteCount: -1 } : {}),
             },
           }
         );
@@ -3524,11 +3658,6 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
   try {
     const { studentId } = req.params;
 
-    // Student can only access their own report
-    if (req.user!.role === 'student' && req.user!.studentId !== studentId && req.user!.username !== studentId) {
-      return res.status(403).json({ error: 'Access forbidden: You can only view your own report' });
-    }
-
     const isMongoId = mongoose.Types.ObjectId.isValid(studentId);
     const student = await UserModel.findOne({
       $or: [
@@ -3537,6 +3666,23 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         ...(isMongoId ? [{ _id: studentId }] : []),
       ],
     });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Student can only access their own report
+    if (req.user!.role === 'student') {
+      const isSelf = req.user!.studentId === student.uniqueStudentId || req.user!.username === student.username || req.user!.userId === student._id.toString();
+      if (!isSelf) {
+        return res.status(403).json({ error: 'Access forbidden: You can only view your own report' });
+      }
+    }
+
+    // Finding 2 Fix: Enforce strict school tenant isolation for School Admins
+    if (req.user!.role === 'school_admin' && student.schoolId !== req.user!.schoolId) {
+      return res.status(403).json({ error: 'Access forbidden: You can only view reports for students in your own school' });
+    }
 
     const targetStudentId = student?.uniqueStudentId || studentId;
     const assignments = await StudentTestAssignmentModel.find({
