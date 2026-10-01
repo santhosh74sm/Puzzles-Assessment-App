@@ -272,11 +272,17 @@ function SchoolMultiSelectDropdown({
 
         <div className="flex items-center gap-2 shrink-0">
           {isAllSchoolsSelected ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedSchoolIds.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               {selectedSchoolIds.length}
             </span>
           ) : null}
@@ -527,11 +533,17 @@ function ClassMultiSelectDropdown({
           {isLoading ? (
             <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
           ) : isAllClassesSelected && availableClasses.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedClasses.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               {selectedClasses.length}
             </span>
           ) : null}
@@ -763,11 +775,17 @@ function SectionMultiSelectDropdown({
           {isLoading ? (
             <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
           ) : isAllSectionsSelected && availableSections.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedSections.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               {selectedSections.length}
             </span>
           ) : null}
@@ -1022,11 +1040,17 @@ function StudentMultiSelectDropdown({
           {isLoading ? (
             <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
           ) : isAllStudentsSelected && availableStudents.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedStudentIds.length > 0 ? (
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               {selectedStudentIds.length}
             </span>
           ) : null}

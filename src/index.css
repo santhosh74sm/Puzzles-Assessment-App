@@ -708,13 +708,21 @@ html.light button[class~="bg-rose-600"] *,
 html.light button[class~="bg-rose-500"] *,
 html.light button[class~="bg-violet-600"] *,
 html.light span[class~="bg-indigo-600"],
+html.light span.rounded-full[class*="bg-indigo-600"],
+html.light span.rounded-full[class*="bg-indigo-600"] *,
 html.light span[class~="bg-emerald-600"],
 html.light span[class~="bg-rose-600"],
 html.light span[class~="bg-amber-600"],
 html.light span[class~="bg-violet-600"],
 html.light [class~="from-indigo-600"] > span,
-html.light [class~="from-indigo-600"] * {
+html.light [class~="from-indigo-600"] *,
+html.light button[class*="from-indigo-600"][class*="to-violet-600"] span.text-base {
   color: #ffffff !important;
+}
+
+html.light button[class*="from-indigo-600"][class*="to-violet-600"] span:first-child {
+  background-color: #ffffff !important;
+  color: #4338ca !important;
 }
 
 html.light label {

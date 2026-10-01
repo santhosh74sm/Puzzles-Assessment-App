@@ -201,7 +201,10 @@ function DrillDownSchoolMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllSchoolsSelected && availableSchools.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedSchoolNames.length > 0 ? (
@@ -411,7 +414,10 @@ function DrillDownClassMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllClassesSelected && availableClasses.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedClasses.length > 0 ? (
@@ -611,7 +617,10 @@ function DrillDownSectionMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllSectionsSelected && availableSections.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedSections.length > 0 ? (
@@ -829,7 +838,10 @@ function DrillDownStudentMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllStudentsSelected && availableStudents.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold">
+            <span
+              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
+              style={{ color: '#ffffff' }}
+            >
               All
             </span>
           ) : selectedStudentIds.length > 0 ? (
