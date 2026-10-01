@@ -183,7 +183,7 @@ function DrillDownSchoolMultiSelect({
             <span className="text-slate-500">No schools found</span>
           ) : isAllSchoolsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Schools</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Schools</span>
               <span className="text-[11px] text-indigo-300 font-mono">
                 ({availableSchools.length})
               </span>
@@ -191,9 +191,9 @@ function DrillDownSchoolMultiSelect({
           ) : selectedSchoolNames.length === 0 ? (
             <span className="text-amber-400 font-medium">None Selected</span>
           ) : selectedSchoolNames.length === 1 ? (
-            <span className="text-white font-medium truncate">{selectedSchoolNames[0]}</span>
+            <span className="text-slate-900 dark:text-white font-medium truncate">{selectedSchoolNames[0]}</span>
           ) : (
-            <span className="text-white font-medium">
+            <span className="text-slate-900 dark:text-white font-medium">
               {selectedSchoolNames.length} Schools Selected
             </span>
           )}
@@ -393,7 +393,7 @@ function DrillDownClassMultiSelect({
             <span className="text-slate-500">No classes found</span>
           ) : isAllClassesSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Classes</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Classes</span>
               <span className="text-[11px] text-indigo-300 font-mono">
                 ({availableClasses.length})
               </span>
@@ -401,9 +401,9 @@ function DrillDownClassMultiSelect({
           ) : selectedClasses.length === 0 ? (
             <span className="text-amber-400 font-medium">None Selected</span>
           ) : selectedClasses.length === 1 ? (
-            <span className="text-white font-medium">{selectedClasses[0]}</span>
+            <span className="text-slate-900 dark:text-white font-medium">{selectedClasses[0]}</span>
           ) : (
-            <span className="text-white font-medium">
+            <span className="text-slate-900 dark:text-white font-medium">
               {selectedClasses.length} Classes Selected
             </span>
           )}
@@ -593,7 +593,7 @@ function DrillDownSectionMultiSelect({
             <span className="text-slate-500">No sections found</span>
           ) : isAllSectionsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Sections</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Sections</span>
               <span className="text-[11px] text-indigo-300 font-mono">
                 ({availableSections.length})
               </span>
@@ -601,9 +601,9 @@ function DrillDownSectionMultiSelect({
           ) : selectedSections.length === 0 ? (
             <span className="text-amber-400 font-medium">None Selected</span>
           ) : selectedSections.length === 1 ? (
-            <span className="text-white font-medium">Sec {selectedSections[0]}</span>
+            <span className="text-slate-900 dark:text-white font-medium">Sec {selectedSections[0]}</span>
           ) : (
-            <span className="text-white font-medium">
+            <span className="text-slate-900 dark:text-white font-medium">
               {selectedSections.length} Sections Selected
             </span>
           )}

@@ -136,6 +136,36 @@ html.light .bg-slate-950\/10 {
   background-color: #f1f5f9 !important;
 }
 
+/* Light mode slate containers, pills, and backgrounds */
+html.light .bg-slate-50,
+html.light [class*="bg-slate-50"]:not([class*="dark:"]):not([class*="text-"]):not([class*="border-"]) {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-slate-100,
+html.light [class*="bg-slate-100"]:not([class*="dark:"]):not([class*="text-"]):not([class*="border-"]),
+html.light button[class~="bg-slate-100"] {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .bg-slate-200,
+html.light [class*="bg-slate-200"]:not([class*="dark:"]):not([class*="text-"]):not([class*="border-"]),
+html.light button[class~="bg-slate-200"] {
+  background-color: #e2e8f0 !important;
+}
+
+/* Light mode hover backgrounds */
+html.light .hover\:bg-slate-100:hover,
+html.light [class*="hover:bg-slate-100"]:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .hover\:bg-slate-200:hover,
+html.light [class*="hover:bg-slate-200"]:hover,
+html.light [class*="hover:bg-slate-200\/70"]:hover {
+  background-color: #e2e8f0 !important;
+}
+
 /* 
  * ------------------------------------------------------------
  * 3. BORDERS & DIVIDERS (Light Mode)
@@ -143,7 +173,11 @@ html.light .bg-slate-950\/10 {
  */
 html.light [class*="border-slate-800"],
 html.light [class*="border-slate-700"],
-html.light [class*="border-slate-600"] {
+html.light [class*="border-slate-600"],
+html.light .border-slate-200,
+html.light [class*="border-slate-200"]:not([class*="dark:"]),
+html.light .border-slate-300,
+html.light [class*="border-slate-300"]:not([class*="dark:"]) {
   border-color: #e2e8f0 !important;
 }
 
@@ -220,6 +254,62 @@ html.light .mt-1\.5[class*="bg-slate-900"] label:hover {
   color: #0f172a !important;
 }
 
+/* Theme segmented control inside profile dropdown */
+html.light [role="menu"] .grid.grid-cols-3 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light [role="menu"] .grid.grid-cols-3 button:not([class*="bg-indigo-600"]) {
+  color: #475569 !important;
+  background-color: transparent !important;
+}
+
+html.light [role="menu"] .grid.grid-cols-3 button:not([class*="bg-indigo-600"]):hover {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.light [role="menu"] .grid.grid-cols-3 button[class*="bg-indigo-600"] {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+/* Header profile trigger button in light mode */
+html.light header button[aria-label*="Profile"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light header button[aria-label*="Profile"]:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Logout button in profile menu */
+html.light [role="menu"] button[class*="border-rose"],
+html.light [role="menu"] button[class*="border-rose"] span,
+html.light [role="menu"] button[class*="border-rose"] svg {
+  color: #e11d48 !important;
+}
+
+html.light [role="menu"] button[class*="border-rose"] {
+  background-color: #ffffff !important;
+  border-color: #fda4af !important;
+}
+
+html.light [role="menu"] button[class*="border-rose"]:hover {
+  background-color: #fff1f2 !important;
+  border-color: #fb7185 !important;
+}
+
+/* Profile avatar purple square letters are strictly white */
+html.light [class*="from-indigo-600"][class*="to-violet-500"],
+html.light [class*="from-indigo-600"][class*="to-violet-500"] * {
+  color: #ffffff !important;
+}
+
 /* 
  * ------------------------------------------------------------
  * 6. FORM INPUTS, TEXTAREAS & SELECTS (Light Mode)
@@ -277,7 +367,9 @@ html.light input[type="radio"] {
 /* Secondary / Slate action buttons */
 html.light button.bg-slate-800:not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-emerald"]):not([class*="bg-rose"]):not([class*="bg-indigo"]),
 html.light button[class~="bg-slate-800"]:not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-emerald"]):not([class*="bg-rose"]):not([class*="bg-indigo"]),
-html.light button[class~="bg-slate-700"]:not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-emerald"]):not([class*="bg-rose"]):not([class*="bg-indigo"]) {
+html.light button[class~="bg-slate-700"]:not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-emerald"]):not([class*="bg-rose"]):not([class*="bg-indigo"]),
+html.light button[class~="bg-slate-100"]:not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-emerald"]):not([class*="bg-rose"]):not([class*="bg-indigo"]),
+html.light button[class~="bg-slate-200"]:not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-emerald"]):not([class*="bg-rose"]):not([class*="bg-indigo"]) {
   background-color: #f1f5f9 !important;
   border: 1px solid #cbd5e1 !important;
   color: #1e293b !important;
@@ -285,9 +377,68 @@ html.light button[class~="bg-slate-700"]:not([class*="text-rose"]):not([class*="
 
 html.light button.bg-slate-800:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]),
 html.light button[class~="bg-slate-800"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]),
-html.light button[class~="bg-slate-700"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]) {
+html.light button[class~="bg-slate-700"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]),
+html.light button[class~="bg-slate-100"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]),
+html.light button[class~="bg-slate-200"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]),
+html.light button[class*="hover:bg-slate-200"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]),
+html.light button[class*="hover:bg-slate-100"]:hover:not([class*="hover:bg-rose"]):not([class*="hover:bg-indigo"]) {
   background-color: #e2e8f0 !important;
   color: #0f172a !important;
+}
+
+/* Light mode table action buttons (Edit, Delete, View Report) */
+html.light table button[title="Edit Student"] {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html.light table button[title="Edit Student"]:hover {
+  background-color: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+html.light table button[title="Edit Student"] svg {
+  color: #475569 !important;
+}
+
+html.light table button[title="Delete Student"] {
+  background-color: #ffffff !important;
+  border: 1px solid #fda4af !important;
+  color: #e11d48 !important;
+}
+
+html.light table button[title="Delete Student"]:hover {
+  background-color: #fff1f2 !important;
+  border-color: #fb7185 !important;
+  color: #be123c !important;
+}
+
+html.light table button[title="Delete Student"] svg {
+  color: #e11d48 !important;
+}
+
+/* Scoped overrides for School Card & Admin Delete buttons */
+html.light button[title="Delete School"],
+html.light button[title="Delete School Admin"] {
+  background-color: #ffffff !important;
+  border: 1px solid #fda4af !important;
+  color: #e11d48 !important;
+}
+
+html.light button[title="Delete School"]:hover,
+html.light button[title="Delete School Admin"]:hover {
+  background-color: #fff1f2 !important;
+  border-color: #fb7185 !important;
+  color: #be123c !important;
+}
+
+html.light button[title="Delete School"] svg,
+html.light button[title="Delete School Admin"] svg,
+html.light button[title="Delete School"] span,
+html.light button[title="Delete School Admin"] span {
+  color: #e11d48 !important;
 }
 
 /* Primary / Solid colored action buttons MUST retain white text */
@@ -530,14 +681,40 @@ html.light h6 {
 }
 
 /* Turn text-white on light backgrounds to dark slate */
+html.light .text-white {
+  color: #0f172a !important;
+}
+
 html.light h1.text-white,
 html.light h2.text-white,
 html.light h3.text-white,
 html.light h4.text-white,
+html.light h5.text-white,
+html.light h6.text-white,
 html.light p.text-white,
-html.light span.text-white:not(button *):not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-rose-600"] *):not([class*="from-indigo-600"] *):not([class*="from-emerald-600"] *):not([class*="from-violet-600"] *),
-html.light strong.text-white {
+html.light span.text-white,
+html.light div.text-white,
+html.light strong.text-white,
+html.light button .text-white:not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-rose-600"] *):not([class*="from-indigo-600"] *):not([class*="from-emerald-600"] *):not([class*="from-violet-600"] *) {
   color: #0f172a !important;
+}
+
+/* Specifically preserve crisp white text inside solid accent buttons, gradients, and badges */
+html.light button[class~="bg-indigo-600"] *,
+html.light button[class~="bg-indigo-500"] *,
+html.light button[class~="bg-emerald-600"] *,
+html.light button[class~="bg-emerald-500"] *,
+html.light button[class~="bg-rose-600"] *,
+html.light button[class~="bg-rose-500"] *,
+html.light button[class~="bg-violet-600"] *,
+html.light span[class~="bg-indigo-600"],
+html.light span[class~="bg-emerald-600"],
+html.light span[class~="bg-rose-600"],
+html.light span[class~="bg-amber-600"],
+html.light span[class~="bg-violet-600"],
+html.light [class~="from-indigo-600"] > span,
+html.light [class~="from-indigo-600"] * {
+  color: #ffffff !important;
 }
 
 html.light label {
@@ -545,12 +722,17 @@ html.light label {
 }
 
 /* Slate text levels */
-html.light .text-slate-100 { color: #0f172a !important; }
-html.light .text-slate-200 { color: #1e293b !important; }
-html.light .text-slate-300 { color: #334155 !important; }
-html.light .text-slate-400 { color: #475569 !important; }
-html.light .text-slate-500 { color: #64748b !important; }
+html.light .text-slate-950 { color: #020617 !important; }
+html.light .text-slate-900 { color: #0f172a !important; }
+html.light .text-slate-800 { color: #1e293b !important; }
+html.light .text-slate-700 { color: #334155 !important; }
 html.light .text-slate-600 { color: #475569 !important; }
+html.light .text-slate-500 { color: #64748b !important; }
+html.light .text-slate-400 { color: #475569 !important; }
+html.light .text-slate-300 { color: #334155 !important; }
+html.light .text-slate-200 { color: #1e293b !important; }
+html.light .text-slate-100 { color: #0f172a !important; }
+html.light .text-slate-50  { color: #0f172a !important; }
 
 /* 
  * ------------------------------------------------------------

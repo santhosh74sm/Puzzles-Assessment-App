@@ -167,21 +167,23 @@ export function ProfileMenu({
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label="User Profile and Settings Menu"
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700/80 transition-all text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700/80 transition-all text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
       >
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-          {displayName.charAt(0).toUpperCase()}
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-sm">
+          <span className="font-bold text-xs" style={{ color: '#ffffff' }}>
+            {displayName.charAt(0).toUpperCase()}
+          </span>
         </div>
         <div className="hidden sm:flex flex-col text-left">
           <span className="text-xs font-semibold text-slate-900 dark:text-white leading-tight max-w-[120px] truncate">
             {displayName}
           </span>
-          <span className="text-[10px] text-slate-600 dark:text-slate-400 capitalize font-medium">
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize font-medium">
             {role.replace('_', ' ')}
           </span>
         </div>
         <ChevronDown 
-          className={`w-3.5 h-3.5 text-slate-500 dark:text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
 
@@ -206,8 +208,10 @@ export function ProfileMenu({
           <div className="p-4 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                  {displayName.charAt(0).toUpperCase()}
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-md">
+                  <span className="font-bold text-sm" style={{ color: '#ffffff' }}>
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
                 </div>
                 <div className="overflow-hidden">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{displayName}</h4>
@@ -259,7 +263,7 @@ export function ProfileMenu({
                 className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   theme === 'dark'
                     ? 'bg-indigo-600 text-white shadow-md font-semibold'
-                    : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
                 }`}
                 title="Dark"
               >
@@ -276,7 +280,7 @@ export function ProfileMenu({
                 className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   theme === 'light'
                     ? 'bg-indigo-600 text-white shadow-md font-semibold'
-                    : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
                 }`}
                 title="Light"
               >
@@ -293,7 +297,7 @@ export function ProfileMenu({
                 className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   theme === 'system'
                     ? 'bg-indigo-600 text-white shadow-md font-semibold'
-                    : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
                 }`}
                 title="Match device setting"
               >
@@ -309,13 +313,13 @@ export function ProfileMenu({
             <button
               type="button"
               onClick={handleLogoutClick}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-rose-50/80 hover:bg-rose-100 text-rose-700 border border-rose-200/80 dark:bg-transparent dark:hover:bg-rose-500/10 dark:text-rose-400 dark:border-transparent transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white hover:bg-rose-50/80 text-rose-600 border border-rose-300 hover:border-rose-400 dark:bg-transparent dark:hover:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 transition-all cursor-pointer shadow-xs"
             >
               <div className="flex items-center gap-2">
                 <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                <span>Log Out</span>
+                <span className="text-rose-600 dark:text-rose-400 font-semibold">Log Out</span>
               </div>
-              <span className="text-[11px] text-rose-600 dark:text-slate-400 font-medium">Sign out</span>
+              <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">Sign out</span>
             </button>
           </div>
         </div>,

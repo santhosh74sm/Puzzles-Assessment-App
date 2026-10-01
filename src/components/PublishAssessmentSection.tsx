@@ -241,7 +241,7 @@ function SchoolMultiSelectDropdown({
             <span className="text-slate-500">No schools available</span>
           ) : isAllSchoolsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Schools</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Schools</span>
               <span className="text-xs text-indigo-300 font-mono">
                 ({schools.length} Schools)
               </span>
@@ -249,7 +249,7 @@ function SchoolMultiSelectDropdown({
           ) : selectedSchoolIds.length === 0 ? (
             <span className="text-slate-400">Select School(s)...</span>
           ) : selectedSchoolIds.length === 1 ? (
-            <span className="text-white font-medium truncate">
+            <span className="text-slate-900 dark:text-white font-medium truncate">
               {selectedSchools[0]?.name}
               {selectedSchools[0]?.code && (
                 <span className="ml-1.5 text-[11px] font-mono text-indigo-300 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-800">
@@ -259,7 +259,7 @@ function SchoolMultiSelectDropdown({
             </span>
           ) : (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">
+              <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedSchoolIds.length} Schools Selected
               </span>
               <span className="text-xs text-slate-400 truncate">
@@ -499,7 +499,7 @@ function ClassMultiSelectDropdown({
             <span className="text-slate-500">No classes with students found</span>
           ) : isAllClassesSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Classes</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Classes</span>
               <span className="text-xs text-indigo-300 font-mono">
                 ({availableClasses.length} {availableClasses.length === 1 ? 'Class' : 'Classes'})
               </span>
@@ -507,12 +507,12 @@ function ClassMultiSelectDropdown({
           ) : selectedClasses.length === 0 ? (
             <span className="text-slate-400">Select Class(es)...</span>
           ) : selectedClasses.length === 1 ? (
-            <span className="text-white font-medium truncate">
+            <span className="text-slate-900 dark:text-white font-medium truncate">
               {selectedClasses[0]}
             </span>
           ) : (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">
+              <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedClasses.length} Classes Selected
               </span>
               <span className="text-xs text-slate-400 truncate">
@@ -735,7 +735,7 @@ function SectionMultiSelectDropdown({
             <span className="text-slate-500">No sections available</span>
           ) : isAllSectionsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Sections</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Sections</span>
               <span className="text-xs text-indigo-300 font-mono">
                 ({availableSections.length > 0 ? availableSections.map((s) => `Sec ${s}`).join(', ') : 'All'})
               </span>
@@ -743,12 +743,12 @@ function SectionMultiSelectDropdown({
           ) : selectedSections.length === 0 ? (
             <span className="text-slate-400">Select Section(s)...</span>
           ) : selectedSections.length === 1 ? (
-            <span className="text-white font-medium truncate">
+            <span className="text-slate-900 dark:text-white font-medium truncate">
               Sec {selectedSections[0]}
             </span>
           ) : (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">
+              <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedSections.length} Sections Selected
               </span>
               <span className="text-xs text-slate-400 truncate">
@@ -989,7 +989,7 @@ function StudentMultiSelectDropdown({
             <span className="text-slate-500">No students found</span>
           ) : isAllStudentsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Students</span>
+              <span className="text-slate-900 dark:text-white font-semibold">All Students</span>
               <span className="text-xs text-indigo-300 font-mono">
                 ({availableStudents.length} Students)
               </span>
@@ -997,7 +997,7 @@ function StudentMultiSelectDropdown({
           ) : selectedStudentIds.length === 0 ? (
             <span className="text-slate-400">Select Student(s)...</span>
           ) : selectedStudentIds.length === 1 ? (
-            <span className="text-white font-medium truncate">
+            <span className="text-slate-900 dark:text-white font-medium truncate">
               {selectedStudents[0]?.studentName || selectedStudentIds[0]}
               {selectedStudents[0]?.uniqueStudentId && (
                 <span className="ml-1.5 text-[11px] font-mono text-indigo-300 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-800">
@@ -1007,7 +1007,7 @@ function StudentMultiSelectDropdown({
             </span>
           ) : (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">
+              <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedStudentIds.length} Students Selected
               </span>
               <span className="text-xs text-slate-400 truncate">
@@ -2752,17 +2752,31 @@ export function PublishAssessmentSection({
           <button
             type="button"
             onClick={() => setPublishMode('Selected Questions')}
-            className={`p-5 rounded-2xl border text-left transition-all ${
+            className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
               publishMode === 'Selected Questions'
-                ? 'bg-indigo-600/20 border-indigo-500 shadow-xl shadow-indigo-500/10 ring-2 ring-indigo-500'
-                : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-600 dark:border-indigo-500 shadow-sm ring-1 ring-indigo-600/30'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-white text-base">Selected Questions</span>
-              <Layers className="w-5 h-5 text-indigo-400" />
+              <span className={`font-bold text-base ${
+                publishMode === 'Selected Questions'
+                  ? 'text-indigo-700 dark:text-indigo-400'
+                  : 'text-slate-900 dark:text-white'
+              }`}>
+                Selected Questions
+              </span>
+              <Layers className={`w-5 h-5 ${
+                publishMode === 'Selected Questions'
+                  ? 'text-indigo-600 dark:text-indigo-400'
+                  : 'text-slate-400 dark:text-slate-400'
+              }`} />
             </div>
-            <p className="text-xs text-slate-400">
+            <p className={`text-xs leading-relaxed ${
+              publishMode === 'Selected Questions'
+                ? 'text-slate-700 dark:text-slate-300'
+                : 'text-slate-600 dark:text-slate-400'
+            }`}>
               Choose specific questions from the Question Bank. You can shuffle question order and preview questions.
             </p>
           </button>
@@ -2770,17 +2784,31 @@ export function PublishAssessmentSection({
           <button
             type="button"
             onClick={() => setPublishMode('Random Questions')}
-            className={`p-5 rounded-2xl border text-left transition-all ${
+            className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
               publishMode === 'Random Questions'
-                ? 'bg-indigo-600/20 border-indigo-500 shadow-xl shadow-indigo-500/10 ring-2 ring-indigo-500'
-                : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-600 dark:border-indigo-500 shadow-sm ring-1 ring-indigo-600/30'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
             }`}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-white text-base">Random Questions</span>
-              <Shuffle className="w-5 h-5 text-indigo-400" />
+              <span className={`font-bold text-base ${
+                publishMode === 'Random Questions'
+                  ? 'text-indigo-700 dark:text-indigo-400'
+                  : 'text-slate-900 dark:text-white'
+              }`}>
+                Random Questions
+              </span>
+              <Shuffle className={`w-5 h-5 ${
+                publishMode === 'Random Questions'
+                  ? 'text-indigo-600 dark:text-indigo-400'
+                  : 'text-slate-400 dark:text-slate-400'
+              }`} />
             </div>
-            <p className="text-xs text-slate-400">
+            <p className={`text-xs leading-relaxed ${
+              publishMode === 'Random Questions'
+                ? 'text-slate-700 dark:text-slate-300'
+                : 'text-slate-600 dark:text-slate-400'
+            }`}>
               Automatically picks questions based on each student's past performance and prevents repeat questions.
             </p>
           </button>
