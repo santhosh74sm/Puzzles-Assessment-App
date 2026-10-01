@@ -14,6 +14,9 @@ import {
   X,
   AlertTriangle,
   Eye,
+  KeyRound,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { StudentReportDetailView } from './StudentReportDetailView.tsx';
 
@@ -77,6 +80,13 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
   // Student Report detail view state
   const [viewingReportStudent, setViewingReportStudent] = useState<any | null>(null);
+
+  // Super Admin Reset Password modal state
+  const [resettingUser, setResettingUser] = useState<any | null>(null);
+  const [generatedTempPassword, setGeneratedTempPassword] = useState<string | null>(null);
+  const [isGeneratingPassword, setIsGeneratingPassword] = useState(false);
+  const [copiedTempPassword, setCopiedTempPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
 
   // Alphabetically sorted schools (A -> Z, case-insensitive)
   const sortedSchools = [...schools].sort((a, b) =>
@@ -347,6 +357,40 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
     } finally {
       setIsSubmittingDeleteSchool(false);
     }
+  };
+
+  const handleOpenResetPassword = async (userObj: any) => {
+    setResettingUser(userObj);
+    setGeneratedTempPassword(null);
+    setResetPasswordError(null);
+    setCopiedTempPassword(false);
+    setIsGeneratingPassword(true);
+
+    try {
+      const res = await fetch('/api/super-admin/reset-password', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ userId: userObj.id || userObj._id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to generate temporary password');
+      }
+      setGeneratedTempPassword(data.temporaryPassword);
+      // Refresh list to update status if needed
+      await loadSchoolDetails(activeSchoolId);
+    } catch (err: any) {
+      setResetPasswordError(err.message || 'Unable to generate temporary password');
+    } finally {
+      setIsGeneratingPassword(false);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    if (!generatedTempPassword) return;
+    navigator.clipboard.writeText(generatedTempPassword);
+    setCopiedTempPassword(true);
+    setTimeout(() => setCopiedTempPassword(false), 2000);
   };
 
   const [rosterVisibleCount, setRosterVisibleCount] = useState(50);
@@ -802,15 +846,38 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                       <div className="flex items-center justify-between">
                         <span className="font-mono font-bold text-indigo-300">{adm.username}</span>
                         <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono text-[10px]">
-                          {adm.mustChangePassword ? 'Needs Password Change' : 'Active'}
+                          {adm.passwordResetRequested
+                            ? 'Reset Requested'
+                            : adm.mustChangePassword
+                            ? 'Needs Password Change'
+                            : 'Active'}
                         </span>
                       </div>
                       <p className="text-slate-400 text-[11px] mt-0.5">
                         Created: {adm.createdAt ? new Date(adm.createdAt).toLocaleDateString() : 'Recently'}
                       </p>
+                      {adm.passwordResetRequested && (
+                        <div className="mt-1.5 p-1 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-[10px] text-amber-800 dark:text-amber-300 flex items-center gap-1 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />
+                          <span>Password reset requested</span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-end">
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-1.5">
+                      {adm.passwordResetRequested ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenResetPassword(adm)}
+                          className="px-2 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 hover:text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:text-amber-300 dark:border-amber-700/70 text-xs font-semibold flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                          title="Reset Password"
+                        >
+                          <KeyRound className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span>Reset Password</span>
+                        </button>
+                      ) : (
+                        <div />
+                      )}
                       <button
                         type="button"
                         onClick={() => setDeletingAdmin(adm)}
@@ -912,18 +979,36 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                             </span>
                           </td>
                           <td className="py-2.5 px-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono ${
-                                stu.mustChangePassword
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/60'
-                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/60'
-                              }`}
-                            >
-                              {stu.mustChangePassword ? 'Temporary' : 'Set'}
-                            </span>
+                            {stu.passwordResetRequested ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/80 font-bold inline-flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />
+                                Reset Requested
+                              </span>
+                            ) : (
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-mono ${
+                                  stu.mustChangePassword
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/60'
+                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/60'
+                                }`}
+                              >
+                                {stu.mustChangePassword ? 'Temporary' : 'Set'}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {stu.passwordResetRequested && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenResetPassword(stu)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 hover:text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:text-amber-300 dark:border-amber-700/70 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                                  title="Reset Password"
+                                >
+                                  <KeyRound className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                                  <span>Reset Password</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => setViewingReportStudent(stu)}
@@ -1282,6 +1367,100 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 {isSubmittingDeleteSchool ? 'Deleting School...' : 'Yes, Delete School'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Reset Password Modal */}
+      {resettingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30 shrink-0">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Reset Password</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {resettingUser.studentName ? `${resettingUser.studentName} (${resettingUser.uniqueStudentId})` : resettingUser.username}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResettingUser(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {isGeneratingPassword ? (
+              <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                Generating secure temporary password...
+              </div>
+            ) : resetPasswordError ? (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+                  {resetPasswordError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenResetPassword(resettingUser)}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : generatedTempPassword ? (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Generated Temporary Password
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 p-3 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 font-mono text-base font-bold text-slate-900 dark:text-white tracking-wider select-all">
+                      {generatedTempPassword}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyPassword}
+                      className="px-3.5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer shrink-0"
+                      title="Copy temporary password"
+                    >
+                      {copiedTempPassword ? (
+                        <>
+                          <Check className="w-4 h-4 text-emerald-300" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <p>
+                    Share this temporary password with the user. The user will be required to create a new password upon logging in.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setResettingUser(null)}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

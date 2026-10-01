@@ -10,6 +10,8 @@ export interface IUserDocument extends Document {
   role: 'super_admin' | 'school_admin' | 'student';
   passwordHash: string;
   mustChangePassword: boolean;
+  passwordResetRequested?: boolean;
+  passwordResetRequestedAt?: Date;
   schoolId?: string;
   schoolName?: string;
   studentName?: string;
@@ -27,6 +29,8 @@ export const UserSchema = new Schema<IUserDocument>(
     role: { type: String, required: true, enum: ['super_admin', 'school_admin', 'student'], index: true },
     passwordHash: { type: String, required: true },
     mustChangePassword: { type: Boolean, default: true },
+    passwordResetRequested: { type: Boolean, default: false, index: true },
+    passwordResetRequestedAt: { type: Date },
     schoolId: { type: String, index: true },
     schoolName: { type: String },
     studentName: { type: String },

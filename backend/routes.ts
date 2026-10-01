@@ -107,9 +107,12 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     }
 
     const trimmedUsername = username.trim();
-    // Case-insensitive lookup for username
+    // Case-insensitive lookup for username or uniqueStudentId
     const user = await UserModel.findOne({
-      username: { $regex: new RegExp(`^${trimmedUsername}$`, 'i') },
+      $or: [
+        { username: { $regex: new RegExp(`^${trimmedUsername}$`, 'i') } },
+        { uniqueStudentId: { $regex: new RegExp(`^${trimmedUsername}$`, 'i') } },
+      ],
     });
 
     if (!user) {
@@ -169,7 +172,51 @@ router.post('/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-// Force Password Change (Mandatory on first login)
+// Password Reset Request (Students and Admins)
+router.post('/auth/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Username or Student ID is required' });
+    }
+
+    const trimmed = username.trim();
+    if (!trimmed) {
+      return res.status(400).json({ error: 'Username or Student ID is required' });
+    }
+
+    // Lookup user by username or uniqueStudentId
+    const user = await UserModel.findOne({
+      $or: [
+        { username: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+        { uniqueStudentId: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+      ],
+    });
+
+    if (user) {
+      user.passwordResetRequested = true;
+      user.passwordResetRequestedAt = new Date();
+      await user.save();
+      console.log(`[Auth] Password reset requested for user "${user.username}" (role: ${user.role})`);
+    } else {
+      console.log(`[Auth] Password reset requested for non-existent username: "${trimmed}"`);
+    }
+
+    // Return the required clear message without revealing sensitive account info
+    return res.json({
+      success: true,
+      message:
+        'Please contact your Super Admin. The Super Admin will provide you with a temporary password. Use the temporary password to log in and create a new password.',
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      error: 'Unable to process reset request. Please try again.',
+      details: err.message,
+    });
+  }
+});
+
+// Force Password Change (Mandatory on first login or after password reset)
 router.post('/auth/change-password', authenticate, async (req: Request, res: Response) => {
   try {
     const { newPassword } = req.body;
@@ -190,6 +237,8 @@ router.post('/auth/change-password', authenticate, async (req: Request, res: Res
     const salt = bcrypt.genSaltSync(10);
     user.passwordHash = bcrypt.hashSync(newPassword, salt);
     user.mustChangePassword = false;
+    user.passwordResetRequested = false;
+    user.passwordResetRequestedAt = undefined;
     await user.save();
 
     return res.json({ success: true, message: 'Password updated successfully' });
@@ -282,11 +331,60 @@ router.get('/schools/:schoolId/admins', authenticate, requireRole('super_admin')
       schoolId: u.schoolId,
       schoolName: u.schoolName,
       mustChangePassword: u.mustChangePassword,
+      passwordResetRequested: Boolean(u.passwordResetRequested),
+      passwordResetRequestedAt: u.passwordResetRequestedAt,
       createdAt: u.createdAt,
     }));
     return res.json(formatted);
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch school admins', details: err.message });
+  }
+});
+
+// Super Admin Reset Password: Generates secure temporary password
+router.post('/super-admin/reset-password', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User account not found' });
+    }
+
+    // Generate secure temporary password
+    const chars = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+    let tempPass = '';
+    for (let i = 0; i < 7; i++) {
+      tempPass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    tempPass += '!'; // Add special character
+
+    const salt = bcrypt.genSaltSync(10);
+    user.passwordHash = bcrypt.hashSync(tempPass, salt);
+    user.mustChangePassword = true;
+    // Per requirement 7: The reset request must remain active until user creates new password
+    user.passwordResetRequested = true;
+    await user.save();
+
+    console.log(`[SuperAdmin] Generated temporary password for user "${user.username}" (role: ${user.role})`);
+
+    return res.json({
+      success: true,
+      temporaryPassword: tempPass,
+      userId: user._id.toString(),
+      username: user.username,
+      studentName: user.studentName,
+      role: user.role,
+      message: 'Temporary password generated successfully.',
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      error: 'Unable to generate temporary password. Please try again.',
+      details: err.message,
+    });
   }
 });
 

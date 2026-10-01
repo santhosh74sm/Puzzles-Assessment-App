@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Shield, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Sun, Moon, Monitor } from 'lucide-react';
+import { Sparkles, Shield, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Sun, Moon, Monitor, CheckCircle2 } from 'lucide-react';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard.tsx';
 import { SchoolAdminDashboard } from './components/SchoolAdminDashboard.tsx';
 import { StudentPortal } from './components/StudentPortal.tsx';
@@ -37,6 +37,13 @@ function AppContent() {
   const [loading, setLoading] = useState(false);
   const [setupMode, setSetupMode] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
+
+  // Forgot Password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/auth/setup-status')
@@ -95,6 +102,39 @@ function AppContent() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotMessage(null);
+
+    const trimmed = forgotUsername.trim();
+    if (!trimmed) {
+      setForgotError('Please enter your Username or Student ID');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to submit reset request.');
+      }
+      setForgotMessage(
+        data.message ||
+          'Please contact your Super Admin. The Super Admin will provide you with a temporary password. Use the temporary password to log in and create a new password.'
+      );
+    } catch (err: any) {
+      setForgotError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -221,11 +261,17 @@ function AppContent() {
             {setupMode ? <Shield className="w-7 h-7" /> : <Sparkles className="w-7 h-7" />}
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {setupMode ? 'First-Time Setup: Create Admin' : 'School Puzzle Tests'}
+            {setupMode
+              ? 'First-Time Setup: Create Admin'
+              : showForgotPassword
+              ? 'Forgot Password'
+              : 'School Puzzle Tests'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {setupMode
               ? 'No accounts have been created yet. Please create the first administrator account to get started.'
+              : showForgotPassword
+              ? 'Enter your username or Student ID to request a password reset.'
               : 'Sign in to access your school tests and account.'}
           </p>
         </div>
@@ -237,83 +283,183 @@ function AppContent() {
           </div>
         )}
 
-        {error && (
-          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-            <span>{error}</span>
-          </div>
-        )}
+        {showForgotPassword ? (
+          /* Forgot Password View */
+          <div className="space-y-4">
+            {forgotError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{forgotError}</span>
+              </div>
+            )}
 
-        {/* Login / Initial Setup Form */}
-        <form key={loginFormKey} onSubmit={handleLoginOrSetup} className="space-y-4" autoComplete="off">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-              {setupMode ? 'Admin Username' : 'Username or ID'}
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
-              <input
-                type="text"
-                required
-                autoComplete="off"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={setupMode ? 'e.g. admin' : 'Username or ID'}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
+            {forgotMessage ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-left space-y-2">
+                  <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-semibold text-xs">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                    <span>Request Submitted</span>
+                  </div>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                    {forgotMessage}
+                  </p>
+                </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                autoComplete="off"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={setupMode ? 'Choose a password' : 'Password'}
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotMessage(null);
+                    setForgotError(null);
+                  }}
+                  className="w-full py-2.5 rounded-xl font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm transition-all cursor-pointer"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4" autoComplete="off">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                    Username / Student ID
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      required
+                      autoComplete="off"
+                      value={forgotUsername}
+                      onChange={(e) => setForgotUsername(e.target.value)}
+                      placeholder="e.g. STU-10B-1574 or admin"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <span>{forgotLoading ? 'Submitting...' : 'Submit'}</span>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setForgotError(null);
+                      setForgotMessage(null);
+                    }}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        ) : (
+          /* Normal Sign In Form */
+          <>
+            {error && (
+              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form key={loginFormKey} onSubmit={handleLoginOrSetup} className="space-y-4" autoComplete="off">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  {setupMode ? 'Admin Username' : 'Username or ID'}
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+                  <input
+                    type="text"
+                    required
+                    autoComplete="off"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={setupMode ? 'e.g. admin' : 'Username or ID'}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="off"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={setupMode ? 'Choose a password' : 'Password'}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 focus:outline-none focus:text-indigo-500 cursor-pointer"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {!setupMode && (
+                <div className="flex justify-end pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(true);
+                      setForgotError(null);
+                      setForgotMessage(null);
+                      setForgotUsername('');
+                    }}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+
               <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5 focus:outline-none focus:text-indigo-500 cursor-pointer"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                title={showPassword ? 'Hide password' : 'Show password'}
+                type="submit"
+                disabled={loading || checkingSetup}
+                className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer login-submit-btn"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+                  backgroundColor: '#4f46e5',
+                  color: '#ffffff',
+                }}
               >
-                {showPassword ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
+                <span
+                  className="login-submit-text text-white"
+                  style={{ backgroundColor: 'transparent', color: '#ffffff' }}
+                >
+                  {loading ? 'Signing in...' : setupMode ? 'Create First Admin Account' : 'Sign In'}
+                </span>
+                <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
               </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || checkingSetup}
-            className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer login-submit-btn"
-            style={{
-              backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
-              backgroundColor: '#4f46e5',
-              color: '#ffffff',
-            }}
-          >
-            <span
-              className="login-submit-text text-white"
-              style={{ backgroundColor: 'transparent', color: '#ffffff' }}
-            >
-              {loading ? 'Signing in...' : setupMode ? 'Create First Admin Account' : 'Sign In'}
-            </span>
-            <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
-          </button>
-        </form>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

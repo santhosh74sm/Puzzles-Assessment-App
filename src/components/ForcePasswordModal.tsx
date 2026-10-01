@@ -139,9 +139,9 @@ export function ForcePasswordModal({ username, onSuccess }: ForcePasswordModalPr
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 py-3 rounded-xl font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50"
+            className="w-full mt-2 py-3 rounded-xl font-medium bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50 cursor-pointer"
           >
-            {loading ? 'Saving password...' : 'Save Password & Continue'}
+            {loading ? 'Creating new password...' : 'Create New Password'}
           </button>
         </form>
       </div>
