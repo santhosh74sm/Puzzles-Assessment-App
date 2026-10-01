@@ -298,10 +298,20 @@ function AppContent() {
           <button
             type="submit"
             disabled={loading || checkingSetup}
-            className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer login-submit-btn"
+            style={{
+              backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+              backgroundColor: '#4f46e5',
+              color: '#ffffff',
+            }}
           >
-            <span>{loading ? 'Signing in...' : setupMode ? 'Create First Admin Account' : 'Sign In'}</span>
-            <ArrowRight className="w-4 h-4" />
+            <span
+              className="login-submit-text text-white"
+              style={{ backgroundColor: 'transparent', color: '#ffffff' }}
+            >
+              {loading ? 'Signing in...' : setupMode ? 'Create First Admin Account' : 'Sign In'}
+            </span>
+            <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
           </button>
         </form>
       </div>

@@ -408,16 +408,24 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 type="button"
                 onClick={() => recordAndAdvance(currentSelectedAnswer)}
                 disabled={isSubmitting}
-                className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white shadow-xl shadow-indigo-600/30 flex items-center gap-2 text-sm transition-all cursor-pointer"
+                className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white shadow-xl shadow-indigo-600/30 flex items-center gap-2 text-sm transition-all cursor-pointer next-question-btn"
+                style={{
+                  backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+                  backgroundColor: '#4f46e5',
+                  color: '#ffffff',
+                }}
               >
-                <span>
+                <span
+                  className="next-question-btn-text text-white"
+                  style={{ backgroundColor: 'transparent', color: '#ffffff' }}
+                >
                   {isSubmitting
                     ? 'Submitting Test...'
                     : currentQuestionIndex < activeTest.questions.length - 1
                     ? 'Next Question'
                     : 'Submit Test'}
                 </span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
               </button>
             </div>
           </div>

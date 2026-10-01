@@ -244,27 +244,36 @@ export function FlameMiniGameCanvas({
                       disabled={disabled}
                       className={`relative flex items-center gap-3 p-4 rounded-xl border text-left font-medium transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-gradient-to-r from-indigo-600 to-violet-600 border-indigo-400 text-white shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-400'
-                          : 'bg-slate-100/90 hover:bg-slate-200/80 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+                          ? 'bg-gradient-to-r from-indigo-600 to-violet-600 border-indigo-400 text-white shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-400 selected-answer-option'
+                          : 'bg-white hover:bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-200 unselected-answer-option'
                       }`}
+                      style={
+                        isSelected
+                          ? {
+                              backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+                              backgroundColor: '#4f46e5',
+                              borderColor: '#818cf8',
+                              color: '#ffffff',
+                            }
+                          : {
+                              backgroundColor: '#ffffff',
+                              color: '#0f172a',
+                            }
+                      }
                     >
                       <span
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                          isSelected
-                            ? 'bg-white text-indigo-700 shadow-sm border border-white'
-                            : 'bg-white dark:bg-black/30 border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                        }`}
-                        style={isSelected ? { backgroundColor: '#ffffff', color: '#4338ca' } : undefined}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all bg-white border border-slate-200 dark:border-white/10 shadow-xs option-letter-badge"
+                        style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
                       >
                         {String.fromCharCode(65 + idx)}
                       </span>
                       <span
                         className={`text-base ${
                           isSelected
-                            ? 'font-bold text-white'
-                            : 'font-medium text-slate-800 dark:text-slate-200'
+                            ? 'font-bold text-white selected-answer-text'
+                            : 'font-medium text-slate-900 dark:text-slate-200 unselected-answer-text'
                         }`}
-                        style={isSelected ? { color: '#ffffff' } : undefined}
+                        style={isSelected ? { color: '#ffffff' } : { color: '#0f172a' }}
                       >
                         {opt}
                       </span>

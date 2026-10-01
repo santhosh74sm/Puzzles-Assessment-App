@@ -695,7 +695,7 @@ html.light p.text-white,
 html.light span.text-white,
 html.light div.text-white,
 html.light strong.text-white,
-html.light button .text-white:not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-rose-600"] *):not([class*="from-indigo-600"] *):not([class*="from-emerald-600"] *):not([class*="from-violet-600"] *) {
+html.light button .text-white:not([class*="bg-indigo-600"]):not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-rose-600"] *):not([class*="from-indigo-600"] *):not([class*="from-emerald-600"] *):not([class*="from-violet-600"] *):not(.targets-filter-all-badge):not(.selected-answer-text):not(.login-submit-text):not(.next-question-btn-text) {
   color: #0f172a !important;
 }
 
@@ -720,9 +720,72 @@ html.light button[class*="from-indigo-600"][class*="to-violet-600"] span.text-ba
   color: #ffffff !important;
 }
 
-html.light button[class*="from-indigo-600"][class*="to-violet-600"] span:first-child {
+html.light button[class*="from-indigo-600"][class*="to-violet-600"]:not(.login-submit-btn):not(.next-question-btn):not([type="submit"]) span:first-child {
   background-color: #ffffff !important;
   color: #4338ca !important;
+}
+
+/* 1. Login Page: Sign In button text & background in Light Theme */
+html.light .login-submit-btn,
+html.light button.login-submit-btn {
+  background-image: linear-gradient(to right, #4f46e5, #7c3aed) !important;
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+html.light .login-submit-btn .login-submit-text,
+html.light button.login-submit-btn span,
+html.light button.login-submit-btn span:first-child {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* 2. Targets Filter: "All" badge text in Light Theme */
+html.light button span.targets-filter-all-badge,
+html.light button .targets-filter-all-badge,
+html.light .targets-filter-all-badge {
+  color: #ffffff !important;
+}
+
+/* 3. Next Question button in Light Theme */
+html.light .next-question-btn,
+html.light button.next-question-btn {
+  background-image: linear-gradient(to right, #4f46e5, #7c3aed) !important;
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+html.light .next-question-btn .next-question-btn-text,
+html.light button.next-question-btn span,
+html.light button.next-question-btn span:first-child {
+  background-color: transparent !important;
+  color: #ffffff !important;
+}
+
+/* 4. Student test page: Multiple choice options in Light Theme */
+html.light button.unselected-answer-option {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+html.light button.unselected-answer-option .unselected-answer-text {
+  color: #0f172a !important;
+}
+html.light button.selected-answer-option {
+  background-image: linear-gradient(to right, #4f46e5, #7c3aed) !important;
+  background-color: #4f46e5 !important;
+  border-color: #818cf8 !important;
+  color: #ffffff !important;
+}
+html.light button.selected-answer-option span.selected-answer-text,
+html.light button.selected-answer-option .selected-answer-text {
+  color: #ffffff !important;
+}
+/* White letter badge with black letter for both unselected and selected options */
+html.light .option-letter-badge,
+html.light button.selected-answer-option .option-letter-badge,
+html.light button.unselected-answer-option .option-letter-badge {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 html.light label {
