@@ -865,6 +865,88 @@ router.get('/question-groups', authenticate, async (req: Request, res: Response)
   }
 });
 
+// Delete Question Group with Cascade Question Delete (Super Admin Only)
+// Deletes BOTH:
+// 1. The Question Group
+// 2. ALL questions belonging to that Question Group
+// Historical snapshots in PublishedTest, PublishHistory, and completed student attempts are strictly preserved.
+router.delete('/question-groups/:id', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    let group = await QuestionGroupModel.findById(id);
+    if (!group && mongoose.Types.ObjectId.isValid(id)) {
+      group = await QuestionGroupModel.findById(new mongoose.Types.ObjectId(id));
+    }
+
+    if (!group) {
+      return res.status(404).json({ error: 'Question Group not found' });
+    }
+
+    const gIdStr = group._id.toString();
+    const groupName = group.name;
+
+    // 1. Identify all questions strictly belonging to this question group
+    const groupQuestions = await QuestionModel.find({
+      $or: [
+        { groupId: gIdStr },
+        { groupId: group.id },
+        ...(mongoose.Types.ObjectId.isValid(gIdStr) ? [{ groupId: new mongoose.Types.ObjectId(gIdStr) }] : []),
+      ],
+    });
+
+    const questionIdsToDelete = groupQuestions.map((q) => q._id.toString());
+
+    // 2. Cascade delete all questions belonging to this group from QuestionModel
+    if (questionIdsToDelete.length > 0) {
+      await QuestionModel.deleteMany({
+        _id: { $in: groupQuestions.map((q) => q._id) },
+      });
+    }
+
+    // 3. Delete the Question Group itself from QuestionGroupModel
+    await QuestionGroupModel.findByIdAndDelete(group._id);
+
+    // 4. Safely remove deleted questions ONLY from NOT_STARTED student assignments
+    // DO NOT touch COMPLETED, IN_PROGRESS, INCOMPLETE, or LOCKED_INCOMPLETE attempts!
+    if (questionIdsToDelete.length > 0) {
+      const deletedIdSet = new Set(questionIdsToDelete);
+      const matchingAssignments = await StudentTestAssignmentModel.find({
+        status: 'NOT_STARTED',
+        $or: [
+          { 'questions.questionId': { $in: questionIdsToDelete } },
+          { 'questions.id': { $in: questionIdsToDelete } },
+          { 'questions._id': { $in: questionIdsToDelete } },
+        ],
+      });
+
+      for (const assign of matchingAssignments) {
+        if (Array.isArray(assign.questions)) {
+          const originalCount = assign.questions.length;
+          assign.questions = assign.questions.filter((q: any) => {
+            const qId = String(q.questionId || q.id || q._id || '');
+            return !deletedIdSet.has(qId);
+          });
+          if (assign.questions.length !== originalCount) {
+            assign.totalQuestions = assign.questions.length;
+            await assign.save();
+          }
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Question Group '${groupName}' and ${questionIdsToDelete.length} question(s) deleted successfully. Historical assessment snapshots remain preserved.`,
+      deletedGroupId: gIdStr,
+      deletedQuestionsCount: questionIdsToDelete.length,
+      deletedQuestionIds: questionIdsToDelete,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to delete question group', details: err.message });
+  }
+});
+
 // Helpers for Single / Multiple selection answer parsing and evaluation
 function parseMultipleCorrectAnswers(raw: any, options?: string[]): string[] {
   if (Array.isArray(raw)) {
@@ -876,8 +958,14 @@ function parseMultipleCorrectAnswers(raw: any, options?: string[]): string[] {
   const str = raw.trim();
   if (!str) return [];
 
-  if (options && options.length > 0) {
-    if (options.some((opt) => opt.toLowerCase() === str.toLowerCase())) {
+  const optsArray = Array.isArray(options)
+    ? options
+    : typeof options === 'string'
+    ? (options as string).split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  if (optsArray.length > 0) {
+    if (optsArray.some((opt) => opt.toLowerCase() === str.toLowerCase())) {
       return [str];
     }
   }
@@ -894,22 +982,28 @@ function parseMultipleCorrectAnswers(raw: any, options?: string[]): string[] {
 
 function normalizeToOptionValue(val: string, options?: string[]): string {
   const trimmed = val.trim();
-  if (!options || options.length === 0) return trimmed.toLowerCase();
+  const optsArray = Array.isArray(options)
+    ? options
+    : typeof options === 'string'
+    ? (options as string).split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
 
-  const directMatch = options.find((o) => o.trim().toLowerCase() === trimmed.toLowerCase());
+  if (optsArray.length === 0) return trimmed.toLowerCase();
+
+  const directMatch = optsArray.find((o) => o.trim().toLowerCase() === trimmed.toLowerCase());
   if (directMatch) return directMatch.trim().toLowerCase();
 
   if (/^[A-Za-z]$/.test(trimmed)) {
     const letterIdx = trimmed.toUpperCase().charCodeAt(0) - 65;
-    if (letterIdx >= 0 && letterIdx < options.length) {
-      return options[letterIdx].trim().toLowerCase();
+    if (letterIdx >= 0 && letterIdx < optsArray.length) {
+      return optsArray[letterIdx].trim().toLowerCase();
     }
   }
 
   if (/^\d+$/.test(trimmed)) {
     const numIdx = Number(trimmed) - 1;
-    if (numIdx >= 0 && numIdx < options.length) {
-      return options[numIdx].trim().toLowerCase();
+    if (numIdx >= 0 && numIdx < optsArray.length) {
+      return optsArray[numIdx].trim().toLowerCase();
     }
   }
 
@@ -1015,6 +1109,13 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       ? Number(points)
       : null;
 
+    let parsedOptions: string[] = [];
+    if (Array.isArray(options)) {
+      parsedOptions = options.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (typeof options === 'string' && options.trim()) {
+      parsedOptions = options.split(',').map((s: any) => s.trim()).filter(Boolean);
+    }
+
     const normalizedAnswerType: 'single' | 'multiple' =
       answerType === 'multiple' ? 'multiple' : 'single';
 
@@ -1027,7 +1128,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       } else if (Array.isArray(correctAnswer) && correctAnswer.length > 0) {
         finalCorrectAnswers = correctAnswer.map((s: any) => String(s).trim()).filter(Boolean);
       } else if (correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== '') {
-        finalCorrectAnswers = parseMultipleCorrectAnswers(correctAnswer, options);
+        finalCorrectAnswers = parseMultipleCorrectAnswers(correctAnswer, parsedOptions);
       }
       finalCorrectAnswer = finalCorrectAnswers.length > 0 ? finalCorrectAnswers.join(', ') : null;
     } else {
@@ -1047,7 +1148,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       content: content.trim(),
       timeSeconds: parsedTime,
       points: parsedPoints,
-      options: options || [],
+      options: parsedOptions,
       answerType: normalizedAnswerType,
       correctAnswer: finalCorrectAnswer,
       correctAnswers: finalCorrectAnswers,
@@ -1104,8 +1205,14 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
     if (points !== undefined) {
       question.points = points !== null && points !== '' ? Number(points) : null;
     }
-    if (Array.isArray(options)) {
-      question.options = options;
+    if (options !== undefined) {
+      if (Array.isArray(options)) {
+        question.options = options.map((s: any) => String(s).trim()).filter(Boolean);
+      } else if (typeof options === 'string' && options.trim()) {
+        question.options = options.split(',').map((s: any) => s.trim()).filter(Boolean);
+      } else if (options === null) {
+        question.options = [];
+      }
     }
 
     const normalizedAnswerType: 'single' | 'multiple' =

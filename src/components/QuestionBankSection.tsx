@@ -34,6 +34,10 @@ export function QuestionBankSection({
   // Group View Modal (Read Only)
   const [viewGroupModal, setViewGroupModal] = useState<any | null>(null);
 
+  // Delete Question Group Confirmation State
+  const [deletingGroup, setDeletingGroup] = useState<any | null>(null);
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false);
+
   // Delete Question Confirmation State
   const [deletingQuestion, setDeletingQuestion] = useState<any | null>(null);
   const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
@@ -108,6 +112,48 @@ export function QuestionBankSection({
       });
     } finally {
       setIsDeletingQuestion(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!deletingGroup) return;
+    const gId = deletingGroup.id || deletingGroup._id;
+    if (!gId) return;
+
+    setIsDeletingGroup(true);
+    setFeedbackMessage(null);
+    try {
+      const res = await fetch(`/api/question-groups/${gId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedbackMessage({
+          type: 'success',
+          text: `Question group "${deletingGroup.name}" and ${data.deletedQuestionsCount ?? 0} question(s) deleted successfully. Past test results will not be affected.`,
+        });
+        setDeletingGroup(null);
+        if (viewGroupModal && (viewGroupModal.id === gId || viewGroupModal._id === gId)) {
+          setViewGroupModal(null);
+        }
+        if (selectedGroupFilter === gId) {
+          setSelectedGroupFilter('');
+        }
+        await onRefreshData();
+      } else {
+        setFeedbackMessage({
+          type: 'error',
+          text: data.error || 'Unable to delete question group. Please try again.',
+        });
+      }
+    } catch (e: any) {
+      setFeedbackMessage({
+        type: 'error',
+        text: e.message || 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setIsDeletingGroup(false);
     }
   };
 
@@ -482,14 +528,7 @@ export function QuestionBankSection({
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-white">{grp.name}</span>
-                      <button
-                        onClick={() => setViewGroupModal({ ...grp, breakdown })}
-                        className="text-xs px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center gap-1 transition-all"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        View Questions
-                      </button>
+                      <span className="text-sm font-bold text-white truncate">{grp.name}</span>
                     </div>
                     <p className="text-xs text-slate-400 mt-1 line-clamp-1">{grp.description || 'No description'}</p>
 
@@ -507,6 +546,26 @@ export function QuestionBankSection({
                         <span className="text-base font-bold text-white">{breakdown.Hard.count}</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setViewGroupModal({ ...grp, breakdown })}
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center justify-center gap-1 transition-all flex-1 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View Questions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingGroup({ ...grp, breakdown })}
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      title={`Delete group ${grp.name}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
                   </div>
                 </div>
               );
@@ -864,6 +923,121 @@ export function QuestionBankSection({
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
                     Yes, Delete Question
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Question Group Confirmation Dialog */}
+      {deletingGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-500/50 flex items-center justify-center shrink-0 text-rose-400">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <span className="text-xs font-mono uppercase text-rose-400 tracking-wider font-semibold">
+                  Delete Question Group
+                </span>
+                <h3 className="text-lg font-bold text-white mt-0.5">
+                  Delete "{deletingGroup.name}"?
+                </h3>
+              </div>
+              <button
+                onClick={() => !isDeletingGroup && setDeletingGroup(null)}
+                disabled={isDeletingGroup}
+                className="text-slate-400 hover:text-white text-lg font-bold disabled:opacity-40"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Clear Warning */}
+            <p className="text-sm text-slate-300">
+              This will permanently delete this group and <strong className="text-rose-400 font-semibold">ALL questions</strong> inside this group.
+            </p>
+
+            {/* Group Summary Card */}
+            <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-white truncate max-w-[280px]">
+                  {deletingGroup.name}
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-700/90 text-slate-300 font-medium">
+                  {deletingGroup.breakdown?.total ?? deletingGroup.questionCount ?? 0} question(s) inside
+                </span>
+              </div>
+              {deletingGroup.description && (
+                <p className="text-xs text-slate-400 line-clamp-2">{deletingGroup.description}</p>
+              )}
+
+              {/* Difficulty Breakdown Preview */}
+              <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
+                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60">
+                  <span className="text-emerald-400 block font-semibold">Easy</span>
+                  <span className="text-sm font-bold text-white">
+                    {deletingGroup.breakdown?.Easy?.count ?? deletingGroup.easyCount ?? 0}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60">
+                  <span className="text-amber-400 block font-semibold">Medium</span>
+                  <span className="text-sm font-bold text-white">
+                    {deletingGroup.breakdown?.Medium?.count ?? deletingGroup.mediumCount ?? 0}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60">
+                  <span className="text-rose-400 block font-semibold">Hard</span>
+                  <span className="text-sm font-bold text-white">
+                    {deletingGroup.breakdown?.Hard?.count ?? deletingGroup.hardCount ?? 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Safety & Warning Information */}
+            <div className="space-y-2 text-xs">
+              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <div>
+                  <strong className="font-semibold text-amber-200">Cascade Delete:</strong> All questions belonging to "{deletingGroup.name}" will be permanently deleted from the Question Bank.
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+                <div>
+                  <strong className="font-semibold text-indigo-200">Past Tests Safe:</strong> Existing published tests, completed student attempts, and historical reports remain intact.
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingGroup(null)}
+                disabled={isDeletingGroup}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-all disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteGroup}
+                disabled={isDeletingGroup}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {isDeletingGroup ? (
+                  <>Deleting Group...</>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
                   </>
                 )}
               </button>
