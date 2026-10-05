@@ -10,37 +10,25 @@ import { connectMongoDB, getMongoConnectionInfo } from './backend/database.ts';
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  // In AI Studio Cloud Run, Nginx reverse proxy listens on 8080 and proxies traffic to 3000.
+  // Cloud Run sets PORT=8080 in the container environment. If the app tries to bind to 8080,
+  // it collides with Nginx (EADDRINUSE: address already in use 0.0.0.0:8080).
+  // The app must always listen on port 3000 (DEFAULT_APP_PORT).
+  const PORT = (process.env.PORT && process.env.PORT !== '8080')
+    ? Number(process.env.PORT)
+    : (Number(process.env.DEFAULT_APP_PORT) || 3000);
   const HOST = '0.0.0.0';
 
   app.use(express.json());
 
-  // Establish and verify MongoDB Connection exclusively to puzzles_assessment_dev
-  console.log('[System] Initializing MongoDB database connection...');
-  try {
-    const dbInfo = await connectMongoDB();
-    console.log(`[System] Verified MongoDB connection to: ${dbInfo.dbName} (${dbInfo.uri})`);
-  } catch (err: any) {
-    console.warn(`[System] MongoDB connection notice:`, err.message);
-  }
-
-  // Database status and verification endpoint
-  app.get('/api/database/status', (req, res) => {
-    const info = getMongoConnectionInfo();
-    res.json({
-      status: info.isConnected ? 'connected' : 'disconnected',
-      readyState: info.readyState,
-      dbName: info.dbName,
-      host: info.host,
-      port: info.port,
-      uri: info.uri,
-    });
+  // Root and API health check endpoints for Cloud Run / Nginx container probes
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', service: 'Puzzles Assessment Engine' });
   });
 
-  // Backend health check endpoint
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', (_req, res) => {
     const info = getMongoConnectionInfo();
-    res.json({
+    res.status(200).json({
       status: 'ok',
       service: 'Puzzles Assessment Engine (Node.js + Express)',
       uptime: process.uptime(),
@@ -56,6 +44,19 @@ async function startServer() {
     });
   });
 
+  // Database status and verification endpoint
+  app.get('/api/database/status', (_req, res) => {
+    const info = getMongoConnectionInfo();
+    res.json({
+      status: info.isConnected ? 'connected' : 'disconnected',
+      readyState: info.readyState,
+      dbName: info.dbName,
+      host: info.host,
+      port: info.port,
+      uri: info.uri,
+    });
+  });
+
   // Serve downloadable static assets
   app.use(express.static(path.resolve(process.cwd(), 'public')));
 
@@ -65,16 +66,14 @@ async function startServer() {
   // Determine whether running in production mode
   const distPath = path.resolve(process.cwd(), 'dist');
   const hasDist = fs.existsSync(path.resolve(distPath, 'index.html'));
-  const isProduction =
-    process.env.NODE_ENV === 'production' ||
-    Boolean(process.env.K_SERVICE) ||
-    (hasDist && process.env.NODE_ENV !== 'development' && PORT !== 3000);
+  const isDevCommand = process.env.npm_lifecycle_event === 'dev';
+  const isProduction = hasDist && (process.env.NODE_ENV === 'production' || !isDevCommand);
 
   if (isProduction && hasDist) {
     console.log(`[System] Running in production mode, serving built SPA from: ${distPath}`);
     app.use(express.static(distPath));
     app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api')) {
+      if (req.path.startsWith('/api') || req.path === '/health') {
         return next();
       }
       res.sendFile(path.resolve(distPath, 'index.html'));
@@ -88,9 +87,23 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`[System] Server listening on ${HOST}:${PORT} (mode: ${isProduction ? 'production' : 'development'})`);
   });
+
+  server.on('error', (err: any) => {
+    console.error(`[System] Server listen error on port ${PORT}:`, err.message);
+  });
+
+  // Establish and verify MongoDB Connection asynchronously so server startup is instantaneous
+  console.log('[System] Initializing MongoDB database connection...');
+  connectMongoDB()
+    .then((dbInfo) => {
+      console.log(`[System] Verified MongoDB connection to: ${dbInfo.dbName} (${dbInfo.uri})`);
+    })
+    .catch((err: any) => {
+      console.warn(`[System] MongoDB connection notice:`, err.message);
+    });
 }
 
 startServer().catch((err) => {
