@@ -337,7 +337,9 @@ export function StudentReportDetailView({
                                   <span>
                                     Student's Answer:{' '}
                                     <strong className="text-white">
-                                      {typeof q.studentAnswer === 'object' && q.studentAnswer !== null
+                                      {Array.isArray(q.studentAnswer)
+                                        ? (q.studentAnswer.length > 0 ? q.studentAnswer.join(', ') : 'None')
+                                        : typeof q.studentAnswer === 'object' && q.studentAnswer !== null
                                         ? JSON.stringify(q.studentAnswer)
                                         : String(q.studentAnswer || 'None')}
                                     </strong>
@@ -348,7 +350,9 @@ export function StudentReportDetailView({
                                       <span>
                                         Correct Answer:{' '}
                                         <strong className="text-emerald-400">
-                                          {typeof q.correctAnswer === 'object'
+                                          {Array.isArray(q.correctAnswer)
+                                            ? q.correctAnswer.join(', ')
+                                            : typeof q.correctAnswer === 'object' && q.correctAnswer !== null
                                             ? JSON.stringify(q.correctAnswer)
                                             : String(q.correctAnswer)}
                                         </strong>

@@ -151,11 +151,13 @@ export interface IQuestionDocument extends Document {
   groupName: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   questionType?: string;
+  answerType?: 'single' | 'multiple';
   content: string;
   timeSeconds?: number | null;
   points?: number | null;
   options: string[];
   correctAnswer?: any;
+  correctAnswers?: string[];
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -167,11 +169,13 @@ export const QuestionSchema = new Schema<IQuestionDocument>(
     groupName: { type: String, required: true },
     difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'], index: true },
     questionType: { type: String, required: false },
+    answerType: { type: String, enum: ['single', 'multiple'], default: 'single' },
     content: { type: String, required: true },
     timeSeconds: { type: Number, required: false, default: null },
     points: { type: Number, required: false, default: null },
     options: { type: [String], default: [] },
     correctAnswer: { type: Schema.Types.Mixed, required: false, default: null },
+    correctAnswers: { type: [String], default: [] },
     metadata: { type: Schema.Types.Mixed, default: {} },
   },
   {

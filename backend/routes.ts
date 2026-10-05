@@ -19,7 +19,7 @@ import {
   selectRandomQuestionsForRuleEngine,
 } from './services/randomEngine.ts';
 import type { Question, QuestionAttemptLog } from './types.ts';
-import { to12Hour, to24Hour, toISODate } from '../src/utils/dateTime.ts';
+import { to12Hour, to24Hour, toISODate, isScheduledForFuture, isAssessmentExpired } from '../src/utils/dateTime.ts';
 
 const router = express.Router();
 
@@ -865,6 +865,126 @@ router.get('/question-groups', authenticate, async (req: Request, res: Response)
   }
 });
 
+// Helpers for Single / Multiple selection answer parsing and evaluation
+function parseMultipleCorrectAnswers(raw: any, options?: string[]): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (typeof raw !== 'string') {
+    return raw != null ? [String(raw).trim()] : [];
+  }
+  const str = raw.trim();
+  if (!str) return [];
+
+  if (options && options.length > 0) {
+    if (options.some((opt) => opt.toLowerCase() === str.toLowerCase())) {
+      return [str];
+    }
+  }
+
+  if (str.includes(',')) {
+    return str.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  if (str.includes('+')) {
+    return str.split('+').map((s) => s.trim()).filter(Boolean);
+  }
+
+  return [str];
+}
+
+function normalizeToOptionValue(val: string, options?: string[]): string {
+  const trimmed = val.trim();
+  if (!options || options.length === 0) return trimmed.toLowerCase();
+
+  const directMatch = options.find((o) => o.trim().toLowerCase() === trimmed.toLowerCase());
+  if (directMatch) return directMatch.trim().toLowerCase();
+
+  if (/^[A-Za-z]$/.test(trimmed)) {
+    const letterIdx = trimmed.toUpperCase().charCodeAt(0) - 65;
+    if (letterIdx >= 0 && letterIdx < options.length) {
+      return options[letterIdx].trim().toLowerCase();
+    }
+  }
+
+  if (/^\d+$/.test(trimmed)) {
+    const numIdx = Number(trimmed) - 1;
+    if (numIdx >= 0 && numIdx < options.length) {
+      return options[numIdx].trim().toLowerCase();
+    }
+  }
+
+  return trimmed.toLowerCase();
+}
+
+function evaluateQuestionCorrectness(qItem: any, studentAnswer: any): boolean | undefined {
+  const hasCorrectAnswer =
+    (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
+    (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
+
+  if (!hasCorrectAnswer) return undefined;
+
+  if (studentAnswer === undefined || studentAnswer === null || (typeof studentAnswer === 'string' && studentAnswer.trim() === '')) {
+    return false;
+  }
+  if (Array.isArray(studentAnswer) && studentAnswer.length === 0) {
+    return false;
+  }
+
+  const isMultiple = (qItem.answerType || 'single') === 'multiple';
+  const options = Array.isArray(qItem.options) ? qItem.options : [];
+
+  if (isMultiple) {
+    let studentItems: string[] = [];
+    if (Array.isArray(studentAnswer)) {
+      studentItems = studentAnswer.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (typeof studentAnswer === 'string') {
+      studentItems = studentAnswer.split(',').map((s: any) => s.trim()).filter(Boolean);
+    } else {
+      studentItems = [String(studentAnswer).trim()].filter(Boolean);
+    }
+
+    let expectedItems: string[] = [];
+    if (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0) {
+      expectedItems = qItem.correctAnswers.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (Array.isArray(qItem.correctAnswer) && qItem.correctAnswer.length > 0) {
+      expectedItems = qItem.correctAnswer.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (typeof qItem.correctAnswer === 'string' && qItem.correctAnswer.trim()) {
+      expectedItems = parseMultipleCorrectAnswers(qItem.correctAnswer, options);
+    } else if (qItem.correctAnswer != null) {
+      expectedItems = [String(qItem.correctAnswer).trim()];
+    }
+
+    if (studentItems.length === 0 || expectedItems.length === 0) {
+      return false;
+    }
+
+    const studentNormalizedSet = new Set(studentItems.map((item) => normalizeToOptionValue(item, options)));
+    const expectedNormalizedSet = new Set(expectedItems.map((item) => normalizeToOptionValue(item, options)));
+
+    if (studentNormalizedSet.size !== expectedNormalizedSet.size) {
+      return false;
+    }
+
+    for (const item of studentNormalizedSet) {
+      if (!expectedNormalizedSet.has(item)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Single Selection
+  const expected = qItem.correctAnswer;
+  if (typeof expected === 'string' && typeof studentAnswer === 'string') {
+    return normalizeToOptionValue(expected, options) === normalizeToOptionValue(studentAnswer, options);
+  }
+  if (typeof expected === 'number' && !isNaN(Number(studentAnswer))) {
+    return Number(expected) === Number(studentAnswer);
+  }
+  return JSON.stringify(expected) === JSON.stringify(studentAnswer);
+}
+
 // Add Question
 router.post('/questions', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
   try {
@@ -875,7 +995,9 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       timeSeconds,
       points,
       options,
+      answerType,
       correctAnswer,
+      correctAnswers,
       metadata,
     } = req.body;
 
@@ -892,9 +1014,31 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
     const parsedPoints = points !== undefined && points !== null && points !== ''
       ? Number(points)
       : null;
-    const parsedCorrectAnswer = correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== ''
-      ? correctAnswer
-      : null;
+
+    const normalizedAnswerType: 'single' | 'multiple' =
+      answerType === 'multiple' ? 'multiple' : 'single';
+
+    let finalCorrectAnswer: any = null;
+    let finalCorrectAnswers: string[] = [];
+
+    if (normalizedAnswerType === 'multiple') {
+      if (Array.isArray(correctAnswers) && correctAnswers.length > 0) {
+        finalCorrectAnswers = correctAnswers.map((s: any) => String(s).trim()).filter(Boolean);
+      } else if (Array.isArray(correctAnswer) && correctAnswer.length > 0) {
+        finalCorrectAnswers = correctAnswer.map((s: any) => String(s).trim()).filter(Boolean);
+      } else if (correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== '') {
+        finalCorrectAnswers = parseMultipleCorrectAnswers(correctAnswer, options);
+      }
+      finalCorrectAnswer = finalCorrectAnswers.length > 0 ? finalCorrectAnswers.join(', ') : null;
+    } else {
+      if (correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== '') {
+        finalCorrectAnswer = typeof correctAnswer === 'string' ? correctAnswer.trim() : correctAnswer;
+        finalCorrectAnswers = [String(finalCorrectAnswer)];
+      } else if (Array.isArray(correctAnswers) && correctAnswers.length > 0) {
+        finalCorrectAnswer = String(correctAnswers[0]).trim();
+        finalCorrectAnswers = [finalCorrectAnswer];
+      }
+    }
 
     const newQuestion = await QuestionModel.create({
       groupId: group._id.toString(),
@@ -904,13 +1048,104 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       timeSeconds: parsedTime,
       points: parsedPoints,
       options: options || [],
-      correctAnswer: parsedCorrectAnswer,
+      answerType: normalizedAnswerType,
+      correctAnswer: finalCorrectAnswer,
+      correctAnswers: finalCorrectAnswers,
       metadata: metadata || {},
     });
 
     return res.status(201).json(formatDoc(newQuestion));
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to add question', details: err.message });
+  }
+});
+
+// Update Question (Super Admin Only)
+router.put('/questions/:id', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      groupId,
+      difficulty,
+      content,
+      timeSeconds,
+      points,
+      options,
+      answerType,
+      correctAnswer,
+      correctAnswers,
+      metadata,
+    } = req.body;
+
+    let question = await QuestionModel.findById(id);
+    if (!question && mongoose.Types.ObjectId.isValid(id)) {
+      question = await QuestionModel.findById(new mongoose.Types.ObjectId(id));
+    }
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    if (groupId) {
+      const grp = await QuestionGroupModel.findById(groupId);
+      if (grp) {
+        question.groupId = grp._id.toString();
+        question.groupName = grp.name;
+      }
+    }
+    if (difficulty && ['Easy', 'Medium', 'Hard'].includes(difficulty)) {
+      question.difficulty = difficulty;
+    }
+    if (content) {
+      question.content = content.trim();
+    }
+    if (timeSeconds !== undefined) {
+      question.timeSeconds = timeSeconds !== null && timeSeconds !== '' ? Number(timeSeconds) : null;
+    }
+    if (points !== undefined) {
+      question.points = points !== null && points !== '' ? Number(points) : null;
+    }
+    if (Array.isArray(options)) {
+      question.options = options;
+    }
+
+    const normalizedAnswerType: 'single' | 'multiple' =
+      answerType ? (answerType === 'multiple' ? 'multiple' : 'single') : (question.answerType || 'single');
+    question.answerType = normalizedAnswerType;
+
+    if (normalizedAnswerType === 'multiple') {
+      let finalCorrectAnswers: string[] = [];
+      if (Array.isArray(correctAnswers) && correctAnswers.length > 0) {
+        finalCorrectAnswers = correctAnswers.map((s: any) => String(s).trim()).filter(Boolean);
+      } else if (Array.isArray(correctAnswer) && correctAnswer.length > 0) {
+        finalCorrectAnswers = correctAnswer.map((s: any) => String(s).trim()).filter(Boolean);
+      } else if (correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== '') {
+        finalCorrectAnswers = parseMultipleCorrectAnswers(correctAnswer, question.options);
+      }
+      question.correctAnswers = finalCorrectAnswers;
+      question.correctAnswer = finalCorrectAnswers.length > 0 ? finalCorrectAnswers.join(', ') : null;
+    } else {
+      if (correctAnswer !== undefined && correctAnswer !== null && String(correctAnswer).trim() !== '') {
+        const val = typeof correctAnswer === 'string' ? correctAnswer.trim() : correctAnswer;
+        question.correctAnswer = val;
+        question.correctAnswers = [String(val)];
+      } else if (Array.isArray(correctAnswers) && correctAnswers.length > 0) {
+        const val = String(correctAnswers[0]).trim();
+        question.correctAnswer = val;
+        question.correctAnswers = [val];
+      } else if (correctAnswer === null || correctAnswer === '') {
+        question.correctAnswer = null;
+        question.correctAnswers = [];
+      }
+    }
+
+    if (metadata) {
+      question.metadata = metadata;
+    }
+
+    await question.save();
+    return res.json(formatDoc(question));
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update question', details: err.message });
   }
 });
 
@@ -933,6 +1168,7 @@ router.get('/questions', authenticate, async (req: Request, res: Response) => {
       const sanitized = list.map((q) => {
         const doc = formatDoc(q);
         delete doc.correctAnswer;
+        delete doc.correctAnswers;
         return doc;
       });
       return res.json(sanitized);
@@ -1708,6 +1944,11 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
         timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
         options: q.options || [],
+        answerType: q.answerType || 'single',
+        correctAnswer: q.correctAnswer ?? null,
+        correctAnswers: Array.isArray(q.correctAnswers)
+          ? q.correctAnswers
+          : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
         metadata: q.metadata || {},
         pairs: q.metadata?.pairs || [],
       }));
@@ -1786,14 +2027,19 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         );
       }
 
-      const questionLogs: QuestionAttemptLog[] = studentQuestionList.map((q) => ({
+      const questionLogs: QuestionAttemptLog[] = studentQuestionList.map((q: any) => ({
         questionId: q.id,
         groupName: q.groupName,
         difficulty: q.difficulty,
+        questionType: q.questionType,
+        answerType: q.answerType || 'single',
         content: q.content,
         points: q.points != null ? Number(q.points) : null,
         studentAnswer: null,
         correctAnswer: q.correctAnswer ?? null,
+        correctAnswers: Array.isArray(q.correctAnswers)
+          ? q.correctAnswers
+          : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
         isCorrect: false,
         timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
         timeTakenSeconds: 0,
@@ -2142,14 +2388,19 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
           );
         }
 
-        const questionLogs: QuestionAttemptLog[] = studentQuestionList.map((q) => ({
+        const questionLogs: QuestionAttemptLog[] = studentQuestionList.map((q: any) => ({
           questionId: q.id,
           groupName: q.groupName,
           difficulty: q.difficulty,
+          questionType: q.questionType,
+          answerType: q.answerType || 'single',
           content: q.content,
           points: q.points != null ? Number(q.points) : null,
           studentAnswer: null,
           correctAnswer: q.correctAnswer ?? null,
+          correctAnswers: Array.isArray(q.correctAnswers)
+            ? q.correctAnswers
+            : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
           isCorrect: false,
           timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
           timeTakenSeconds: 0,
@@ -2200,7 +2451,11 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
               content: q.content,
               points: q.points != null ? Number(q.points) : null,
               studentAnswer: null,
+              answerType: q.answerType || 'single',
               correctAnswer: q.correctAnswer ?? null,
+              correctAnswers: Array.isArray(q.correctAnswers)
+                ? q.correctAnswers
+                : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
               isCorrect: false,
               timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
               timeTakenSeconds: 0,
@@ -2226,7 +2481,11 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
               content: q.content,
               points: q.points != null ? Number(q.points) : null,
               studentAnswer: null,
+              answerType: q.answerType || 'single',
               correctAnswer: q.correctAnswer ?? null,
+              correctAnswers: Array.isArray(q.correctAnswers)
+                ? q.correctAnswers
+                : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
               isCorrect: false,
               timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
               timeTakenSeconds: 0,
@@ -2427,7 +2686,7 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       if (pub?.startDate && pub.startDate !== 'Today') {
         const start24 = to24Hour(pub.startTime || '00:00');
         const startStr = `${toISODate(pub.startDate)}T${start24}`;
-        if (currentDateTimeStr < startStr) {
+        if (isScheduledForFuture(currentDateTimeStr, startStr, 0)) {
           isUpcoming = true;
         }
       }
@@ -2435,7 +2694,7 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       if (pub?.endDate && pub.endDate !== 'Open') {
         const end24 = to24Hour(pub.endTime || '23:59');
         const endStr = `${toISODate(pub.endDate)}T${end24}`;
-        if (currentDateTimeStr > endStr) {
+        if (isAssessmentExpired(currentDateTimeStr, endStr, 0)) {
           isExpired = true;
         }
       }
@@ -2537,7 +2796,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     if (pubTest?.startDate && pubTest.startDate !== 'Today') {
       const start24 = to24Hour(pubTest.startTime || '00:00');
       const startStr = `${toISODate(pubTest.startDate)}T${start24}`;
-      if (currentDateTimeStr < startStr) {
+      if (isScheduledForFuture(currentDateTimeStr, startStr, 2)) {
         return res.status(400).json({ error: 'This assessment is scheduled for a future date and time and cannot be started yet.' });
       }
     }
@@ -2545,7 +2804,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     if (pubTest?.endDate && pubTest.endDate !== 'Open') {
       const end24 = to24Hour(pubTest.endTime || '23:59');
       const endStr = `${toISODate(pubTest.endDate)}T${end24}`;
-      if (currentDateTimeStr > endStr) {
+      if (isAssessmentExpired(currentDateTimeStr, endStr, 1)) {
         return res.status(400).json({ error: 'This assessment has expired and can no longer be started.' });
       }
     }
@@ -2590,6 +2849,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
           points: q.points != null ? Number(q.points) : (fullQ?.points != null ? Number(fullQ.points) : null),
           timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
           options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
+          answerType: q.answerType || fullQ?.answerType || 'single',
           metadata: q.metadata || fullQ?.metadata || {},
           pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
           timeTakenSeconds: q.timeTakenSeconds || 0,
@@ -2659,6 +2919,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
         points: q.points != null ? Number(q.points) : (fullQ?.points != null ? Number(fullQ.points) : null),
         timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
         options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
+        answerType: q.answerType || fullQ?.answerType || 'single',
         metadata: q.metadata || fullQ?.metadata || {},
         pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
         timeTakenSeconds: q.timeTakenSeconds || 0,
@@ -2702,7 +2963,9 @@ async function markAssignmentIncomplete(
 
   for (const q of assignment.questions) {
     // Finding 8 Fix: Non-evaluative questions without correctAnswer must not distort possible total
-    const hasCorrectAnswer = q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '';
+    const hasCorrectAnswer =
+      (q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '') ||
+      (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0);
     const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
     if (hasCorrectAnswer && hasPoints) {
       possibleTotal += Number(q.points);
@@ -2862,22 +3125,10 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
     const qItem = assignment.questions[questionIndex];
 
     // Evaluate answer correctness ONLY if question has a configured correct answer
-    const hasCorrectAnswer = qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '';
-    let isCorrect: boolean | undefined = undefined;
-
-    if (hasCorrectAnswer) {
-      const expected = qItem.correctAnswer;
-      if (answer === undefined || answer === null || String(answer).trim() === '') {
-        isCorrect = false;
-      } else if (typeof expected === 'string' && typeof answer === 'string') {
-        isCorrect = expected.trim().toLowerCase() === answer.trim().toLowerCase();
-      } else if (typeof expected === 'number' && !isNaN(Number(answer))) {
-        isCorrect = Number(expected) === Number(answer);
-      } else {
-        isCorrect = JSON.stringify(expected) === JSON.stringify(answer);
-      }
-    }
-
+    const hasCorrectAnswer =
+      (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
+      (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
+    const isCorrect = evaluateQuestionCorrectness(qItem, answer);
     const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
     const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
 
@@ -2945,23 +3196,10 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
         const qIdx = assignment.questions.findIndex((q: any) => q.questionId === ansItem.questionId);
         if (qIdx !== -1) {
           const qItem = assignment.questions[qIdx];
-          const hasCorrectAnswer = qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '';
-          let isCorrect: boolean | undefined = undefined;
-
-          if (hasCorrectAnswer) {
-            const expected = qItem.correctAnswer;
-            const stuAns = ansItem.answer;
-            if (stuAns === undefined || stuAns === null || String(stuAns).trim() === '') {
-              isCorrect = false;
-            } else if (typeof expected === 'string' && typeof stuAns === 'string') {
-              isCorrect = expected.trim().toLowerCase() === stuAns.trim().toLowerCase();
-            } else if (typeof expected === 'number' && !isNaN(Number(stuAns))) {
-              isCorrect = Number(expected) === Number(stuAns);
-            } else {
-              isCorrect = JSON.stringify(expected) === JSON.stringify(stuAns);
-            }
-          }
-
+          const hasCorrectAnswer =
+            (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
+            (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
+          const isCorrect = evaluateQuestionCorrectness(qItem, ansItem.answer);
           const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
           const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
 
@@ -2982,7 +3220,9 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
 
     for (const q of assignment.questions) {
       const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
-      const hasCorrectAnswer = q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '';
+      const hasCorrectAnswer =
+        (q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '') ||
+        (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0);
       // Finding 8 Fix: Non-evaluative questions without correctAnswer must not distort possible points
       if (hasCorrectAnswer && hasPoints) {
         possiblePointsTotal += Number(q.points);

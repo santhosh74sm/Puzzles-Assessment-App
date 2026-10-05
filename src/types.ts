@@ -39,17 +39,21 @@ export interface MatchPair {
   right: string;
 }
 
+export type AnswerType = 'single' | 'multiple';
+
 export interface Question {
   id: string;
   groupId: string;
   groupName: string;
   difficulty: QuestionDifficulty;
   questionType?: string;
+  answerType?: AnswerType;
   content: string;
   timeSeconds?: number | null;
   points?: number | null;
   options?: string[];
   correctAnswer?: any; // string, number, or record of match pairs
+  correctAnswers?: string[];
   metadata?: Record<string, any>;
   createdAt: string;
 }
@@ -99,10 +103,12 @@ export interface QuestionAttemptLog {
   groupName: string;
   difficulty: QuestionDifficulty;
   questionType?: string;
+  answerType?: AnswerType;
   content: string;
   points?: number | null;
   studentAnswer: any;
   correctAnswer?: any;
+  correctAnswers?: string[];
   isCorrect?: boolean;
   timeAllowedSeconds?: number | null;
   timeTakenSeconds: number;

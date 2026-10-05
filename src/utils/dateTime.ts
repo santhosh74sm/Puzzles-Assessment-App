@@ -86,14 +86,14 @@ export function to24Hour(timeStr?: string | null): string {
 export function toISODate(dateStr?: string | null): string {
   if (!dateStr) return '';
   const trimmed = String(dateStr).trim();
-  const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const ymdMatch = trimmed.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$/);
   if (ymdMatch) {
     const year = ymdMatch[1];
     const month = ymdMatch[2].padStart(2, '0');
     const day = ymdMatch[3].padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
-  const dmyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/);
   if (dmyMatch) {
     const day = dmyMatch[1].padStart(2, '0');
     const month = dmyMatch[2].padStart(2, '0');
@@ -145,14 +145,14 @@ export function getLocalCurrentTime12H(): string {
 export function formatDateDDMMYYYY(dateStr?: string | null): string {
   if (!dateStr) return '';
   const trimmed = String(dateStr).trim();
-  const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const ymdMatch = trimmed.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$/);
   if (ymdMatch) {
     const year = ymdMatch[1];
     const month = ymdMatch[2].padStart(2, '0');
     const day = ymdMatch[3].padStart(2, '0');
     return `${day}-${month}-${year}`;
   }
-  const dmyMatch = trimmed.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  const dmyMatch = trimmed.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/);
   if (dmyMatch) {
     const day = dmyMatch[1].padStart(2, '0');
     const month = dmyMatch[2].padStart(2, '0');
@@ -223,4 +223,33 @@ export function parse12HourComponents(timeStr?: string | null): {
     minute: '00',
     period: 'AM',
   };
+}
+
+/**
+ * Checks if currentISO time is strictly in the future compared to startISO,
+ * accounting for a small grace window (default 2 minutes) to prevent false-rejections
+ * from sub-minute clock skew or immediate-start boundary clicks.
+ */
+export function isScheduledForFuture(currentISO?: string | null, startISO?: string | null, graceMinutes = 2): boolean {
+  if (!currentISO || !startISO) return false;
+  const matchCurr = String(currentISO).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  const matchStart = String(startISO).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!matchCurr || !matchStart) return currentISO < startISO;
+  const currMs = Date.UTC(Number(matchCurr[1]), Number(matchCurr[2]) - 1, Number(matchCurr[3]), Number(matchCurr[4]), Number(matchCurr[5]));
+  const startMs = Date.UTC(Number(matchStart[1]), Number(matchStart[2]) - 1, Number(matchStart[3]), Number(matchStart[4]), Number(matchStart[5]));
+  return currMs < (startMs - graceMinutes * 60 * 1000);
+}
+
+/**
+ * Checks if currentISO time is strictly expired compared to endISO,
+ * with optional grace window (default 1 minute).
+ */
+export function isAssessmentExpired(currentISO?: string | null, endISO?: string | null, graceMinutes = 1): boolean {
+  if (!currentISO || !endISO) return false;
+  const matchCurr = String(currentISO).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  const matchEnd = String(endISO).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!matchCurr || !matchEnd) return currentISO > endISO;
+  const currMs = Date.UTC(Number(matchCurr[1]), Number(matchCurr[2]) - 1, Number(matchCurr[3]), Number(matchCurr[4]), Number(matchCurr[5]));
+  const endMs = Date.UTC(Number(matchEnd[1]), Number(matchEnd[2]) - 1, Number(matchEnd[3]), Number(matchEnd[4]), Number(matchEnd[5]));
+  return currMs > (endMs + graceMinutes * 60 * 1000);
 }

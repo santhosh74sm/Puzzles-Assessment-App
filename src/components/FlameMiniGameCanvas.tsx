@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, Trophy, RotateCcw } from 'lucide-react';
+import { Sparkles, Trophy, RotateCcw, Check } from 'lucide-react';
 
 interface FlameMiniGameProps {
   content: string;
   points?: number | null;
   timeRemaining?: number;
   options?: string[];
+  answerType?: 'single' | 'multiple';
   pairs?: { left: string; right: string }[];
   onAnswerSubmit: (answer: any) => void;
   selectedAnswer: any;
@@ -18,6 +19,7 @@ export function FlameMiniGameCanvas({
   points,
   timeRemaining,
   options = [],
+  answerType = 'single',
   pairs = [],
   onAnswerSubmit,
   selectedAnswer,
@@ -122,6 +124,31 @@ export function FlameMiniGameCanvas({
     onAnswerSubmit(opt);
     confetti({ particleCount: 25, spread: 50, origin: { y: 0.8 } });
   };
+
+  const handleMultipleOptionToggle = (opt: string) => {
+    if (disabled) return;
+    const currentList: string[] = Array.isArray(selectedAnswer)
+      ? [...selectedAnswer]
+      : typeof selectedAnswer === 'string' && selectedAnswer
+      ? [selectedAnswer]
+      : [];
+    const index = currentList.indexOf(opt);
+    let updated: string[];
+    if (index > -1) {
+      updated = currentList.filter((item) => item !== opt);
+    } else {
+      updated = [...currentList, opt];
+    }
+    onAnswerSubmit(updated);
+    confetti({ particleCount: 20, spread: 45, origin: { y: 0.8 } });
+  };
+
+  const isMultiple = answerType === 'multiple';
+  const selectedList: string[] = Array.isArray(selectedAnswer)
+    ? selectedAnswer
+    : typeof selectedAnswer === 'string' && selectedAnswer
+    ? [selectedAnswer]
+    : [];
 
   const handleGridCenterSelect = (val: string) => {
     if (disabled) return;
@@ -233,53 +260,74 @@ export function FlameMiniGameCanvas({
             </div>
 
             {options && options.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                {options.map((opt, idx) => {
-                  const isSelected = selectedAnswer === opt;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleOptionClick(opt)}
-                      disabled={disabled}
-                      className={`relative flex items-center gap-3 p-4 rounded-xl border text-left font-medium transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-indigo-600 to-violet-600 border-indigo-400 text-white shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-400 selected-answer-option'
-                          : 'bg-white hover:bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-200 unselected-answer-option'
-                      }`}
-                      style={
-                        isSelected
-                          ? {
-                              backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
-                              backgroundColor: '#4f46e5',
-                              borderColor: '#818cf8',
-                              color: '#ffffff',
-                            }
-                          : {
-                              backgroundColor: '#ffffff',
-                              color: '#0f172a',
-                            }
-                      }
-                    >
-                      <span
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all bg-white border border-slate-200 dark:border-white/10 shadow-xs option-letter-badge"
-                        style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
-                      >
-                        {String.fromCharCode(65 + idx)}
-                      </span>
-                      <span
-                        className={`text-base ${
+              <div className="space-y-4 max-w-2xl mx-auto">
+                {isMultiple && (
+                  <div className="flex items-center justify-center">
+                    <span className="text-xs font-medium px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-700/60 text-indigo-300">
+                      Multiple Selection &bull; Select any number of choices
+                    </span>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {options.map((opt, idx) => {
+                    const isSelected = isMultiple ? selectedList.includes(opt) : selectedAnswer === opt;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => (isMultiple ? handleMultipleOptionToggle(opt) : handleOptionClick(opt))}
+                        disabled={disabled}
+                        className={`relative flex items-center gap-3 p-4 rounded-xl border text-left font-medium transition-all cursor-pointer ${
                           isSelected
-                            ? 'font-bold text-white selected-answer-text'
-                            : 'font-medium text-slate-900 dark:text-slate-200 unselected-answer-text'
+                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 border-indigo-400 text-white shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-400 selected-answer-option'
+                            : 'bg-white hover:bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-200 unselected-answer-option'
                         }`}
-                        style={isSelected ? { color: '#ffffff' } : { color: '#0f172a' }}
+                        style={
+                          isSelected
+                            ? {
+                                backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
+                                backgroundColor: '#4f46e5',
+                                borderColor: '#818cf8',
+                                color: '#ffffff',
+                              }
+                            : {
+                                backgroundColor: '#ffffff',
+                                color: '#0f172a',
+                              }
+                        }
                       >
-                        {opt}
-                      </span>
-                    </button>
-                  );
-                })}
+                        {isMultiple ? (
+                          <div
+                            className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 transition-all border ${
+                              isSelected
+                                ? 'bg-white text-indigo-600 border-white shadow-xs'
+                                : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400'
+                            }`}
+                          >
+                            {isSelected ? <Check className="w-4 h-4 text-indigo-600 stroke-[3]" /> : null}
+                          </div>
+                        ) : (
+                          <span
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all bg-white border border-slate-200 dark:border-white/10 shadow-xs option-letter-badge"
+                            style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+                          >
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                        )}
+                        <span
+                          className={`text-base flex-1 ${
+                            isSelected
+                              ? 'font-bold text-white selected-answer-text'
+                              : 'font-medium text-slate-900 dark:text-slate-200 unselected-answer-text'
+                          }`}
+                          style={isSelected ? { color: '#ffffff' } : { color: '#0f172a' }}
+                        >
+                          {opt}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="max-w-md mx-auto">

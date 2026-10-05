@@ -139,11 +139,15 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
         });
       }
       const startIndex = Math.min(firstUnansweredIdx, Math.max(0, (testData.questions?.length || 1) - 1));
+      const firstQ = testData.questions?.[startIndex];
+      const initialAns =
+        initialAnswers[firstQ?.questionId]?.answer ??
+        (firstQ?.answerType === 'multiple' ? [] : null);
 
       setActiveTest(testData);
       setCurrentQuestionIndex(startIndex);
       setAnswersMap(initialAnswers);
-      setCurrentSelectedAnswer(initialAnswers[testData.questions?.[startIndex]?.questionId]?.answer ?? null);
+      setCurrentSelectedAnswer(initialAns);
       setTestResult(null);
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -238,7 +242,10 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
       const nextQ = activeTest.questions[nextIndex];
-      setCurrentSelectedAnswer(updatedAnswers[nextQ?.questionId]?.answer ?? null);
+      setCurrentSelectedAnswer(
+        updatedAnswers[nextQ?.questionId]?.answer ??
+        (nextQ?.answerType === 'multiple' ? [] : null)
+      );
     } else {
       // Last question completed -> submit test
       submitFullTest(updatedAnswers);
@@ -413,6 +420,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
               points={currentQ.points}
               timeRemaining={timeRemaining}
               options={currentQ.options}
+              answerType={currentQ.answerType || 'single'}
               pairs={currentQ.metadata?.pairs || currentQ.pairs}
               onAnswerSubmit={(ans) => setCurrentSelectedAnswer(ans)}
               selectedAnswer={currentSelectedAnswer}

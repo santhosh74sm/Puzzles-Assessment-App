@@ -46,6 +46,7 @@ export function QuestionBankSection({
     timeSeconds: string;
     points: string;
     options: string;
+    multipleSelection: boolean;
     correctAnswer: string;
   }>({
     groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
@@ -54,6 +55,7 @@ export function QuestionBankSection({
     timeSeconds: '',
     points: '',
     options: '',
+    multipleSelection: false,
     correctAnswer: '',
   });
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
@@ -161,6 +163,7 @@ export function QuestionBankSection({
           points: questionForm.points ? Number(questionForm.points) : null,
           correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
           options: opts,
+          answerType: questionForm.multipleSelection ? 'multiple' : 'single',
         }),
       });
       const data = await res.json();
@@ -171,6 +174,7 @@ export function QuestionBankSection({
           timeSeconds: '',
           points: '',
           options: '',
+          multipleSelection: false,
           correctAnswer: '',
         }));
         setFeedbackMessage({ type: 'success', text: 'Question saved successfully.' });
@@ -438,6 +442,17 @@ export function QuestionBankSection({
                 onChange={(e) => setQuestionForm({ ...questionForm, options: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
               />
+              <label className="mt-2.5 flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={questionForm.multipleSelection}
+                  onChange={(e) => setQuestionForm({ ...questionForm, multipleSelection: e.target.checked })}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-xs font-medium text-slate-300">
+                  Multiple Selection
+                </span>
+              </label>
             </div>
 
             <div className="sm:col-span-2 md:col-span-3 flex justify-end">
