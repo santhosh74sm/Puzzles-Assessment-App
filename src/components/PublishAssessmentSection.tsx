@@ -25,6 +25,16 @@ import {
   FolderDown,
 } from 'lucide-react';
 import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
+import { Time12HourPicker } from './Time12HourPicker.tsx';
+import {
+  to12Hour,
+  to24Hour,
+  toISODate,
+  getLocalTodayDate,
+  getLocalFutureDate,
+  getLocalCurrentTime12H,
+  formatAvailabilityWindow,
+} from '../utils/dateTime.ts';
 
 const VALID_CLASSES = [
   'Class 1',
@@ -1661,13 +1671,17 @@ export function PublishAssessmentSection({
     formState?.randomCount != null && formState.randomCount !== '' ? formState.randomCount : ''
   );
   const [startDate, setStartDate] = useState(
-    formState?.startDate ?? new Date().toISOString().split('T')[0]
+    () => formState?.startDate ?? getLocalTodayDate()
   );
-  const [startTime, setStartTime] = useState(formState?.startTime ?? '00:00');
+  const [startTime, setStartTime] = useState(
+    () => formState?.startTime ? to12Hour(formState.startTime) : getLocalCurrentTime12H()
+  );
   const [endDate, setEndDate] = useState(
-    formState?.endDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    () => formState?.endDate ?? getLocalFutureDate(7)
   );
-  const [endTime, setEndTime] = useState(formState?.endTime ?? '23:59');
+  const [endTime, setEndTime] = useState(
+    () => formState?.endTime ? to12Hour(formState.endTime) : '11:59 PM'
+  );
   
   // Feedback notification state (strictly typed for semantic green success vs red error)
   const [publishFeedback, setPublishFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1709,10 +1723,10 @@ export function PublishAssessmentSection({
         setSelectedQuestionsForPublish(formState.selectedQuestionsForPublish ?? []);
         setShuffleQuestions(formState.shuffleQuestions ?? false);
         setRandomCount(formState.randomCount != null && formState.randomCount !== '' ? formState.randomCount : '');
-        setStartDate(formState.startDate ?? new Date().toISOString().split('T')[0]);
-        setStartTime(formState.startTime ?? '00:00');
-        setEndDate(formState.endDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-        setEndTime(formState.endTime ?? '23:59');
+        setStartDate(formState.startDate ?? getLocalTodayDate());
+        setStartTime(formState.startTime ? to12Hour(formState.startTime) : getLocalCurrentTime12H());
+        setEndDate(formState.endDate ?? getLocalFutureDate(7));
+        setEndTime(formState.endTime ? to12Hour(formState.endTime) : '11:59 PM');
         if (formState.randomSelectedDifficulties) {
           setRandomSelectedDifficulties(new Set(formState.randomSelectedDifficulties));
         }
@@ -2522,6 +2536,15 @@ export function PublishAssessmentSection({
       }
     }
 
+    if (startDate && endDate && startDate !== 'Today' && endDate !== 'Open') {
+      const startISO = `${toISODate(startDate)}T${to24Hour(startTime || '00:00')}`;
+      const endISO = `${toISODate(endDate)}T${to24Hour(endTime || '23:59')}`;
+      if (endISO <= startISO) {
+        showErrorFeedback('End Date & Time must be after Start Date & Time.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const normalizedTargetsForApi = targets.map((t) => {
@@ -2614,9 +2637,9 @@ export function PublishAssessmentSection({
             studentIds: allSelectedStudentIds,
           },
           startDate,
-          startTime,
+          startTime: to12Hour(startTime),
           endDate,
-          endTime,
+          endTime: to12Hour(endTime),
           selectedQuestionIds:
             publishMode === 'Random Questions'
               ? randomEligibleQuestions.map((q) => q.id)
@@ -2641,6 +2664,10 @@ export function PublishAssessmentSection({
           showSuccessFeedback(`Successfully published to ${data.assignedStudentCount ?? data.totalAssignedStudents} students!`);
           setPublishName('');
           setSelectedQuestionsForPublish([]);
+          setStartDate(getLocalTodayDate());
+          setStartTime(getLocalCurrentTime12H());
+          setEndDate(getLocalFutureDate(7));
+          setEndTime('11:59 PM');
           setTargets([
             {
               id: `target-${Date.now()}`,
@@ -2903,7 +2930,7 @@ export function PublishAssessmentSection({
             <Calendar className="w-4 h-4 text-indigo-400" />
             Test Dates & Times
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Date</label>
               <input
@@ -2914,12 +2941,11 @@ export function PublishAssessmentSection({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Time</label>
-              <input
-                type="time"
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Time (12-Hour AM/PM)</label>
+              <Time12HourPicker
+                id="publish-start-time"
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white outline-none"
+                onChange={setStartTime}
               />
             </div>
             <div>
@@ -2932,14 +2958,21 @@ export function PublishAssessmentSection({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">End Time</label>
-              <input
-                type="time"
+              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">End Time (12-Hour AM/PM)</label>
+              <Time12HourPicker
+                id="publish-end-time"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white outline-none"
+                onChange={setEndTime}
               />
             </div>
+          </div>
+
+          {/* Formatted live availability preview */}
+          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs font-mono text-slate-300">
+            <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span>
+              Available Window: <strong className="text-white font-semibold">{formatAvailabilityWindow(startDate, startTime, endDate, endTime)}</strong>
+            </span>
           </div>
         </div>
 

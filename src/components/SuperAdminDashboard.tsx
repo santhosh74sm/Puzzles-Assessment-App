@@ -14,6 +14,7 @@ import {
   PublishAssessmentFormState,
 } from './PublishAssessmentSection.tsx';
 import { PublishHistorySection } from './PublishHistorySection.tsx';
+import { to12Hour, getLocalTodayDate, getLocalCurrentTime12H, getLocalFutureDate } from '../utils/dateTime.ts';
 
 interface SuperAdminDashboardProps {
   token: string;
@@ -145,10 +146,10 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         randomSelectedDifficulties: Array.isArray(data.randomSelectedDifficulties) ? data.randomSelectedDifficulties : [],
         shuffleQuestions: Boolean(data.shuffle),
         randomCount: data.randomCount != null && data.randomCount !== '' ? data.randomCount : '',
-        startDate: data.startDate || '',
-        startTime: data.startTime || '00:00',
-        endDate: data.endDate || '',
-        endTime: data.endTime || '23:59',
+        startDate: data.startDate || getLocalTodayDate(),
+        startTime: data.startTime ? to12Hour(data.startTime) : getLocalCurrentTime12H(),
+        endDate: data.endDate || getLocalFutureDate(7),
+        endTime: data.endTime ? to12Hour(data.endTime) : '11:59 PM',
         editingPublishId: publishId,
       });
 

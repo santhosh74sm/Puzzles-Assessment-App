@@ -24,6 +24,12 @@ import {
   Clock,
   Award,
 } from 'lucide-react';
+import {
+  to12Hour,
+  formatDateDDMMYYYY,
+  formatDateTime12H,
+  formatAvailabilityWindow,
+} from '../utils/dateTime.ts';
 
 interface PublishHistorySectionProps {
   token: string;
@@ -53,54 +59,6 @@ function formatPublishDateTime(dateVal?: string | Date | null): string {
   hours = hours ? hours : 12;
   const hoursStr = String(hours).padStart(2, '0');
   return `${day}-${month}-${year} ${hoursStr}:${minutes} ${ampm}`;
-}
-
-// Format date string into "DD-MM-YYYY"
-function formatDateDDMMYYYY(dateStr?: string): string {
-  if (!dateStr) return '';
-  const trimmed = String(dateStr).trim();
-  const ymdMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (ymdMatch) {
-    const year = ymdMatch[1];
-    const month = ymdMatch[2].padStart(2, '0');
-    const day = ymdMatch[3].padStart(2, '0');
-    return `${day}-${month}-${year}`;
-  }
-  return trimmed;
-}
-
-// Clean time string to HH:MM format
-function cleanTimeHHMM(timeStr?: string): string {
-  if (!timeStr) return '';
-  const trimmed = String(timeStr).trim();
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
-  if (match) {
-    return `${match[1].padStart(2, '0')}:${match[2]}`;
-  }
-  return trimmed;
-}
-
-// Format Test Availability Window: "28-09-2026 10:00 → 05-10-2026 23:59"
-function formatAvailabilityWindow(
-  startDate?: string,
-  startTime?: string,
-  endDate?: string,
-  endTime?: string
-): string {
-  const sDate = formatDateDDMMYYYY(startDate);
-  const sTime = cleanTimeHHMM(startTime);
-  const eDate = formatDateDDMMYYYY(endDate);
-  const eTime = cleanTimeHHMM(endTime);
-
-  const startPart = [sDate, sTime].filter(Boolean).join(' ');
-  const endPart = [eDate, eTime].filter(Boolean).join(' ');
-
-  if (startPart && endPart) {
-    return `${startPart} → ${endPart}`;
-  }
-  if (startPart) return startPart;
-  if (endPart) return endPart;
-  return 'Not configured';
 }
 
 // -------------------------------------------------------------
@@ -2295,10 +2253,6 @@ export function PublishHistorySection({
                           Paused
                         </span>
                       )}
-                      <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                        <Calendar className="w-3 h-3 text-slate-500" />
-                        Published: {formatPublishDateTime(hist.publishedAt || hist.updatedAt || hist.createdAt)}
-                      </span>
                     </div>
 
                     <h4 className="font-bold text-base text-white">{hist.publishName}</h4>

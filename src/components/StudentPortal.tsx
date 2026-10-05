@@ -13,6 +13,7 @@ import {
 import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
 import { ProfileMenu } from './ProfileMenu.tsx';
 import confetti from 'canvas-confetti';
+import { to24Hour, toISODate, formatAvailabilityWindow } from '../utils/dateTime.ts';
 
 interface StudentPortalProps {
   token: string;
@@ -42,18 +43,22 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     Authorization: `Bearer ${token}`,
   };
 
+  const getClientHeaders = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const clientDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'x-client-now': clientDateTime,
+      'x-timezone-offset': String(now.getTimezoneOffset()),
+    };
+  };
+
   const loadStudentTests = async () => {
     try {
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const clientDateTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
       const res = await fetch('/api/student/tests', {
-        headers: {
-          ...headers,
-          'x-client-now': clientDateTime,
-          'x-timezone-offset': String(now.getTimezoneOffset()),
-        },
+        headers: getClientHeaders(),
       });
       const data = await res.json();
       setAssignedTests(Array.isArray(data) ? data : []);
@@ -105,7 +110,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     try {
       const res = await fetch(`/api/student/tests/${assignmentId}/start`, {
         method: 'POST',
-        headers,
+        headers: getClientHeaders(),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -317,9 +322,18 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       {/* Main Body */}
       <main className="flex-1 p-6 md:p-8 max-w-5xl mx-auto w-full">
         {errorMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-700 dark:text-rose-300 text-sm flex items-center gap-2">
-            <AlertOctagon className="w-5 h-5 shrink-0" />
-            <span>{errorMsg}</span>
+          <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertOctagon className="w-5 h-5 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-xs px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/60 dark:hover:bg-rose-800 text-rose-800 dark:text-rose-200 font-semibold cursor-pointer transition-colors"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
@@ -461,13 +475,15 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                   const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
                   const hasStart = card.startDate && card.startDate !== 'Today';
-                  const startStr = hasStart ? `${card.startDate}T${card.startTime || '00:00'}` : null;
+                  const isoStart = hasStart ? toISODate(card.startDate) : null;
+                  const startStr = isoStart ? `${isoStart}T${to24Hour(card.startTime || '00:00')}` : null;
                   const hasEnd = card.endDate && card.endDate !== 'Open';
-                  const endStr = hasEnd ? `${card.endDate}T${card.endTime || '23:59'}` : null;
+                  const isoEnd = hasEnd ? toISODate(card.endDate) : null;
+                  const endStr = isoEnd ? `${isoEnd}T${to24Hour(card.endTime || '23:59')}` : null;
 
                   const isUpcoming = startStr ? nowStr < startStr : (card.isUpcoming ?? false);
                   const isExpired = endStr ? nowStr > endStr : (card.isExpired ?? false);
-                  const canStart = card.status === 'NOT_STARTED' && !isUpcoming && !isExpired;
+                  const canStart = card.status === 'NOT_STARTED' && !isUpcoming && !isExpired && !card.isPaused;
 
                   return (
                     <div
@@ -489,6 +505,8 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                                 ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
                                 : isExpired
                                 ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                                : isUpcoming
+                                ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
                                 : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
                             }`}
                           >
@@ -498,19 +516,19 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                               ? 'Incomplete'
                               : card.isPaused
                               ? 'Paused'
-                              : card.status === 'NOT_STARTED' && isExpired
+                              : isExpired
                               ? 'Expired'
-                              : card.status === 'NOT_STARTED'
-                              ? 'Ready'
-                              : card.status}
+                              : isUpcoming
+                              ? 'Upcoming'
+                              : 'Ready'}
                           </span>
                         </div>
 
                         <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-snug">{card.publishName}</h3>
 
                         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                          <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                          <span>Available: {card.startDate} to {card.endDate}</span>
+                          <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                          <span>Available: {formatAvailabilityWindow(card.startDate, card.startTime, card.endDate, card.endTime)}</span>
                         </div>
                       </div>
 
@@ -544,18 +562,32 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                         )}
 
                         {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'NOT_STARTED' && (
-                          <button
-                            type="button"
-                            onClick={() => handleStartTest(assignmentId)}
-                            disabled={!canStart}
-                            className="w-full py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-sm transition-all shadow-lg shadow-indigo-600/30 cursor-pointer"
-                          >
-                            {isUpcoming
-                              ? 'Upcoming Test'
-                              : isExpired
-                              ? 'Test Has Expired'
-                              : 'Start Test'}
-                          </button>
+                          <div className="space-y-2 w-full">
+                            {isUpcoming && (
+                              <div className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-1.5 font-medium">
+                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                                <span>This assessment is scheduled for a future date and time and cannot be started yet.</span>
+                              </div>
+                            )}
+                            {isExpired && (
+                              <div className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-1.5 font-medium">
+                                <AlertOctagon className="w-3.5 h-3.5 shrink-0" />
+                                <span>This assessment has expired and can no longer be started.</span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleStartTest(assignmentId)}
+                              disabled={!canStart}
+                              className="w-full py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-sm transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              {isUpcoming
+                                ? 'Upcoming Test'
+                                : isExpired
+                                ? 'Test Has Expired'
+                                : 'Start Test'}
+                            </button>
+                          </div>
                         )}
 
                         {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'IN_PROGRESS' && (

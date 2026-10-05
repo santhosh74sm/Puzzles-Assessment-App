@@ -19,6 +19,7 @@ import {
   selectRandomQuestionsForRuleEngine,
 } from './services/randomEngine.ts';
 import type { Question, QuestionAttemptLog } from './types.ts';
+import { to12Hour, to24Hour, toISODate } from '../src/utils/dateTime.ts';
 
 const router = express.Router();
 
@@ -1610,6 +1611,14 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       return res.status(400).json({ error: 'Publish Name, Mode, at least one Target Configuration, and Dates are mandatory.' });
     }
 
+    if (startDate && endDate && startDate !== 'Today' && endDate !== 'Open') {
+      const startISO = `${toISODate(startDate)}T${to24Hour(startTime || '00:00')}`;
+      const endISO = `${toISODate(endDate)}T${to24Hour(endTime || '23:59')}`;
+      if (endISO <= startISO) {
+        return res.status(400).json({ error: 'End Date & Time must be after Start Date & Time.' });
+      }
+    }
+
     if (publishMode === 'Selected Questions' && (!selectedQuestionIds || selectedQuestionIds.length === 0)) {
       return res.status(400).json({ error: 'Please select at least 1 question for Selected Questions mode.' });
     }
@@ -1722,9 +1731,9 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       },
       targets: targetsRecord,
       startDate,
-      startTime: startTime || '00:00',
+      startTime: to12Hour(startTime || '12:00 AM'),
       endDate,
-      endTime: endTime || '23:59',
+      endTime: to12Hour(endTime || '11:59 PM'),
       questionIds: selectedQuestionIds || [],
       questionsSnapshot: eligibleQuestionsSnapshot,
       randomCount: randomCount ? Number(randomCount) : undefined,
@@ -1823,11 +1832,11 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       publishId: publishedTestId,
       publishName: publishName.trim(),
       date: startDate,
-      time: startTime || new Date().toLocaleTimeString(),
+      time: to12Hour(startTime || new Date().toLocaleTimeString()),
       startDate,
-      startTime: startTime || '00:00',
+      startTime: to12Hour(startTime || '12:00 AM'),
       endDate,
-      endTime: endTime || '23:59',
+      endTime: to12Hour(endTime || '11:59 PM'),
       schoolId: allTargetSchoolIds[0] || '',
       schoolName: combinedSchoolNames,
       schoolIds: allTargetSchoolIds,
@@ -1886,8 +1895,11 @@ router.get('/published-tests/:publishId', authenticate, requireRole('super_admin
       return res.status(404).json({ error: 'Published test not found' });
     }
     const history = await PublishHistoryModel.findOne({ publishId });
+    const doc = formatDoc(pubTest);
     return res.json({
-      ...formatDoc(pubTest),
+      ...doc,
+      startTime: to12Hour(doc.startTime || '12:00 AM'),
+      endTime: to12Hour(doc.endTime || '11:59 PM'),
       historyId: history?._id?.toString(),
     });
   } catch (err: any) {
@@ -1924,6 +1936,14 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
 
     if (!publishName || !publishMode || targetList.length === 0 || !startDate || !endDate) {
       return res.status(400).json({ error: 'Publish Name, Mode, at least one Target Configuration, and Dates are mandatory.' });
+    }
+
+    if (startDate && endDate && startDate !== 'Today' && endDate !== 'Open') {
+      const startISO = `${toISODate(startDate)}T${to24Hour(startTime || '00:00')}`;
+      const endISO = `${toISODate(endDate)}T${to24Hour(endTime || '23:59')}`;
+      if (endISO <= startISO) {
+        return res.status(400).json({ error: 'End Date & Time must be after Start Date & Time.' });
+      }
     }
 
     if (publishMode === 'Selected Questions' && (!selectedQuestionIds || selectedQuestionIds.length === 0)) {
@@ -2031,9 +2051,9 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
     };
     pubTest.targets = targetsRecord;
     pubTest.startDate = startDate;
-    pubTest.startTime = startTime || '00:00';
+    pubTest.startTime = to12Hour(startTime || '12:00 AM');
     pubTest.endDate = endDate;
-    pubTest.endTime = endTime || '23:59';
+    pubTest.endTime = to12Hour(endTime || '11:59 PM');
     pubTest.questionIds = selectedQuestionIds || [];
     pubTest.questionsSnapshot = eligibleQuestionsSnapshot;
     pubTest.randomCount = randomCount ? Number(randomCount) : undefined;
@@ -2240,9 +2260,9 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
       historyDoc.publishName = publishName.trim();
       historyDoc.publishMode = publishMode;
       historyDoc.startDate = startDate;
-      historyDoc.startTime = startTime || '00:00';
+      historyDoc.startTime = to12Hour(startTime || '12:00 AM');
       historyDoc.endDate = endDate;
-      historyDoc.endTime = endTime || '23:59';
+      historyDoc.endTime = to12Hour(endTime || '11:59 PM');
       historyDoc.schoolId = allTargetSchoolIds[0] || '';
       historyDoc.schoolName = combinedSchoolNames;
       historyDoc.schoolIds = allTargetSchoolIds;
@@ -2405,14 +2425,16 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       let isExpired = false;
 
       if (pub?.startDate && pub.startDate !== 'Today') {
-        const startStr = `${pub.startDate}T${pub.startTime || '00:00'}`;
+        const start24 = to24Hour(pub.startTime || '00:00');
+        const startStr = `${toISODate(pub.startDate)}T${start24}`;
         if (currentDateTimeStr < startStr) {
           isUpcoming = true;
         }
       }
 
       if (pub?.endDate && pub.endDate !== 'Open') {
-        const endStr = `${pub.endDate}T${pub.endTime || '23:59'}`;
+        const end24 = to24Hour(pub.endTime || '23:59');
+        const endStr = `${toISODate(pub.endDate)}T${end24}`;
         if (currentDateTimeStr > endStr) {
           isExpired = true;
         }
@@ -2450,9 +2472,9 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         publishedTestId: pubId,
         publishName: pub?.publishName || a.publishName,
         startDate: pub?.startDate || 'Today',
-        startTime: pub?.startTime || '00:00',
+        startTime: to12Hour(pub?.startTime || a.startTime || '12:00 AM'),
         endDate: pub?.endDate || 'Open',
-        endTime: pub?.endTime || '23:59',
+        endTime: to12Hour(pub?.endTime || a.endTime || '11:59 PM'),
         isUpcoming,
         isExpired,
         isPaused,
@@ -2513,14 +2535,16 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
     }
 
     if (pubTest?.startDate && pubTest.startDate !== 'Today') {
-      const startStr = `${pubTest.startDate}T${pubTest.startTime || '00:00'}`;
+      const start24 = to24Hour(pubTest.startTime || '00:00');
+      const startStr = `${toISODate(pubTest.startDate)}T${start24}`;
       if (currentDateTimeStr < startStr) {
         return res.status(400).json({ error: 'This assessment is scheduled for a future date and time and cannot be started yet.' });
       }
     }
 
     if (pubTest?.endDate && pubTest.endDate !== 'Open') {
-      const endStr = `${pubTest.endDate}T${pubTest.endTime || '23:59'}`;
+      const end24 = to24Hour(pubTest.endTime || '23:59');
+      const endStr = `${toISODate(pubTest.endDate)}T${end24}`;
       if (currentDateTimeStr > endStr) {
         return res.status(400).json({ error: 'This assessment has expired and can no longer be started.' });
       }
@@ -3107,9 +3131,9 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
         shuffle: Boolean(pub?.shuffle ?? h.shuffle),
         schoolCounts,
         startDate: h.startDate || pub?.startDate || h.date,
-        startTime: h.startTime || pub?.startTime || h.time,
+        startTime: to12Hour(h.startTime || pub?.startTime || h.time || '12:00 AM'),
         endDate: h.endDate || pub?.endDate || '',
-        endTime: h.endTime || pub?.endTime || '',
+        endTime: to12Hour(h.endTime || pub?.endTime || '11:59 PM'),
         publishedAt: effectivePublishTime,
         updatedAt: h.updatedAt || pub?.updatedAt || effectivePublishTime,
         createdAt: effectivePublishTime,
@@ -3417,9 +3441,9 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       ...history,
       shuffle: Boolean(pubTest?.shuffle ?? history.shuffle),
       startDate: history.startDate || pubTest?.startDate || history.date,
-      startTime: history.startTime || pubTest?.startTime || history.time,
+      startTime: to12Hour(history.startTime || pubTest?.startTime || history.time || '12:00 AM'),
       endDate: history.endDate || pubTest?.endDate || '',
-      endTime: history.endTime || pubTest?.endTime || '',
+      endTime: to12Hour(history.endTime || pubTest?.endTime || '11:59 PM'),
       publishedAt: effectivePublishTime,
       updatedAt: history.updatedAt || pubTest?.updatedAt || effectivePublishTime,
       createdAt: effectivePublishTime,
