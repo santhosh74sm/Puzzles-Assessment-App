@@ -159,7 +159,7 @@ export function FlameMiniGameCanvas({
   };
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl p-6 text-slate-900 dark:text-white">
+    <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl p-4 sm:p-6 text-slate-900 dark:text-white">
       {/* Background Animated Canvas (Flame visual effect engine) */}
       <canvas
         ref={canvasRef}
@@ -191,7 +191,7 @@ export function FlameMiniGameCanvas({
                 Choose an item on the left, then pick its match on the right:
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-6 max-w-xl mx-auto">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 max-w-xl mx-auto">
               <div className="space-y-3">
                 <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-2">Item</span>
                 {pairs.map((p, idx) => (

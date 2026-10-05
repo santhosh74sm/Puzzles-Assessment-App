@@ -306,9 +306,9 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 font-bold">
             P
           </div>
-          <div>
-            <h1 className="font-bold text-sm text-slate-900 dark:text-white">{user.studentName || user.username}</h1>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">
+          <div className="min-w-0">
+            <h1 className="font-bold text-sm text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">{user.studentName || user.username}</h1>
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono truncate max-w-[140px] sm:max-w-xs">
               {user.className} ({user.section}) &bull; {user.schoolName}
             </p>
           </div>
@@ -327,7 +327,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       </header>
 
       {/* Main Body */}
-      <main className="flex-1 p-6 md:p-8 max-w-5xl mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full">
         {errorMsg && (
           <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -377,27 +377,27 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
         {activeTest && currentQ && (
           <div className="space-y-6">
             {/* Top Game Bar */}
-            <div className="flex items-center justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm">
-              <div>
-                <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+            <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-sm">
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block truncate">
                   {activeTest.publishName}
                 </span>
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white truncate">
                   Question {currentQuestionIndex + 1} of {activeTest.questions.length}
                 </h3>
               </div>
 
               {/* Per-Question Countdown Timer - Only shown when configured */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                 {currentQ.timeAllowedSeconds != null && currentQ.timeAllowedSeconds > 0 && (
                   <div
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono text-base font-bold transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl font-mono text-sm sm:text-base font-bold transition-all ${
                       timeRemaining <= 5
                         ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/40 animate-pulse'
                         : 'bg-slate-100 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     <span>{timeRemaining}s</span>
                   </div>
                 )}
@@ -406,7 +406,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 <button
                   type="button"
                   onClick={handleAbandonTest}
-                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold transition-all cursor-pointer"
+                  className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold transition-all cursor-pointer shrink-0"
                   title="Abandon attempt"
                 >
                   Exit Test
@@ -428,7 +428,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
             />
 
             {/* Next / Submit Question Button */}
-            <div className="flex items-center justify-between pt-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4">
               <span className="text-xs text-slate-500">
                 * Your answer will be saved when you move forward.
               </span>
@@ -437,7 +437,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 type="button"
                 onClick={() => recordAndAdvance(currentSelectedAnswer)}
                 disabled={isSubmitting}
-                className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white shadow-xl shadow-indigo-600/30 flex items-center gap-2 text-sm transition-all cursor-pointer next-question-btn"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer next-question-btn shrink-0"
                 style={{
                   backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
                   backgroundColor: '#4f46e5',

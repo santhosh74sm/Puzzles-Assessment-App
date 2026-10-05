@@ -181,7 +181,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row font-sans">
       {/* Sidebar Navigation - Strictly the 5 specified items */}
-      <aside className="w-full md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 shrink-0 flex flex-col justify-between">
+      <aside className="w-full md:w-64 bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 shrink-0 flex flex-col justify-between">
         <div>
           {/* Brand Header */}
           <div className="flex items-center gap-3 px-3 py-4 border-b border-slate-200 dark:border-slate-800 mb-6">
@@ -258,7 +258,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </div>
 
         {/* Sidebar Footer */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 text-xs text-slate-500 space-y-1">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 text-xs text-slate-500 space-y-1 hidden md:block">
           <div className="flex items-center justify-between">
             <span>Role: Super Admin</span>
             <span className="text-emerald-600 dark:text-emerald-500 text-[11px] font-medium flex items-center gap-1">
@@ -272,7 +272,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
       {/* Main Workspace Column */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Main Authenticated Header with Profile Menu */}
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-30">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-30">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
               {activeTab === 'schools' && 'Schools & Students'}
@@ -288,7 +288,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </header>
 
         {/* Main Content Area - Renders ONLY the selected section */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
         {activeTab === 'schools' && (
           <SchoolsSection
             token={token}
