@@ -918,6 +918,9 @@ function DrillDownStudentMultiSelect({
                         <span className="truncate font-medium text-white">{stu.studentName}</span>
                         <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
                           <span className="text-indigo-400">{stu.uniqueStudentId || stu.studentId}</span>
+                          {stu.schoolAdmissionNumber && (
+                            <span>&bull; Adm: {stu.schoolAdmissionNumber}</span>
+                          )}
                           {stu.className && (
                             <span>&bull; {stu.className}{stu.section ? ` - ${stu.section}` : ''}</span>
                           )}
@@ -1739,6 +1742,7 @@ function HistoricalAuditDrillDown({
                       <p className="font-semibold text-white text-sm break-words">{s.studentName}</p>
                       <span className="text-[11px] text-slate-400 font-mono break-words block">
                         {s.className} {s.section ? `(${s.section})` : ''} &bull; ID: {s.uniqueStudentId || s.studentId}
+                        {s.schoolAdmissionNumber && <span className="text-slate-400"> &bull; Adm: {s.schoolAdmissionNumber}</span>}
                         {s.schoolName && <span className="text-slate-400"> &bull; {s.schoolName}</span>}
                       </span>
                     </div>

@@ -22,6 +22,7 @@ interface StudentPortalProps {
 }
 
 export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
+  const [studentProfile, setStudentProfile] = useState<any>(user);
   const [assignedTests, setAssignedTests] = useState<any[]>([]);
   const [activeTest, setActiveTest] = useState<any | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -67,9 +68,33 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     }
   };
 
+  const refreshProfile = async () => {
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const fresh = await res.json();
+        setStudentProfile(fresh);
+        try {
+          localStorage.setItem('puzzles_user', JSON.stringify(fresh));
+        } catch (_) {}
+      }
+    } catch (e) {
+      console.error('Failed to refresh student profile', e);
+    }
+  };
+
   useEffect(() => {
     loadStudentTests();
+    refreshProfile();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setStudentProfile((prev: any) => ({ ...prev, ...user }));
+    }
+  }, [user]);
 
   // Timer runner for current question
   useEffect(() => {
@@ -307,19 +332,22 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
             P
           </div>
           <div className="min-w-0">
-            <h1 className="font-bold text-sm text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">{user.studentName || user.username}</h1>
+            <h1 className="font-bold text-sm text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">{studentProfile?.studentName || studentProfile?.username || user?.studentName || user?.username}</h1>
             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono truncate max-w-[140px] sm:max-w-xs">
-              {user.className} ({user.section}) &bull; {user.schoolName}
+              {studentProfile?.className || user?.className} ({studentProfile?.section || user?.section}) &bull; {studentProfile?.schoolName || user?.schoolName}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden sm:block text-right text-xs font-mono">
-            <span className="text-slate-500 dark:text-slate-400 block">Student ID: {user.uniqueStudentId}</span>
+            <span className="text-slate-500 dark:text-slate-400 block">Student ID: {studentProfile?.uniqueStudentId || user?.uniqueStudentId}</span>
+            {(studentProfile?.schoolAdmissionNumber || user?.schoolAdmissionNumber) && (
+              <span className="text-slate-500 dark:text-slate-400 block">Adm No: {studentProfile?.schoolAdmissionNumber || user?.schoolAdmissionNumber}</span>
+            )}
           </div>
           <ProfileMenu 
-            user={user} 
+            user={studentProfile || user} 
             onLogout={performLogout} 
             isAssessmentActive={!!activeTest} 
           />

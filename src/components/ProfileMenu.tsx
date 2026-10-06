@@ -127,7 +127,7 @@ export function ProfileMenu({
   };
 
   const role = user?.role || 'super_admin';
-  const displayName = user?.name || user?.username || (role === 'super_admin' ? 'Super Admin' : 'Admin');
+  const displayName = user?.studentName || user?.name || user?.username || (role === 'super_admin' ? 'Super Admin' : 'Admin');
 
   const getRoleBadge = () => {
     if (role === 'super_admin') {
@@ -218,6 +218,11 @@ export function ProfileMenu({
                   <p className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate font-medium">
                     {user?.username || user?.uniqueStudentId || 'admin'}
                   </p>
+                  {user?.schoolAdmissionNumber && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                      Adm No: <span className="text-slate-700 dark:text-slate-300 font-semibold">{user.schoolAdmissionNumber}</span>
+                    </p>
+                  )}
                 </div>
               </div>
               {getRoleBadge()}

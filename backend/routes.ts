@@ -165,6 +165,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
         studentName: user.studentName,
         className: user.className,
         section: user.section,
+        schoolAdmissionNumber: user.schoolAdmissionNumber,
         uniqueStudentId: user.uniqueStudentId,
       },
     });
@@ -264,6 +265,7 @@ router.get('/auth/me', authenticate, async (req: Request, res: Response) => {
       studentName: user.studentName,
       className: user.className,
       section: user.section,
+      schoolAdmissionNumber: user.schoolAdmissionNumber,
       uniqueStudentId: user.uniqueStudentId,
     });
   } catch (err: any) {
@@ -698,15 +700,93 @@ router.put('/students/:id', authenticate, async (req: Request, res: Response) =>
 
     await student.save();
 
-    // Also update studentName, className, and section in their existing StudentTestAssignment documents to keep names synchronized
+    const studentIdentifiers = [
+      student.uniqueStudentId,
+      student.username,
+      student._id.toString(),
+    ].filter(Boolean);
+
+    // 1. Synchronize all StudentTestAssignment documents for this student across all historical/completed/active assessments
+    // Strictly updates only studentName, schoolAdmissionNumber, className, and section.
+    // Scores, answers, time taken, completion status, and test results are completely preserved.
     await StudentTestAssignmentModel.updateMany(
-      { studentId: student.uniqueStudentId },
+      {
+        studentId: { $in: studentIdentifiers },
+        $or: [
+          { schoolId: student.schoolId },
+          { schoolId: { $exists: false } },
+          { schoolId: '' },
+          { schoolId: null },
+        ],
+      },
       {
         $set: {
           studentName: student.studentName,
+          schoolAdmissionNumber: student.schoolAdmissionNumber,
           className: student.className,
           section: student.section,
         },
+      }
+    );
+
+    // 2. Synchronize all PublishHistory documents where this student appears in studentsStatus
+    // Updates studentName, schoolAdmissionNumber, className, and section in studentsStatus.
+    // Historical completion stats, dates, times, exit types, and scores are completely preserved.
+    const matchingHistories = await PublishHistoryModel.find({
+      studentsStatus: {
+        $elemMatch: {
+          $or: [
+            { studentId: { $in: studentIdentifiers } },
+            { uniqueStudentId: { $in: studentIdentifiers } },
+          ],
+        },
+      },
+    });
+
+    for (const hDoc of matchingHistories) {
+      let docModified = false;
+      if (Array.isArray(hDoc.studentsStatus)) {
+        for (const st of hDoc.studentsStatus) {
+          const sKey = st.studentId || st.uniqueStudentId;
+          if (studentIdentifiers.includes(sKey)) {
+            st.studentName = student.studentName;
+            st.schoolAdmissionNumber = student.schoolAdmissionNumber;
+            st.className = student.className;
+            st.section = student.section;
+            docModified = true;
+          }
+        }
+      }
+      if (docModified) {
+        hDoc.markModified('studentsStatus');
+        await hDoc.save();
+      }
+    }
+
+    await PublishHistoryModel.updateMany(
+      {
+        $or: [
+          { 'studentsStatus.studentId': { $in: studentIdentifiers } },
+          { 'studentsStatus.uniqueStudentId': { $in: studentIdentifiers } },
+        ],
+      },
+      {
+        $set: {
+          'studentsStatus.$[elem].studentName': student.studentName,
+          'studentsStatus.$[elem].schoolAdmissionNumber': student.schoolAdmissionNumber,
+          'studentsStatus.$[elem].className': student.className,
+          'studentsStatus.$[elem].section': student.section,
+        },
+      },
+      {
+        arrayFilters: [
+          {
+            $or: [
+              { 'elem.studentId': { $in: studentIdentifiers } },
+              { 'elem.uniqueStudentId': { $in: studentIdentifiers } },
+            ],
+          },
+        ],
       }
     );
 
@@ -2162,6 +2242,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         publishName: publishName.trim(),
         studentId: student.uniqueStudentId!,
         studentName: student.studentName || '',
+        schoolAdmissionNumber: student.schoolAdmissionNumber || '',
         schoolId: student.schoolId,
         schoolName: stSchool ? stSchool.name : (student.schoolName || ''),
         className: student.className || '',
@@ -2210,7 +2291,11 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       publishedAt: new Date(),
       studentsStatus: candidateStudents.map((s) => ({
         studentId: s.uniqueStudentId!,
+        uniqueStudentId: s.uniqueStudentId!,
         studentName: s.studentName!,
+        schoolAdmissionNumber: s.schoolAdmissionNumber || '',
+        schoolId: s.schoolId || '',
+        schoolName: (schoolMap.get(s.schoolId)?.name) || s.schoolName || '',
         className: s.className!,
         section: s.section!,
         status: 'NOT_STARTED',
@@ -2521,6 +2606,7 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
           publishName: publishName.trim(),
           studentId: sId,
           studentName: student.studentName || '',
+          schoolAdmissionNumber: student.schoolAdmissionNumber || '',
           schoolId: student.schoolId,
           schoolName: stSchool ? stSchool.name : (student.schoolName || ''),
           className: student.className || '',
@@ -2538,6 +2624,8 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
         // Student already exists: if status is NOT_STARTED, update school/class/section details & questions if needed
         const existing = remainingAssignMap.get(sId);
         if (existing.status === 'NOT_STARTED') {
+          existing.studentName = student.studentName || existing.studentName;
+          existing.schoolAdmissionNumber = student.schoolAdmissionNumber || existing.schoolAdmissionNumber;
           existing.schoolId = student.schoolId;
           existing.schoolName = stSchool ? stSchool.name : (student.schoolName || existing.schoolName);
           existing.className = student.className || existing.className;
@@ -2660,6 +2748,7 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
           studentId: a.studentId,
           uniqueStudentId: a.studentId,
           studentName: a.studentName || prev?.studentName || '',
+          schoolAdmissionNumber: a.schoolAdmissionNumber || prev?.schoolAdmissionNumber || '',
           schoolId: a.schoolId || prev?.schoolId || '',
           schoolName: a.schoolName || prev?.schoolName || '',
           className: a.className || prev?.className || '',
@@ -2830,6 +2919,8 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
 
       result.push({
         ...doc,
+        studentName: studentUser?.studentName || a.studentName || doc.studentName,
+        schoolAdmissionNumber: studentUser?.schoolAdmissionNumber || a.schoolAdmissionNumber || doc.schoolAdmissionNumber || '',
         status: a.status,
         exitType: a.exitType || null,
         totalQuestions: activeQuestionsCount,
@@ -3513,11 +3604,35 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
 
     const history = formatDoc(historyDoc);
 
+    // Resolve canonical student details from UserModel to guarantee latest Name & Admission Number
+    const allStudentIds = [
+      ...(history.studentsStatus || []).map((s: any) => s.studentId || s.uniqueStudentId),
+      ...liveAssignments.map((a: any) => a.studentId),
+    ].filter(Boolean);
+
+    const userDocs = await UserModel.find(
+      {
+        $or: [
+          { uniqueStudentId: { $in: allStudentIds } },
+          { username: { $in: allStudentIds } },
+        ],
+      },
+      { studentName: 1, schoolAdmissionNumber: 1, className: 1, section: 1, schoolId: 1, schoolName: 1, uniqueStudentId: 1, username: 1 }
+    ).lean();
+
+    const userMap = new Map<string, any>();
+    for (const u of userDocs) {
+      if (u.uniqueStudentId) userMap.set(u.uniqueStudentId, u);
+      if (u.username) userMap.set(u.username, u);
+      userMap.set(u._id.toString(), u);
+    }
+
     const processedStudentIds = new Set<string>();
     const studentsStatus: any[] = (history.studentsStatus || []).map((s: any) => {
       const sId = s.studentId || s.uniqueStudentId;
       processedStudentIds.add(sId);
       const live = assignMap.get(sId);
+      const userDoc = userMap.get(sId) || (live ? userMap.get(live.studentId) : null);
       const effectiveStatus = live ? live.status : s.status;
       const effectiveExitType = (effectiveStatus === 'COMPLETED' || effectiveStatus === 'NOT_STARTED')
         ? null
@@ -3527,11 +3642,12 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       const effectiveScore = live ? live.scoreOutOf100 : s.scoreOutOf100;
       return {
         ...s,
-        studentName: s.studentName || live?.studentName || 'Student',
-        schoolId: live?.schoolId || s.schoolId || history.schoolId || '',
-        schoolName: live?.schoolName || s.schoolName || history.schoolName || '',
-        className: live?.className || s.className || '',
-        section: live?.section || s.section || '',
+        studentName: userDoc?.studentName || live?.studentName || s.studentName || 'Student',
+        schoolAdmissionNumber: userDoc?.schoolAdmissionNumber || live?.schoolAdmissionNumber || s.schoolAdmissionNumber || '',
+        schoolId: userDoc?.schoolId || live?.schoolId || s.schoolId || history.schoolId || '',
+        schoolName: userDoc?.schoolName || live?.schoolName || s.schoolName || history.schoolName || '',
+        className: userDoc?.className || live?.className || s.className || '',
+        section: userDoc?.section || live?.section || s.section || '',
         assessmentName: history.publishName,
         status: effectiveStatus,
         exitType: effectiveExitType || null,
@@ -3541,14 +3657,16 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
 
     for (const [stId, live] of assignMap.entries()) {
       if (!processedStudentIds.has(stId)) {
+        const userDoc = userMap.get(stId);
         studentsStatus.push({
           studentId: stId,
           uniqueStudentId: stId,
-          studentName: live.studentName || 'Student',
-          schoolId: live.schoolId || history.schoolId || '',
-          schoolName: live.schoolName || history.schoolName || '',
-          className: live.className || '',
-          section: live.section || '',
+          studentName: userDoc?.studentName || live.studentName || 'Student',
+          schoolAdmissionNumber: userDoc?.schoolAdmissionNumber || live.schoolAdmissionNumber || '',
+          schoolId: userDoc?.schoolId || live.schoolId || history.schoolId || '',
+          schoolName: userDoc?.schoolName || live.schoolName || history.schoolName || '',
+          className: userDoc?.className || live.className || '',
+          section: userDoc?.section || live.section || '',
           assessmentName: history.publishName,
           status: live.status,
           exitType: (live.status === 'COMPLETED' || live.status === 'NOT_STARTED')
@@ -4121,6 +4239,9 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
       return {
         assignmentId: a._id.toString(),
         publishedTestId: a.publishedTestId,
+        studentId: a.studentId,
+        studentName: student?.studentName || a.studentName,
+        schoolAdmissionNumber: student?.schoolAdmissionNumber || a.schoolAdmissionNumber || '',
         assessmentNumber,
         assessmentTitle,
         testName: assessmentTitle,
@@ -4173,7 +4294,7 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         studentName: sortedAssignments[0].studentName || targetStudentId,
         className: sortedAssignments[0].className || '',
         section: sortedAssignments[0].section || '',
-        schoolAdmissionNumber: targetStudentId,
+        schoolAdmissionNumber: sortedAssignments[0].schoolAdmissionNumber || targetStudentId,
         uniqueStudentId: targetStudentId,
         schoolName: sortedAssignments[0].schoolName || '',
       } : null),

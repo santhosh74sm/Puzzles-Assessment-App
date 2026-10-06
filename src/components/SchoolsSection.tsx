@@ -261,6 +261,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       if (res.ok) {
         setFeedbackMessage({ type: 'success', text: `Student "${data.student?.studentName || editForm.studentName}" updated successfully.` });
         setEditingStudent(null);
+        if (data.student && viewingReportStudent && (
+          viewingReportStudent.id === studentId ||
+          viewingReportStudent._id === studentId ||
+          viewingReportStudent.uniqueStudentId === studentId ||
+          viewingReportStudent.uniqueStudentId === data.student.uniqueStudentId
+        )) {
+          setViewingReportStudent((prev: any) => ({ ...prev, ...data.student }));
+        }
         if (activeSchoolId) {
           await loadSchoolDetails(activeSchoolId);
         }

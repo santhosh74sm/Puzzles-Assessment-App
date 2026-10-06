@@ -312,6 +312,7 @@ export interface IStudentTestAssignmentDocument extends Document {
   publishName: string;
   studentId: string;
   studentName: string;
+  schoolAdmissionNumber?: string;
   schoolId: string;
   schoolName: string;
   className: string;
@@ -338,6 +339,7 @@ export const StudentTestAssignmentSchema = new Schema<IStudentTestAssignmentDocu
     publishName: { type: String, required: true },
     studentId: { type: String, required: true, index: true },
     studentName: { type: String, default: '' },
+    schoolAdmissionNumber: { type: String, default: '' },
     schoolId: { type: String, required: true, index: true },
     schoolName: { type: String, default: '' },
     className: { type: String, required: true },

@@ -57,6 +57,25 @@ function AppContent() {
       .finally(() => setCheckingSetup(false));
   }, []);
 
+  // Sync latest user profile on mount if token exists
+  useEffect(() => {
+    if (token) {
+      fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((fresh) => {
+          if (fresh) {
+            setCurrentUser(fresh);
+            try {
+              localStorage.setItem('puzzles_user', JSON.stringify(fresh));
+            } catch (_) {}
+          }
+        })
+        .catch((err) => console.error('Failed to sync current user profile:', err));
+    }
+  }, [token]);
+
   const handleLoginOrSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
