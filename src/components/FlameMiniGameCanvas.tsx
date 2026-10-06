@@ -319,7 +319,7 @@ export function FlameMiniGameCanvas({
                                 : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400'
                             }`}
                           >
-                            {isSelected ? <Check className="w-4 h-4 text-indigo-600 stroke-[3]" /> : null}
+                            {isSelected ? <Check className="w-4 h-4 text-indigo-600 stroke-[3]" style={{ backgroundColor: '#4d2ec9' }} /> : null}
                           </div>
                         )}
                         <span
