@@ -190,85 +190,85 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
       aria-label="Mobile Navigation"
       style={{
         position: 'fixed',
-        bottom: '12px',
-        left: '12px',
-        right: '12px',
+        bottom: 0,
+        left: 0,
+        right: 0,
         zIndex: 9999,
-        maxWidth: '32rem',
-        margin: '0 auto',
       }}
-      className="fixed bottom-3 inset-x-3 sm:inset-x-6 z-50 md:hidden max-w-lg mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-950/25 p-1.5 flex items-center justify-around gap-1 pointer-events-auto"
+      className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800/90 shadow-2xl shadow-slate-950/20 px-3 py-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] pointer-events-auto"
     >
-      {/* 1. Schools & Students */}
-      <button
-        type="button"
-        onClick={() => setActiveTab('schools')}
-        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'schools'
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
-        }`}
-        title="Schools & Students"
-      >
-        <Building2 className={`w-5 h-5 shrink-0 ${activeTab === 'schools' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
-          Schools
-        </span>
-      </button>
+      <div className="max-w-md mx-auto w-full flex items-center justify-around gap-1">
+        {/* 1. Schools & Students */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('schools')}
+          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+            activeTab === 'schools'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+          title="Schools & Students"
+        >
+          <Building2 className={`w-5 h-5 shrink-0 ${activeTab === 'schools' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+          <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+            Schools
+          </span>
+        </button>
 
-      {/* 2. Question Bank & Groups */}
-      <button
-        type="button"
-        onClick={() => setActiveTab('question_bank')}
-        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'question_bank'
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
-        }`}
-        title="Question Bank & Groups"
-      >
-        <Layers className={`w-5 h-5 shrink-0 ${activeTab === 'question_bank' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
-          Questions
-        </span>
-      </button>
+        {/* 2. Question Bank & Groups */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('question_bank')}
+          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+            activeTab === 'question_bank'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+          title="Question Bank & Groups"
+        >
+          <Layers className={`w-5 h-5 shrink-0 ${activeTab === 'question_bank' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+          <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+            Questions
+          </span>
+        </button>
 
-      {/* 3. Publish Assessment */}
-      <button
-        type="button"
-        onClick={() => setActiveTab('publish')}
-        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'publish'
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
-        }`}
-        title="Publish Assessment"
-      >
-        <Send className={`w-5 h-5 shrink-0 ${activeTab === 'publish' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
-          Publish
-        </span>
-      </button>
+        {/* 3. Publish Assessment */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('publish')}
+          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+            activeTab === 'publish'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+          title="Publish Assessment"
+        >
+          <Send className={`w-5 h-5 shrink-0 ${activeTab === 'publish' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+          <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+            Publish
+          </span>
+        </button>
 
-      {/* 4. Test History */}
-      <button
-        type="button"
-        onClick={() => {
-          setSelectedHistoryDetail(null);
-          setActiveTab('history');
-        }}
-        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
-          activeTab === 'history'
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
-        }`}
-        title="Test History"
-      >
-        <History className={`w-5 h-5 shrink-0 ${activeTab === 'history' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
-          History
-        </span>
-      </button>
+        {/* 4. Test History */}
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedHistoryDetail(null);
+            setActiveTab('history');
+          }}
+          className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+            activeTab === 'history'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+          title="Test History"
+        >
+          <History className={`w-5 h-5 shrink-0 ${activeTab === 'history' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+          <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+            History
+          </span>
+        </button>
+      </div>
     </nav>
   );
 
@@ -376,8 +376,8 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
 
       {/* Main Workspace Column */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Main Authenticated Header with Profile Menu */}
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-30">
+        {/* Main Authenticated Header with Profile Menu - Desktop only; on mobile, duplicate heading is removed and only in-page heading is shown */}
+        <header className="hidden md:flex h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 items-center justify-between shrink-0 z-30">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
               {activeTab === 'schools' && 'Schools & Students'}
@@ -395,7 +395,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </header>
 
         {/* Main Content Area - Renders ONLY the selected section */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-32 md:pb-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
         {activeTab === 'schools' && (
           <SchoolsSection
             token={token}
