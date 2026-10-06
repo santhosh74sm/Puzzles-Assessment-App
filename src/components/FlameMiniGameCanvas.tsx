@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Sparkles, Trophy, RotateCcw, Check } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface FlameMiniGameProps {
   content: string;
@@ -25,6 +26,14 @@ export function FlameMiniGameCanvas({
   selectedAnswer,
   disabled,
 }: FlameMiniGameProps) {
+  let isDark = true;
+  try {
+    const { effectiveTheme } = useTheme();
+    isDark = effectiveTheme === 'dark';
+  } catch {
+    isDark = typeof document !== 'undefined' ? !document.documentElement.classList.contains('light') : true;
+  }
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Match interaction state
@@ -290,13 +299,19 @@ export function FlameMiniGameCanvas({
                                 borderColor: '#818cf8',
                                 color: '#ffffff',
                               }
+                            : isDark
+                            ? {
+                                backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                                borderColor: 'rgba(51, 65, 85, 0.8)',
+                                color: '#ffffff',
+                              }
                             : {
                                 backgroundColor: '#ffffff',
                                 color: '#0f172a',
                               }
                         }
                       >
-                        {isMultiple ? (
+                        {isMultiple && (
                           <div
                             className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 transition-all border ${
                               isSelected
@@ -306,21 +321,20 @@ export function FlameMiniGameCanvas({
                           >
                             {isSelected ? <Check className="w-4 h-4 text-indigo-600 stroke-[3]" /> : null}
                           </div>
-                        ) : (
-                          <span
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all bg-white border border-slate-200 dark:border-white/10 shadow-xs option-letter-badge"
-                            style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
-                          >
-                            {String.fromCharCode(65 + idx)}
-                          </span>
                         )}
+                        <span
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all bg-white border border-slate-200 dark:border-white/10 shadow-xs option-letter-badge"
+                          style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+                        >
+                          {String.fromCharCode(65 + idx)}
+                        </span>
                         <span
                           className={`text-base flex-1 ${
                             isSelected
                               ? 'font-bold text-white selected-answer-text'
                               : 'font-medium text-slate-900 dark:text-slate-200 unselected-answer-text'
                           }`}
-                          style={isSelected ? { color: '#ffffff' } : { color: '#0f172a' }}
+                          style={isSelected || isDark ? { color: '#ffffff' } : { color: '#0f172a' }}
                         >
                           {opt}
                         </span>

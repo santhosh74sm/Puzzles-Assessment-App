@@ -770,6 +770,17 @@ html.light button.unselected-answer-option {
 html.light button.unselected-answer-option .unselected-answer-text {
   color: #0f172a !important;
 }
+html.dark button.unselected-answer-option,
+html[data-theme="dark"] button.unselected-answer-option {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+  background-image: none !important;
+  border-color: rgba(51, 65, 85, 0.8) !important;
+  color: #ffffff !important;
+}
+html.dark button.unselected-answer-option .unselected-answer-text,
+html[data-theme="dark"] button.unselected-answer-option .unselected-answer-text {
+  color: #ffffff !important;
+}
 html.light button.selected-answer-option {
   background-image: linear-gradient(to right, #4f46e5, #7c3aed) !important;
   background-color: #4f46e5 !important;
