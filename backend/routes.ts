@@ -26,16 +26,44 @@ const router = express.Router();
 // Helper to convert Mongoose documents to clean JSON with 'id'
 function formatDoc(doc: any): any {
   if (!doc) return null;
-  const obj = doc.toObject ? doc.toObject() : { ...doc };
+  const obj = doc.toObject ? doc.toObject({ transform: true }) : { ...doc };
   if (obj._id && !obj.id) {
     obj.id = obj._id.toString();
   }
   delete obj.__v;
+  delete obj.passwordHash;
   return obj;
 }
 
 function formatDocs(docs: any[]): any[] {
   return docs.map(formatDoc);
+}
+
+// Helper to determine if an assessment has expired based on client request time / timezone
+function isRequestAssessmentExpired(req: Request, pubTest: any): boolean {
+  if (!pubTest?.endDate || pubTest.endDate === 'Open') {
+    return false;
+  }
+  const clientDateTimeHeader = req.headers['x-client-now'] as string;
+  let currentDateTimeStr = '';
+  if (clientDateTimeHeader && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clientDateTimeHeader)) {
+    currentDateTimeStr = clientDateTimeHeader.slice(0, 16);
+  } else {
+    const clientOffsetHeader = req.headers['x-timezone-offset'];
+    const clientOffset = clientOffsetHeader !== undefined && clientOffsetHeader !== '' ? Number(clientOffsetHeader) : null;
+    const nowMs = Date.now();
+    const clientNow = clientOffset !== null && !isNaN(clientOffset) ? new Date(nowMs - (clientOffset * 60000)) : new Date(nowMs);
+    const clientYear = clientNow.getUTCFullYear();
+    const clientMonth = String(clientNow.getUTCMonth() + 1).padStart(2, '0');
+    const clientDay = String(clientNow.getUTCDate()).padStart(2, '0');
+    const clientHour = String(clientNow.getUTCHours()).padStart(2, '0');
+    const clientMin = String(clientNow.getUTCMinutes()).padStart(2, '0');
+    currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
+  }
+
+  const end24 = to24Hour(pubTest.endTime || '23:59');
+  const endStr = `${toISODate(pubTest.endDate)}T${end24}`;
+  return isAssessmentExpired(currentDateTimeStr, endStr, 1);
 }
 
 // ==========================================
@@ -3313,8 +3341,24 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
       return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
-    if (assignment.status === 'COMPLETED' || assignment.status === 'LOCKED_INCOMPLETE') {
+    if (pubTest && isRequestAssessmentExpired(req, pubTest)) {
+      return res.status(400).json({ error: 'Assessment has expired and can no longer accept answers.' });
+    }
+
+    if (assignment.status === 'COMPLETED') {
+      return res.status(400).json({ error: 'This test has already been completed and is no longer accepting answers.' });
+    }
+
+    if (assignment.status === 'LOCKED_INCOMPLETE') {
       return res.status(400).json({ error: 'This test is no longer accepting answers' });
+    }
+
+    if (assignment.status === 'INCOMPLETE') {
+      return res.status(400).json({
+        error: assignment.exitType === 'EXIT'
+          ? 'Assessment was exited and cannot accept further answers.'
+          : 'Assessment is not in progress and cannot accept answers.',
+      });
     }
 
     const questionIndex = assignment.questions.findIndex((q: any) => q.questionId === questionId);
@@ -3374,17 +3418,24 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
       return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
+    if (pubTest && isRequestAssessmentExpired(req, pubTest)) {
+      return res.status(400).json({ error: 'Assessment has expired and can no longer be submitted.' });
+    }
+
     if (assignment.status === 'COMPLETED') {
-      return res.json({
-        status: 'COMPLETED',
-        message: 'This test is already submitted.',
-        scoreOutOf100: assignment.scoreOutOf100,
-        totalPointsEarned: assignment.totalPointsEarned,
-      });
+      return res.status(400).json({ error: 'Assessment has already been completed.' });
     }
 
     if (assignment.status === 'LOCKED_INCOMPLETE') {
       return res.status(400).json({ error: 'This test has ended and can no longer be submitted.' });
+    }
+
+    if (assignment.status === 'INCOMPLETE') {
+      return res.status(400).json({
+        error: assignment.exitType === 'EXIT'
+          ? 'Assessment was exited and cannot be submitted.'
+          : 'Assessment ended early and cannot be submitted.',
+      });
     }
 
     // Process answers payload if sent from frontend
@@ -4114,7 +4165,7 @@ router.get('/reports/schools/:schoolId/students', authenticate, requireRole('sup
       ];
     }
 
-    const students = await UserModel.find(query);
+    const students = await UserModel.find(query, { passwordHash: 0 });
     const sorted = formatDocs(students).sort((a: any, b: any) =>
       (a.studentName || '').localeCompare(b.studentName || '', undefined, { numeric: true, sensitivity: 'base' })
     );

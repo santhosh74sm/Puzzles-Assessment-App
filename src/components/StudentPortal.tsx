@@ -29,6 +29,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   const [answersMap, setAnswersMap] = useState<Record<string, { answer: any; timeTaken: number }>>({});
   const [currentSelectedAnswer, setCurrentSelectedAnswer] = useState<any | null>(null);
 
+  // Refs to guarantee fresh, non-stale state access inside timer callbacks
+  const currentSelectedAnswerRef = useRef<any | null>(null);
+  const answersMapRef = useRef<Record<string, { answer: any; timeTaken: number }>>({});
+  const activeTestRef = useRef<any | null>(null);
+  const currentQuestionIndexRef = useRef<number>(0);
+  const isSubmittingRef = useRef<boolean>(false);
+
   // Per-question timer
   const [timeRemaining, setTimeRemaining] = useState<number>(30);
   const questionStartTimeRef = useRef<number>(Date.now());
@@ -38,6 +45,26 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pendingAnswerSaveRef = useRef<Promise<any> | null>(null);
+
+  useEffect(() => {
+    currentSelectedAnswerRef.current = currentSelectedAnswer;
+  }, [currentSelectedAnswer]);
+
+  useEffect(() => {
+    answersMapRef.current = answersMap;
+  }, [answersMap]);
+
+  useEffect(() => {
+    activeTestRef.current = activeTest;
+  }, [activeTest]);
+
+  useEffect(() => {
+    currentQuestionIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex]);
+
+  useEffect(() => {
+    isSubmittingRef.current = isSubmitting;
+  }, [isSubmitting]);
 
   const headers = {
     'Content-Type': 'application/json',
@@ -113,8 +140,14 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       timerIntervalRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            // Timer expired! Automatic move to next question.
-            handleAutoAdvanceOnTimerExpire();
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
+            // Timer expired! Execute auto-advance capturing fresh selected answer
+            setTimeout(() => {
+              handleAutoAdvanceOnTimerExpireRef.current();
+            }, 0);
             return 0;
           }
           return prev - 1;
@@ -170,9 +203,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
         (firstQ?.answerType === 'multiple' ? [] : null);
 
       setActiveTest(testData);
+      activeTestRef.current = testData;
       setCurrentQuestionIndex(startIndex);
+      currentQuestionIndexRef.current = startIndex;
       setAnswersMap(initialAnswers);
+      answersMapRef.current = initialAnswers;
       setCurrentSelectedAnswer(initialAns);
+      currentSelectedAnswerRef.current = initialAns;
       setTestResult(null);
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -229,26 +266,31 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   };
 
   // Save current answer and advance
-  const recordAndAdvance = (answer: any) => {
-    if (!activeTest || isSubmitting) return;
-    const currentQ = activeTest.questions[currentQuestionIndex];
+  const recordAndAdvance = (answer?: any) => {
+    const test = activeTestRef.current || activeTest;
+    const qIndex = currentQuestionIndexRef.current ?? currentQuestionIndex;
+    if (!test || isSubmittingRef.current) return;
+    const currentQ = test.questions[qIndex];
+    if (!currentQ) return;
+
     const elapsedSeconds = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
     const timeSpent = (currentQ.timeAllowedSeconds != null && currentQ.timeAllowedSeconds > 0)
       ? Math.min(currentQ.timeAllowedSeconds, elapsedSeconds)
       : elapsedSeconds;
 
-    const answerToRecord = answer !== undefined ? answer : currentSelectedAnswer;
+    const answerToRecord = answer !== undefined ? answer : currentSelectedAnswerRef.current;
     const updatedAnswers: Record<string, { answer: any; timeTaken: number }> = {
-      ...answersMap,
+      ...answersMapRef.current,
       [currentQ.questionId]: {
         answer: answerToRecord,
         timeTaken: timeSpent || 1,
       },
     };
+    answersMapRef.current = updatedAnswers;
     setAnswersMap(updatedAnswers);
 
-    const testId = activeTest.assignmentId || activeTest._id || activeTest.id;
-    const isFinalQuestion = currentQuestionIndex >= activeTest.questions.length - 1;
+    const testId = test.assignmentId || test._id || test.id;
+    const isFinalQuestion = qIndex >= test.questions.length - 1;
 
     // Save intermediate answer to backend ONLY if not the final question.
     // The final question submit payload sends all answers in one atomic request,
@@ -256,7 +298,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     if (!isFinalQuestion) {
       pendingAnswerSaveRef.current = fetch(`/api/student/tests/${testId}/answer`, {
         method: 'POST',
-        headers,
+        headers: getClientHeaders(),
         body: JSON.stringify({
           questionId: currentQ.questionId,
           answer: answerToRecord,
@@ -264,13 +306,15 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
         }),
       }).catch(console.error);
 
-      const nextIndex = currentQuestionIndex + 1;
+      const nextIndex = qIndex + 1;
+      currentQuestionIndexRef.current = nextIndex;
       setCurrentQuestionIndex(nextIndex);
-      const nextQ = activeTest.questions[nextIndex];
-      setCurrentSelectedAnswer(
+      const nextQ = test.questions[nextIndex];
+      const nextAns =
         updatedAnswers[nextQ?.questionId]?.answer ??
-        (nextQ?.answerType === 'multiple' ? [] : null)
-      );
+        (nextQ?.answerType === 'multiple' ? [] : null);
+      currentSelectedAnswerRef.current = nextAns;
+      setCurrentSelectedAnswer(nextAns);
     } else {
       // Last question completed -> submit test
       submitFullTest(updatedAnswers);
@@ -278,17 +322,24 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   };
 
   const handleAutoAdvanceOnTimerExpire = () => {
-    recordAndAdvance(currentSelectedAnswer);
+    recordAndAdvance(currentSelectedAnswerRef.current);
   };
+  const handleAutoAdvanceOnTimerExpireRef = useRef(handleAutoAdvanceOnTimerExpire);
+  handleAutoAdvanceOnTimerExpireRef.current = handleAutoAdvanceOnTimerExpire;
 
   const submitFullTest = async (finalAnswers: Record<string, { answer: any; timeTaken: number }>) => {
-    if (!activeTest || isSubmitting) return;
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    const test = activeTestRef.current || activeTest;
+    if (!test || isSubmittingRef.current) return;
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
     setIsSubmitting(true);
+    isSubmittingRef.current = true;
     setErrorMsg(null);
 
-    const testId = activeTest.assignmentId || activeTest._id || activeTest.id;
-    const answersPayload = (activeTest.questions || []).map((q: any) => {
+    const testId = test.assignmentId || test._id || test.id;
+    const answersPayload = (test.questions || []).map((q: any) => {
       const entry = finalAnswers[q.questionId];
       return {
         questionId: q.questionId,
@@ -300,13 +351,14 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     try {
       const res = await fetch(`/api/student/tests/${testId}/submit`, {
         method: 'POST',
-        headers,
+        headers: getClientHeaders(),
         body: JSON.stringify({ answers: answersPayload }),
       });
       const data = await res.json();
       if (res.ok) {
         setTestResult(data);
         setActiveTest(null);
+        activeTestRef.current = null;
         confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
         loadStudentTests();
       } else {
@@ -318,6 +370,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       setErrorMsg('Unable to submit test. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -450,7 +503,10 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
               options={currentQ.options}
               answerType={currentQ.answerType || 'single'}
               pairs={currentQ.metadata?.pairs || currentQ.pairs}
-              onAnswerSubmit={(ans) => setCurrentSelectedAnswer(ans)}
+              onAnswerSubmit={(ans) => {
+                currentSelectedAnswerRef.current = ans;
+                setCurrentSelectedAnswer(ans);
+              }}
               selectedAnswer={currentSelectedAnswer}
               disabled={false}
             />
@@ -463,7 +519,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
               <button
                 type="button"
-                onClick={() => recordAndAdvance(currentSelectedAnswer)}
+                onClick={() => recordAndAdvance(currentSelectedAnswerRef.current)}
                 disabled={isSubmitting}
                 className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer next-question-btn shrink-0"
                 style={{
