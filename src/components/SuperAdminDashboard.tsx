@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Building2,
   Layers,
@@ -166,6 +167,11 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
     setActiveTab('history');
   }, []);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const loadAllInitialData = React.useCallback(async () => {
     await Promise.all([
       loadSchools(),
@@ -178,24 +184,123 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
     loadAllInitialData();
   }, []);
 
+  // Fixed Bottom Navigation Card for Mobile Devices - Rendered via Portal directly into document.body
+  const mobileBottomNav = (
+    <nav 
+      aria-label="Mobile Navigation"
+      style={{
+        position: 'fixed',
+        bottom: '12px',
+        left: '12px',
+        right: '12px',
+        zIndex: 9999,
+        maxWidth: '32rem',
+        margin: '0 auto',
+      }}
+      className="fixed bottom-3 inset-x-3 sm:inset-x-6 z-50 md:hidden max-w-lg mx-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-950/25 p-1.5 flex items-center justify-around gap-1 pointer-events-auto"
+    >
+      {/* 1. Schools & Students */}
+      <button
+        type="button"
+        onClick={() => setActiveTab('schools')}
+        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+          activeTab === 'schools'
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+        }`}
+        title="Schools & Students"
+      >
+        <Building2 className={`w-5 h-5 shrink-0 ${activeTab === 'schools' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+          Schools
+        </span>
+      </button>
+
+      {/* 2. Question Bank & Groups */}
+      <button
+        type="button"
+        onClick={() => setActiveTab('question_bank')}
+        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+          activeTab === 'question_bank'
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+        }`}
+        title="Question Bank & Groups"
+      >
+        <Layers className={`w-5 h-5 shrink-0 ${activeTab === 'question_bank' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+          Questions
+        </span>
+      </button>
+
+      {/* 3. Publish Assessment */}
+      <button
+        type="button"
+        onClick={() => setActiveTab('publish')}
+        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+          activeTab === 'publish'
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+        }`}
+        title="Publish Assessment"
+      >
+        <Send className={`w-5 h-5 shrink-0 ${activeTab === 'publish' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+          Publish
+        </span>
+      </button>
+
+      {/* 4. Test History */}
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedHistoryDetail(null);
+          setActiveTab('history');
+        }}
+        className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all cursor-pointer ${
+          activeTab === 'history'
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-bold scale-[1.02]'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+        }`}
+        title="Test History"
+      >
+        <History className={`w-5 h-5 shrink-0 ${activeTab === 'history' ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+        <span className="text-[10px] sm:text-xs font-semibold tracking-tight truncate max-w-[76px] mt-1 text-center leading-none">
+          History
+        </span>
+      </button>
+    </nav>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row font-sans">
+    <>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col md:flex-row font-sans">
       {/* Sidebar Navigation - Strictly the 5 specified items */}
       <aside className="w-full md:w-64 bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 shrink-0 flex flex-col justify-between">
         <div>
           {/* Brand Header */}
-          <div className="flex items-center gap-3 px-3 py-4 border-b border-slate-200 dark:border-slate-800 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5" />
+          <div className="flex items-center justify-between px-3 py-2 md:py-4 md:border-b border-slate-200 dark:border-slate-800 md:mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="font-bold text-base leading-tight text-slate-900 dark:text-white">Super Admin</h1>
+                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">Main Administrator</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-base leading-tight text-slate-900 dark:text-white">Super Admin</h1>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">Main Administrator</p>
+
+            {/* Mobile-only Top Profile Button: clearly visible at the top, not inside or beside the Test History section */}
+            <div className="md:hidden shrink-0">
+              <ProfileMenu 
+                user={currentUser || { username: 'Super Admin', role: 'super_admin' }} 
+                onLogout={onLogout || (() => {})} 
+              />
             </div>
           </div>
 
-          {/* Strictly 5 Navigation Items */}
-          <nav className="space-y-1.5">
+          {/* Strictly 5 Navigation Items - Desktop only, hidden on mobile */}
+          <nav className="hidden md:block space-y-1.5">
             {/* 1. Schools & Students */}
             <button
               type="button"
@@ -281,14 +386,16 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
               {activeTab === 'history' && 'Test History'}
             </h2>
           </div>
-          <ProfileMenu 
-            user={currentUser || { username: 'Super Admin', role: 'super_admin' }} 
-            onLogout={onLogout || (() => {})} 
-          />
+          <div className="hidden md:block">
+            <ProfileMenu 
+              user={currentUser || { username: 'Super Admin', role: 'super_admin' }} 
+              onLogout={onLogout || (() => {})} 
+            />
+          </div>
         </header>
 
         {/* Main Content Area - Renders ONLY the selected section */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-32 md:pb-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
         {activeTab === 'schools' && (
           <SchoolsSection
             token={token}
@@ -342,5 +449,11 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </main>
       </div>
     </div>
+
+    {/* Portaled Mobile Bottom Navigation: Attached directly to document.body so it NEVER scrolls with page content */}
+    {mounted && typeof document !== 'undefined'
+      ? createPortal(mobileBottomNav, document.body)
+      : mobileBottomNav}
+  </>
   );
 }

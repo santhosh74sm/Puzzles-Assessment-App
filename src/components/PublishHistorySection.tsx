@@ -1286,9 +1286,9 @@ function HistoricalAuditDrillDown({
   );
 
   return (
-    <div className="border-t border-indigo-500/30 bg-slate-950/80 p-5 sm:p-6 space-y-6">
+    <div className="border-t border-indigo-500/30 bg-slate-950/80 p-4 sm:p-6 space-y-5 sm:space-y-6">
       {/* Top Header of Drill-Down */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-800 gap-2">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-semibold block">
             Test Details
@@ -1304,21 +1304,21 @@ function HistoricalAuditDrillDown({
             e.stopPropagation();
             onClose();
           }}
-          className="text-xs text-slate-400 hover:text-white font-medium px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
+          className="text-xs text-slate-400 hover:text-white font-medium px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shrink-0"
         >
           Close &uarr;
         </button>
       </div>
 
       {/* Published & Test Availability Window & Status */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-3.5 sm:p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono">
         <div className="space-y-1">
           <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
             Published:
           </span>
           <div className="text-white font-semibold flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span>{publishDateTimeDisplay}</span>
+            <span className="break-words">{publishDateTimeDisplay}</span>
           </div>
         </div>
 
@@ -1328,7 +1328,7 @@ function HistoricalAuditDrillDown({
           </span>
           <div className="text-white font-semibold flex items-center gap-2">
             <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span>{availabilityWindowDisplay}</span>
+            <span className="break-words">{availabilityWindowDisplay}</span>
           </div>
         </div>
 
@@ -1452,7 +1452,7 @@ function HistoricalAuditDrillDown({
             return (
               <div
                 key={tgt.id || tgt._id || tIdx}
-                className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5 shadow-sm"
+                className="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5 shadow-sm"
               >
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
                   <span className="px-2.5 py-0.5 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700/80 text-xs font-bold font-mono">
@@ -1466,15 +1466,15 @@ function HistoricalAuditDrillDown({
                 <div className="space-y-1.5 text-xs font-mono">
                   <div className="flex items-baseline gap-2">
                     <span className="text-slate-400 font-sans font-medium w-16 shrink-0">School:</span>
-                    <span className="text-white font-semibold break-words">{schoolDisplay}</span>
+                    <span className="text-white font-semibold break-words flex-1 min-w-0">{schoolDisplay}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-slate-400 font-sans font-medium w-16 shrink-0">Class:</span>
-                    <span className="text-white font-semibold break-words">{classDisplay}</span>
+                    <span className="text-white font-semibold break-words flex-1 min-w-0">{classDisplay}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-slate-400 font-sans font-medium w-16 shrink-0">Section:</span>
-                    <span className="text-white font-semibold break-words">{sectionDisplay}</span>
+                    <span className="text-white font-semibold break-words flex-1 min-w-0">{sectionDisplay}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-slate-400 font-sans font-medium w-16 shrink-0">Students:</span>
@@ -1546,13 +1546,13 @@ function HistoricalAuditDrillDown({
             </div>
 
             <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-mono">
                 {detail?.publishMode === 'Random Questions' ? (
                   <>
                     <span className="text-slate-400">
                       Total Eligible Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
                     </span>
-                    <span className="text-slate-600">&bull;</span>
+                    <span className="text-slate-600 hidden sm:inline">&bull;</span>
                     <span className="text-slate-400">
                       Questions Per Student: <strong className="text-indigo-300 text-sm">{detail.randomCount || detail.assignedQuestionsCount || '—'}</strong>
                     </span>
@@ -1567,7 +1567,7 @@ function HistoricalAuditDrillDown({
                 <button
                   type="button"
                   onClick={() => setShowQuestionsPreview(true)}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer self-start sm:self-auto"
+                  className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Preview Published Questions</span>
@@ -1673,11 +1673,11 @@ function HistoricalAuditDrillDown({
       {/* ======================================================== */}
       <div className="space-y-3 pt-3 border-t border-slate-800">
         {/* Roster Status Filter Tabs */}
-        <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs">
+        <div className="flex flex-col sm:flex-row gap-1.5 p-1 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs">
           <button
             type="button"
             onClick={() => setDrillDownTab('all')}
-            className={`flex-1 min-w-[100px] py-1.5 rounded-lg font-medium transition-all ${
+            className={`w-full sm:flex-1 py-2 sm:py-1.5 px-2 rounded-lg font-medium transition-all text-center cursor-pointer ${
               drillDownTab === 'all'
                 ? 'bg-indigo-600 text-white shadow font-semibold'
                 : 'text-slate-400 hover:text-white'
@@ -1688,25 +1688,25 @@ function HistoricalAuditDrillDown({
           <button
             type="button"
             onClick={() => setDrillDownTab('completed')}
-            className={`flex-1 min-w-[120px] py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1 ${
+            className={`w-full sm:flex-1 py-2 sm:py-1.5 px-2 rounded-lg font-medium transition-all flex items-center justify-center gap-1 text-center cursor-pointer ${
               drillDownTab === 'completed'
                 ? 'bg-emerald-600 text-white shadow font-semibold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <CheckCircle className="w-3 h-3" />
+            <CheckCircle className="w-3 h-3 shrink-0" />
             Completed ({filteredCompleted.length})
           </button>
           <button
             type="button"
             onClick={() => setDrillDownTab('not_completed')}
-            className={`flex-1 min-w-[140px] py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1 ${
+            className={`w-full sm:flex-1 py-2 sm:py-1.5 px-2 rounded-lg font-medium transition-all flex items-center justify-center gap-1 text-center cursor-pointer ${
               drillDownTab === 'not_completed'
                 ? 'bg-rose-600 text-white shadow font-semibold'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <XCircle className="w-3 h-3" />
+            <XCircle className="w-3 h-3 shrink-0" />
             Incomplete / Not Done ({filteredIncomplete.length})
           </button>
         </div>
@@ -1734,16 +1734,16 @@ function HistoricalAuditDrillDown({
                       : 'bg-slate-800/40 border-slate-700/50'
                   }`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold text-white text-sm">{s.studentName}</p>
-                      <span className="text-[11px] text-slate-400 font-mono">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-white text-sm break-words">{s.studentName}</p>
+                      <span className="text-[11px] text-slate-400 font-mono break-words block">
                         {s.className} {s.section ? `(${s.section})` : ''} &bull; ID: {s.uniqueStudentId || s.studentId}
                         {s.schoolName && <span className="text-slate-400"> &bull; {s.schoolName}</span>}
                       </span>
                     </div>
                     {s.status === 'COMPLETED' && s.scoreOutOf100 != null && (
-                      <span className="font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-[11px]">
+                      <span className="font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-[11px] shrink-0 self-start sm:self-auto">
                         {s.scoreOutOf100}/100
                       </span>
                     )}
@@ -1794,8 +1794,8 @@ function HistoricalAuditDrillDown({
 
               {/* Student pagination controls */}
               {totalStudentPages > 1 && (
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs font-mono">
-                  <span className="text-slate-400">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-800 text-xs font-mono">
+                  <span className="text-slate-400 text-center sm:text-left">
                     Showing {(safeStudentPage - 1) * studentPageSize + 1}&ndash;{Math.min(safeStudentPage * studentPageSize, displayedStudents.length)} of {displayedStudents.length} students
                   </span>
                   <div className="flex items-center gap-2">
@@ -2194,7 +2194,7 @@ export function PublishHistorySection({
       )}
 
       {/* Filter / Search bar */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase text-slate-400">Total Tests:</span>
           <span className="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-400 font-mono text-xs font-bold border border-indigo-800">
@@ -2235,41 +2235,61 @@ export function PublishHistorySection({
                 {/* Clickable Card Summary */}
                 <div
                   onClick={() => handleItemClick(hist.publishId)}
-                  className="p-5 cursor-pointer flex items-center justify-between transition-colors gap-4"
+                  className="p-4 sm:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between transition-colors gap-3.5 sm:gap-4"
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
-                        {hist.publishMode}
-                      </span>
-                      {hist.publishMode === 'Selected Questions' && (hist.shuffle || hist.shuffleQuestions) && (
+                  <div className="flex items-start justify-between gap-3 w-full sm:w-auto">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
-                          Shuffled
+                          {hist.publishMode}
                         </span>
-                      )}
-                      {isPaused && (
-                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide flex items-center gap-1">
-                          <Pause className="w-3 h-3" />
-                          Paused
-                        </span>
-                      )}
+                        {hist.publishMode === 'Selected Questions' && (hist.shuffle || hist.shuffleQuestions) && (
+                          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
+                            Shuffled
+                          </span>
+                        )}
+                        {isPaused && (
+                          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide flex items-center gap-1">
+                            <Pause className="w-3 h-3" />
+                            Paused
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="font-bold text-base text-white break-words">{hist.publishName}</h4>
+
+                      {/* School-wise assigned student counts */}
+                      <div className="space-y-0.5 pt-0.5">
+                        {schoolSummaries.map((sc, scIdx) => (
+                          <div key={scIdx} className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-200">{sc.schoolName}</span>
+                            <span className="text-slate-500">&mdash;</span>
+                            <span className="text-indigo-400 font-semibold">{sc.count} Assigned</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    <h4 className="font-bold text-base text-white">{hist.publishName}</h4>
-
-                    {/* School-wise assigned student counts */}
-                    <div className="space-y-0.5 pt-0.5">
-                      {schoolSummaries.map((sc, scIdx) => (
-                        <div key={scIdx} className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
-                          <span className="font-semibold text-slate-200">{sc.schoolName}</span>
-                          <span className="text-slate-500">&mdash;</span>
-                          <span className="text-indigo-400 font-semibold">{sc.count} Assigned</span>
-                        </div>
-                      ))}
+                    {/* Mobile-only stats and chevron at top right of the card */}
+                    <div className="sm:hidden flex items-center gap-2.5 shrink-0 text-right font-mono text-xs">
+                      <div>
+                        <span className="text-emerald-400 block font-bold text-[11px]">
+                          {hist.completedCount || 0} Done
+                        </span>
+                        <span className="text-rose-400 block text-[11px]">
+                          {incompleteCount > 0 ? incompleteCount : 0} Left
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
+                          isSelected ? 'rotate-180 text-indigo-400' : ''
+                        }`}
+                      />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs font-mono shrink-0">
+                  {/* Desktop Right Side: Stats + Inline Action Buttons + Chevron */}
+                  <div className="hidden sm:flex items-center gap-4 text-xs font-mono shrink-0">
                     <div className="text-right">
                       <span className="text-emerald-400 block font-bold">
                         {hist.completedCount || 0} Completed
@@ -2330,6 +2350,52 @@ export function PublishHistorySection({
                         isSelected ? 'rotate-180 text-indigo-400' : ''
                       }`}
                     />
+                  </div>
+
+                  {/* Mobile-only Bottom Action Toolbar (Full width, clean buttons, touch-friendly) */}
+                  <div
+                    className="sm:hidden flex items-center gap-2 pt-2.5 border-t border-slate-800/80 w-full"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      title="Edit Test"
+                      onClick={() => onEditAssessment && onEditAssessment(hist.publishId)}
+                      className="flex-1 py-2 px-2 rounded-lg bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      title={isPaused ? 'Resume Test' : 'Pause Test'}
+                      onClick={() => {
+                        if (isPaused) {
+                          setResumeTarget(hist);
+                        } else {
+                          setPauseTarget(hist);
+                        }
+                      }}
+                      className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                        isPaused
+                          ? 'bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border-amber-800'
+                          : 'bg-slate-800 hover:bg-amber-600 hover:text-white text-slate-300 border-slate-700'
+                      }`}
+                    >
+                      {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                      <span>{isPaused ? 'Resume' : 'Pause'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      title="Delete Test"
+                      onClick={() => setDeleteTarget(hist)}
+                      className="flex-1 py-2 px-2 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-slate-700 hover:border-rose-600 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
                   </div>
                 </div>
 
