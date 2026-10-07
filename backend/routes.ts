@@ -1617,6 +1617,11 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             snap.points = question.points != null ? Number(question.points) : null;
             snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            snap.answerType = question.answerType || 'single';
+            snap.correctAnswer = question.correctAnswer ?? null;
+            snap.correctAnswers = Array.isArray(question.correctAnswers)
+              ? question.correctAnswers
+              : (question.correctAnswer ? [String(question.correctAnswer)] : []);
             if (question.metadata) {
               snap.metadata = question.metadata;
             }
@@ -1627,6 +1632,49 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
       if (modified) {
         p.markModified('questionsSnapshot');
         await p.save();
+      }
+    }
+
+    // Synchronize PublishHistoryModel questionsSnapshot for Publish History Preview
+    const histPubTests = await PublishHistoryModel.find({
+      $or: [
+        { 'questionsSnapshot.questionId': qIdStr },
+        { 'questionsSnapshot.id': qIdStr },
+        { 'questionsSnapshot._id': qIdStr },
+      ],
+    });
+    for (const h of histPubTests) {
+      let modified = false;
+      if (Array.isArray(h.questionsSnapshot)) {
+        for (const snap of h.questionsSnapshot) {
+          const matches =
+            String(snap.questionId || '') === qIdStr ||
+            String(snap.id || '') === qIdStr ||
+            String(snap._id || '') === qIdStr;
+          if (matches) {
+            snap.content = question.content;
+            snap.options = question.options || [];
+            snap.difficulty = question.difficulty;
+            snap.groupName = question.groupName;
+            snap.groupId = question.groupId;
+            snap.points = question.points != null ? Number(question.points) : null;
+            snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            snap.answerType = question.answerType || 'single';
+            snap.correctAnswer = question.correctAnswer ?? null;
+            snap.correctAnswers = Array.isArray(question.correctAnswers)
+              ? question.correctAnswers
+              : (question.correctAnswer ? [String(question.correctAnswer)] : []);
+            if (question.metadata) {
+              snap.metadata = question.metadata;
+            }
+            modified = true;
+          }
+        }
+      }
+      if (modified) {
+        h.markModified('questionsSnapshot');
+        await h.save();
       }
     }
 
@@ -2424,6 +2472,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       .map((q) => ({
         id: q.id,
         questionId: q.id,
+        groupId: q.groupId,
         groupName: (q.groupName || 'General').trim(),
         difficulty: (q.difficulty || 'Medium').trim(),
         content: q.content,
@@ -4081,43 +4130,12 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
     const notCompletedStudents = studentsStatus.filter((s: any) => s.status !== 'COMPLETED');
 
     // Extract historical questions snapshot from historyDoc / pubTest questionsSnapshot (preserves full eligible pool)
-    const questionMap = new Map<string, any>();
-
     const storedSnapshot =
       Array.isArray(history.questionsSnapshot) && history.questionsSnapshot.length > 0
         ? history.questionsSnapshot
         : Array.isArray(pubTest?.questionsSnapshot) && pubTest.questionsSnapshot.length > 0
         ? pubTest.questionsSnapshot
         : [];
-
-    for (const q of storedSnapshot) {
-      const qId = q.questionId || q.id || q._id;
-      if (qId && !questionMap.has(String(qId))) {
-        questionMap.set(String(qId), {
-          id: String(qId),
-          questionId: String(qId),
-          groupName: (q.groupName || 'General').trim(),
-          difficulty: (q.difficulty || 'Medium').trim(),
-          content: q.content || 'Question',
-          points: q.points != null ? Number(q.points) : null,
-          timeAllowedSeconds:
-            q.timeAllowedSeconds != null
-              ? Number(q.timeAllowedSeconds)
-              : q.timeSeconds != null
-              ? Number(q.timeSeconds)
-              : null,
-          timeSeconds:
-            q.timeAllowedSeconds != null
-              ? Number(q.timeAllowedSeconds)
-              : q.timeSeconds != null
-              ? Number(q.timeSeconds)
-              : null,
-          options: q.options || [],
-          metadata: q.metadata || {},
-          pairs: q.pairs || q.metadata?.pairs || [],
-        });
-      }
-    }
 
     const targetQIds =
       Array.isArray(history.questionIds) && history.questionIds.length > 0
@@ -4126,94 +4144,156 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
         ? pubTest.questionIds
         : [];
 
-    if (questionMap.size === 0 && targetQIds.length > 0) {
-      const qDocs = await QuestionModel.find({ _id: { $in: targetQIds } });
-      for (const q of qDocs) {
-        const qId = q._id.toString();
-        if (!questionMap.has(qId)) {
-          questionMap.set(qId, {
-            id: qId,
-            questionId: qId,
-            groupName: (q.groupName || 'General').trim(),
-            difficulty: (q.difficulty || 'Medium').trim(),
-            content: q.content,
-            points: q.points != null ? Number(q.points) : null,
-            timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
-            timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
-            options: q.options || [],
-            metadata: q.metadata || {},
-            pairs: q.metadata?.pairs || [],
-          });
-        }
-      }
-    }
-
-    if (questionMap.size === 0) {
+    // Candidate base pool: storedSnapshot, or fallback to targetQIds or liveAssignments
+    let rawCandidates: any[] = [];
+    if (storedSnapshot.length > 0) {
+      rawCandidates = storedSnapshot;
+    } else if (targetQIds.length > 0) {
+      rawCandidates = targetQIds.map((id: any) => ({ questionId: String(id), id: String(id) }));
+    } else {
       for (const a of liveAssignments) {
         if (Array.isArray(a.questions)) {
           for (const q of a.questions) {
-            const qId = q.questionId || q.id || q._id;
-            if (qId && !questionMap.has(String(qId))) {
-              questionMap.set(String(qId), {
-                id: String(qId),
-                questionId: String(qId),
-                groupName: (q.groupName || 'General').trim(),
-                difficulty: (q.difficulty || 'Medium').trim(),
-                content: q.content || 'Question',
-                points: q.points != null ? Number(q.points) : null,
-                timeAllowedSeconds:
-                  q.timeAllowedSeconds != null
-                    ? Number(q.timeAllowedSeconds)
-                    : q.timeSeconds != null
-                    ? Number(q.timeSeconds)
-                    : null,
-                timeSeconds:
-                  q.timeAllowedSeconds != null
-                    ? Number(q.timeAllowedSeconds)
-                    : q.timeSeconds != null
-                    ? Number(q.timeSeconds)
-                    : null,
-                options: q.options || [],
-                metadata: q.metadata || {},
-                pairs: q.pairs || q.metadata?.pairs || [],
-              });
-            }
+            rawCandidates.push(q);
           }
         }
       }
     }
 
+    // Deduplicate candidate questions by questionId
+    const candidateMap = new Map<string, any>();
+    for (const q of rawCandidates) {
+      const qId = String(q.questionId || q.id || q._id || '');
+      if (qId && !candidateMap.has(qId)) {
+        candidateMap.set(qId, q);
+      }
+    }
+
+    // Query live questions and groups to synchronize updates, deletions, and renames
+    const allQIds = Array.from(candidateMap.keys());
+    const validObjectIds = allQIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+    const objectIdList = validObjectIds.map((id) => new mongoose.Types.ObjectId(id));
+    const liveQuestionDocs = await QuestionModel.find({
+      $or: [
+        { _id: { $in: objectIdList } },
+        { _id: { $in: validObjectIds } },
+      ],
+    }).lean();
+
+    const liveQuestionMap = new Map<string, any>();
+    for (const lq of liveQuestionDocs) {
+      liveQuestionMap.set(lq._id.toString(), lq);
+      if (lq.id) liveQuestionMap.set(String(lq.id), lq);
+    }
+
+    const liveGroupDocs = await QuestionGroupModel.find({}).lean();
+    const liveGroupMap = new Map<string, any>();
+    for (const lg of liveGroupDocs) {
+      liveGroupMap.set(lg._id.toString(), lg);
+      if (lg.id) liveGroupMap.set(String(lg.id), lg);
+    }
+
+    const questionMap = new Map<string, any>();
+    for (const [qId, snap] of candidateMap.entries()) {
+      const liveQ = liveQuestionMap.get(qId);
+      const isQuestionDeleted = !liveQ;
+
+      // Group resolution: live group name if active, or snapshot group name if deleted
+      const targetGroupId = String(liveQ?.groupId || snap.groupId || '');
+      let groupName = (liveQ?.groupName || snap.groupName || 'General').trim();
+      let isGroupDeleted = false;
+
+      if (targetGroupId) {
+        if (liveGroupMap.has(targetGroupId)) {
+          groupName = liveGroupMap.get(targetGroupId).name.trim();
+          isGroupDeleted = false;
+        } else {
+          isGroupDeleted = true;
+        }
+      } else {
+        const found = liveGroupDocs.some((g) => g.name.toLowerCase() === groupName.toLowerCase());
+        isGroupDeleted = !found;
+      }
+
+      const qType = liveQ
+        ? (liveQ.answerType === 'multiple' ? 'Multiple Selection' : (liveQ.answerType === 'type' ? 'Type' : 'Single Selection'))
+        : (snap.questionType || (snap.answerType === 'multiple' ? 'Multiple Selection' : (snap.answerType === 'type' ? 'Type' : 'Single Selection')));
+
+      const rawAnsType = liveQ
+        ? (liveQ.answerType || 'single')
+        : (snap.answerType || (qType === 'Multiple Selection' ? 'multiple' : (qType === 'Type' ? 'type' : 'single')));
+
+      const correctAns = liveQ ? (liveQ.correctAnswer ?? null) : (snap.correctAnswer ?? null);
+      const correctAnsList = liveQ
+        ? (Array.isArray(liveQ.correctAnswers) && liveQ.correctAnswers.length > 0
+            ? liveQ.correctAnswers
+            : (liveQ.correctAnswer ? [String(liveQ.correctAnswer)] : []))
+        : (Array.isArray(snap.correctAnswers) && snap.correctAnswers.length > 0
+            ? snap.correctAnswers
+            : (snap.correctAnswer ? [String(snap.correctAnswer)] : []));
+
+      questionMap.set(qId, {
+        id: qId,
+        questionId: qId,
+        groupId: targetGroupId,
+        groupName,
+        isGroupDeleted,
+        isQuestionDeleted,
+        difficulty: (liveQ ? liveQ.difficulty : snap.difficulty) || 'Medium',
+        content: (liveQ ? liveQ.content : snap.content) || 'Question',
+        points: liveQ ? (liveQ.points != null ? Number(liveQ.points) : null) : (snap.points != null ? Number(snap.points) : null),
+        timeAllowedSeconds: liveQ
+          ? (liveQ.timeSeconds != null ? Number(liveQ.timeSeconds) : null)
+          : (snap.timeAllowedSeconds != null ? Number(snap.timeAllowedSeconds) : (snap.timeSeconds != null ? Number(snap.timeSeconds) : null)),
+        timeSeconds: liveQ
+          ? (liveQ.timeSeconds != null ? Number(liveQ.timeSeconds) : null)
+          : (snap.timeSeconds != null ? Number(snap.timeSeconds) : (snap.timeAllowedSeconds != null ? Number(snap.timeAllowedSeconds) : null)),
+        options: liveQ ? (liveQ.options || []) : (snap.options || []),
+        answerType: rawAnsType,
+        questionType: qType,
+        correctAnswer: correctAns,
+        correctAnswers: correctAnsList,
+        metadata: (liveQ ? liveQ.metadata : snap.metadata) || {},
+        pairs: (liveQ ? liveQ.metadata?.pairs : (snap.pairs || snap.metadata?.pairs)) || [],
+      });
+    }
+
     const historicalQuestions = Array.from(questionMap.values());
 
     // Build question summary breakdown: Group -> Difficulty -> count
-    const questionSummaryMap = new Map<string, Map<string, number>>();
+    const questionSummaryMap = new Map<string, { diffMap: Map<string, number>; isGroupDeleted: boolean }>();
     for (const q of historicalQuestions) {
       const g = q.groupName || 'General';
       const d = q.difficulty || 'Medium';
       if (!questionSummaryMap.has(g)) {
-        questionSummaryMap.set(g, new Map());
+        questionSummaryMap.set(g, { diffMap: new Map(), isGroupDeleted: false });
       }
-      const diffMap = questionSummaryMap.get(g)!;
-      diffMap.set(d, (diffMap.get(d) || 0) + 1);
+      const entry = questionSummaryMap.get(g)!;
+      if (q.isGroupDeleted) {
+        entry.isGroupDeleted = true;
+      }
+      entry.diffMap.set(d, (entry.diffMap.get(d) || 0) + 1);
     }
 
     const questionSummary: Array<{
       groupName: string;
+      isGroupDeleted?: boolean;
       difficulties: Array<{ difficulty: string; count: number }>;
     }> = [];
 
-    for (const [g, diffMap] of questionSummaryMap.entries()) {
+    for (const [g, entry] of questionSummaryMap.entries()) {
       const standardOrder = ['Easy', 'Medium', 'Hard'];
-      const diffKeys = Array.from(diffMap.keys());
+      const diffKeys = Array.from(entry.diffMap.keys());
       const sortedKeys = [
         ...standardOrder.filter((d) => diffKeys.includes(d)),
         ...diffKeys.filter((d) => !standardOrder.includes(d)),
       ];
       questionSummary.push({
         groupName: g,
+        isGroupDeleted: entry.isGroupDeleted,
         difficulties: sortedKeys.map((d) => ({
           difficulty: d,
-          count: diffMap.get(d) || 0,
+          count: entry.diffMap.get(d) || 0,
         })),
       });
     }

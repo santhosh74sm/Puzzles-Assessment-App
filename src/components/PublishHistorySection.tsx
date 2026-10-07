@@ -983,26 +983,28 @@ function HistoricalAuditDrillDown({
       return detail.questionSummary;
     }
     if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
-      const map = new Map<string, Map<string, number>>();
+      const map = new Map<string, { diffMap: Map<string, number>; isGroupDeleted: boolean }>();
       for (const q of detail.questions) {
         const g = (q.groupName || 'General').trim();
         const d = (q.difficulty || 'Medium').trim();
-        if (!map.has(g)) map.set(g, new Map());
-        const diffMap = map.get(g)!;
-        diffMap.set(d, (diffMap.get(d) || 0) + 1);
+        if (!map.has(g)) map.set(g, { diffMap: new Map(), isGroupDeleted: false });
+        const entry = map.get(g)!;
+        if (q.isGroupDeleted) entry.isGroupDeleted = true;
+        entry.diffMap.set(d, (entry.diffMap.get(d) || 0) + 1);
       }
       const standardOrder = ['Easy', 'Medium', 'Hard'];
-      return Array.from(map.entries()).map(([g, diffMap]) => {
-        const diffKeys = Array.from(diffMap.keys());
+      return Array.from(map.entries()).map(([g, entry]) => {
+        const diffKeys = Array.from(entry.diffMap.keys());
         const sortedKeys = [
           ...standardOrder.filter((d) => diffKeys.includes(d)),
           ...diffKeys.filter((d) => !standardOrder.includes(d)),
         ];
         return {
           groupName: g,
+          isGroupDeleted: entry.isGroupDeleted,
           difficulties: sortedKeys.map((d) => ({
             difficulty: d,
-            count: diffMap.get(d) || 0,
+            count: entry.diffMap.get(d) || 0,
           })),
         };
       });
@@ -1032,30 +1034,32 @@ function HistoricalAuditDrillDown({
     const rawQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
     if (rawQuestions.length === 0) return [];
 
-    const groupMap = new Map<string, Map<string, any[]>>();
+    const groupMap = new Map<string, { diffMap: Map<string, any[]>; isGroupDeleted: boolean }>();
     for (const q of rawQuestions) {
       const g = (q.groupName || 'General').trim();
       const d = (q.difficulty || 'Medium').trim();
-      if (!groupMap.has(g)) groupMap.set(g, new Map());
-      const diffMap = groupMap.get(g)!;
-      if (!diffMap.has(d)) diffMap.set(d, []);
-      diffMap.get(d)!.push(q);
+      if (!groupMap.has(g)) groupMap.set(g, { diffMap: new Map(), isGroupDeleted: false });
+      const entry = groupMap.get(g)!;
+      if (q.isGroupDeleted) entry.isGroupDeleted = true;
+      if (!entry.diffMap.has(d)) entry.diffMap.set(d, []);
+      entry.diffMap.get(d)!.push(q);
     }
 
     const standardOrder = ['Easy', 'Medium', 'Hard'];
-    return Array.from(groupMap.entries()).map(([groupName, diffMap]) => {
-      const diffKeys = Array.from(diffMap.keys());
+    return Array.from(groupMap.entries()).map(([groupName, entry]) => {
+      const diffKeys = Array.from(entry.diffMap.keys());
       const sortedKeys = [
         ...standardOrder.filter((d) => diffKeys.includes(d)),
         ...diffKeys.filter((d) => !standardOrder.includes(d)),
       ];
       const diffs = sortedKeys.map((diffName) => ({
         difficulty: diffName,
-        questions: diffMap.get(diffName) || [],
+        questions: entry.diffMap.get(diffName) || [],
       }));
       const totalCount = diffs.reduce((sum, d) => sum + d.questions.length, 0);
       return {
         groupName,
+        isGroupDeleted: entry.isGroupDeleted,
         difficulties: diffs,
         totalCount,
       };
@@ -1519,7 +1523,14 @@ function HistoricalAuditDrillDown({
                   key={g.groupName}
                   className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
                 >
-                  <div className="font-bold text-slate-200 text-sm">{g.groupName}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold text-slate-200 text-sm">{g.groupName}</div>
+                    {g.isGroupDeleted && (
+                      <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800 text-[10px] font-mono font-bold flex items-center gap-1">
+                        ⚠️ Group Deleted
+                      </span>
+                    )}
+                  </div>
                   <div className="space-y-1 pl-2">
                     {g.difficulties.map((d: any) => (
                       <div
@@ -1879,7 +1890,14 @@ function HistoricalAuditDrillDown({
                   >
                     {/* Group Title */}
                     <div className="p-3.5 bg-slate-800/80 border-b border-slate-800 flex items-center justify-between">
-                      <span className="font-bold text-sm text-white">{group.groupName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-white">{group.groupName}</span>
+                        {group.isGroupDeleted && (
+                          <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800 text-[10px] font-mono font-bold flex items-center gap-1">
+                            ⚠️ Group Deleted
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-mono text-indigo-400">
                         {group.totalCount} {group.totalCount === 1 ? 'Question' : 'Questions'}
                       </span>
@@ -1908,55 +1926,133 @@ function HistoricalAuditDrillDown({
 
                           {/* Question Items (View Only) */}
                           <div className="space-y-2 pl-2 border-l-2 border-slate-800">
-                            {diff.questions.map((q: any, qIdx: number) => (
-                              <div
-                                key={q.id || q.questionId || qIdx}
-                                className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2 text-xs"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="space-y-1 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold">
-                                        Q{qIdx + 1}
-                                      </span>
-                                      <span className="font-medium text-slate-200 text-sm">{q.content}</span>
+                            {diff.questions.map((q: any, qIdx: number) => {
+                              const qType = q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : (q.answerType === 'type' ? 'Type' : 'Single Selection'));
+                              const isMultiple = (q.answerType === 'multiple') || qType === 'Multiple Selection';
+                              const correctAnsList: string[] = Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0
+                                ? q.correctAnswers.map((a: any) => String(a))
+                                : (q.correctAnswer != null && String(q.correctAnswer).trim() !== '' ? [String(q.correctAnswer)] : []);
+
+                              return (
+                                <div
+                                  key={q.id || q.questionId || qIdx}
+                                  className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3 text-xs"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1.5 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold">
+                                          Q{qIdx + 1}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 text-[10px] font-mono font-semibold">
+                                          {qType}
+                                        </span>
+                                        <span
+                                          className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
+                                            q.difficulty === 'Easy'
+                                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                              : q.difficulty === 'Hard'
+                                              ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                                              : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                                          }`}
+                                        >
+                                          {q.difficulty || 'Medium'}
+                                        </span>
+                                        {q.isQuestionDeleted && (
+                                          <span className="px-2 py-0.5 rounded bg-amber-950/90 text-amber-300 border border-amber-700/80 text-[10px] font-mono font-bold flex items-center gap-1 shadow-sm">
+                                            ⚠️ Question Deleted
+                                          </span>
+                                        )}
+                                        {q.isGroupDeleted && !group.isGroupDeleted && (
+                                          <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800 text-[10px] font-mono font-bold flex items-center gap-1">
+                                            ⚠️ Group Deleted
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="font-medium text-slate-200 text-sm block">{q.content}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
+                                      {((q.timeSeconds != null && q.timeSeconds > 0) || (q.timeAllowedSeconds != null && q.timeAllowedSeconds > 0)) && (
+                                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 flex items-center gap-1">
+                                          <Clock className="w-3 h-3" />
+                                          {q.timeSeconds ?? q.timeAllowedSeconds}s
+                                        </span>
+                                      )}
+                                      {q.points != null && q.points > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                                          <Award className="w-3 h-3" />
+                                          {q.points} pts
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
-                                    {q.timeSeconds != null && q.timeSeconds > 0 && (
-                                      <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        {q.timeSeconds}s
+                                  {/* Options Preview if any */}
+                                  {Array.isArray(q.options) && q.options.length > 0 && (
+                                    <div className="space-y-1.5 pt-1">
+                                      <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold block">
+                                        Answer Choices:
                                       </span>
-                                    )}
-                                    {q.points != null && q.points > 0 && (
-                                      <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
-                                        <Award className="w-3 h-3" />
-                                        {q.points} pts
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                        {q.options.map((opt: string, optIdx: number) => {
+                                          const optLetter = String.fromCharCode(65 + optIdx);
+                                          const isCorrect = correctAnsList.some((ans: string) => {
+                                            const a = ans.trim().toLowerCase();
+                                            return (
+                                              a === opt.trim().toLowerCase() ||
+                                              a === optLetter.toLowerCase() ||
+                                              a === String(optIdx + 1)
+                                            );
+                                          });
 
-                                {/* Options Preview if any */}
-                                {Array.isArray(q.options) && q.options.length > 0 && (
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1.5">
-                                    {q.options.map((opt: string, optIdx: number) => (
-                                      <div
-                                        key={optIdx}
-                                        className="px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/50 text-slate-300 text-xs flex items-center gap-2"
-                                      >
-                                        <span className="w-4 h-4 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] font-bold">
-                                          {String.fromCharCode(65 + optIdx)}
-                                        </span>
-                                        <span className="truncate">{opt}</span>
+                                          return (
+                                            <div
+                                              key={optIdx}
+                                              className={`px-2.5 py-2 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all ${
+                                                isCorrect
+                                                  ? 'bg-emerald-950/40 border-emerald-600/70 text-emerald-200 font-medium'
+                                                  : 'bg-slate-800/60 border-slate-700/50 text-slate-300'
+                                              }`}
+                                            >
+                                              <div className="flex items-center gap-2 min-w-0">
+                                                <span
+                                                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                                                    isCorrect
+                                                      ? 'bg-emerald-600 text-white'
+                                                      : 'bg-slate-700 text-slate-300'
+                                                  }`}
+                                                >
+                                                  {optLetter}
+                                                </span>
+                                                <span className="truncate">{opt}</span>
+                                              </div>
+                                              {isCorrect && (
+                                                <span className="text-[10px] font-mono text-emerald-400 font-bold shrink-0 flex items-center gap-0.5">
+                                                  <CheckCircle className="w-3 h-3" /> Correct
+                                                </span>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
                                       </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                                    </div>
+                                  )}
+
+                                  {/* Correct Answer Display */}
+                                  {correctAnsList.length > 0 && (
+                                    <div className="pt-1 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                                      <span className="text-slate-400 font-medium">
+                                        {isMultiple ? 'Correct Answers:' : 'Correct Answer:'}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-800 font-bold">
+                                        {correctAnsList.join(', ')}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
