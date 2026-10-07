@@ -39,6 +39,9 @@ function formatDocs(docs: any[]): any[] {
   return docs.map(formatDoc);
 }
 
+// Helper to escape regex special characters
+const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // Helper to determine if an assessment has expired based on client request time / timezone
 function isRequestAssessmentExpired(req: Request, pubTest: any): boolean {
   if (!pubTest?.endDate || pubTest.endDate === 'Open') {
@@ -970,6 +973,187 @@ router.get('/question-groups', authenticate, async (req: Request, res: Response)
     return res.json(withCounts);
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to fetch question groups', details: err.message });
+  }
+});
+
+// Update Question Group Name (Super Admin Only)
+// Allows editing ONLY the Question Group Name.
+// Keeps stable Question Group ID, description, questions, difficulty unchanged.
+// Synchronizes the new group name globally: live questions, published tests snapshots,
+// publish history records, and student assessment question records.
+router.put('/question-groups/:id', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Question Group Name is required' });
+    }
+
+    const cleanName = name.trim();
+
+    let group = await QuestionGroupModel.findById(id);
+    if (!group && mongoose.Types.ObjectId.isValid(id)) {
+      group = await QuestionGroupModel.findById(new mongoose.Types.ObjectId(id));
+    }
+
+    if (!group) {
+      return res.status(404).json({ error: 'Question Group not found' });
+    }
+
+    const oldName = group.name;
+    const gIdStr = group._id.toString();
+
+    // Check if another group already has this name (case-insensitive)
+    const existing = await QuestionGroupModel.findOne({
+      _id: { $ne: group._id },
+      name: { $regex: new RegExp(`^${escapeRegExp(cleanName)}$`, 'i') },
+    });
+    if (existing) {
+      return res.status(400).json({ error: `Another Question Group with name '${cleanName}' already exists.` });
+    }
+
+    // 1. Update group name ONLY - keep ID, description, questions, and other group data intact
+    group.name = cleanName;
+    await group.save();
+
+    // 2. Identify all question IDs currently belonging to this group
+    const groupQuestions = await QuestionModel.find({
+      $or: [
+        { groupId: gIdStr },
+        { groupId: group.id },
+        ...(mongoose.Types.ObjectId.isValid(gIdStr) ? [{ groupId: new mongoose.Types.ObjectId(gIdStr) }] : []),
+        { groupName: oldName },
+        { groupName: { $regex: new RegExp(`^${escapeRegExp(oldName)}$`, 'i') } },
+      ],
+    });
+    const questionIdsInGroup = groupQuestions.map((q) => q._id.toString());
+
+    // 3. Update groupName on live Question Bank records
+    await QuestionModel.updateMany(
+      {
+        $or: [
+          { groupId: gIdStr },
+          { groupId: group.id },
+          ...(mongoose.Types.ObjectId.isValid(gIdStr) ? [{ groupId: new mongoose.Types.ObjectId(gIdStr) }] : []),
+          { groupName: oldName },
+          { groupName: { $regex: new RegExp(`^${escapeRegExp(oldName)}$`, 'i') } },
+        ],
+      },
+      {
+        $set: { groupName: cleanName },
+      }
+    );
+
+    // 4. Synchronize new groupName across PublishedTestModel snapshots
+    const pubDocs = await PublishedTestModel.find({
+      $or: [
+        { 'questionsSnapshot.groupId': gIdStr },
+        { 'questionsSnapshot.groupId': group.id },
+        { 'questionsSnapshot.questionId': { $in: questionIdsInGroup } },
+        { 'questionsSnapshot.id': { $in: questionIdsInGroup } },
+        { 'questionsSnapshot.groupName': oldName },
+        { 'questionsSnapshot.groupName': { $regex: new RegExp(`^${escapeRegExp(oldName)}$`, 'i') } },
+      ],
+    });
+    for (const p of pubDocs) {
+      let changed = false;
+      if (Array.isArray(p.questionsSnapshot)) {
+        for (const q of p.questionsSnapshot) {
+          const isMatch =
+            q.groupId === gIdStr ||
+            q.groupId === group.id ||
+            (q.questionId && questionIdsInGroup.includes(String(q.questionId))) ||
+            (q.id && questionIdsInGroup.includes(String(q.id))) ||
+            (q._id && questionIdsInGroup.includes(String(q._id))) ||
+            q.groupName === oldName ||
+            (q.groupName && q.groupName.trim().toLowerCase() === oldName.trim().toLowerCase());
+          if (isMatch) {
+            q.groupName = cleanName;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        await PublishedTestModel.findByIdAndUpdate(p._id, { $set: { questionsSnapshot: p.questionsSnapshot } });
+      }
+    }
+
+    // 5. Synchronize new groupName across PublishHistoryModel snapshots
+    const histDocs = await PublishHistoryModel.find({
+      $or: [
+        { 'questionsSnapshot.groupId': gIdStr },
+        { 'questionsSnapshot.groupId': group.id },
+        { 'questionsSnapshot.questionId': { $in: questionIdsInGroup } },
+        { 'questionsSnapshot.id': { $in: questionIdsInGroup } },
+        { 'questionsSnapshot.groupName': oldName },
+        { 'questionsSnapshot.groupName': { $regex: new RegExp(`^${escapeRegExp(oldName)}$`, 'i') } },
+      ],
+    });
+    for (const h of histDocs) {
+      let changed = false;
+      if (Array.isArray(h.questionsSnapshot)) {
+        for (const q of h.questionsSnapshot) {
+          const isMatch =
+            q.groupId === gIdStr ||
+            q.groupId === group.id ||
+            (q.questionId && questionIdsInGroup.includes(String(q.questionId))) ||
+            (q.id && questionIdsInGroup.includes(String(q.id))) ||
+            (q._id && questionIdsInGroup.includes(String(q._id))) ||
+            q.groupName === oldName ||
+            (q.groupName && q.groupName.trim().toLowerCase() === oldName.trim().toLowerCase());
+          if (isMatch) {
+            q.groupName = cleanName;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        await PublishHistoryModel.findByIdAndUpdate(h._id, { $set: { questionsSnapshot: h.questionsSnapshot } });
+      }
+    }
+
+    // 6. Synchronize new groupName across StudentTestAssignmentModel question logs (current & historical)
+    const assignDocs = await StudentTestAssignmentModel.find({
+      $or: [
+        { 'questions.groupId': gIdStr },
+        { 'questions.groupId': group.id },
+        { 'questions.questionId': { $in: questionIdsInGroup } },
+        { 'questions.id': { $in: questionIdsInGroup } },
+        { 'questions.groupName': oldName },
+        { 'questions.groupName': { $regex: new RegExp(`^${escapeRegExp(oldName)}$`, 'i') } },
+      ],
+    });
+    for (const a of assignDocs) {
+      let changed = false;
+      if (Array.isArray(a.questions)) {
+        for (const q of a.questions) {
+          const isMatch =
+            q.groupId === gIdStr ||
+            q.groupId === group.id ||
+            (q.questionId && questionIdsInGroup.includes(String(q.questionId))) ||
+            (q.id && questionIdsInGroup.includes(String(q.id))) ||
+            (q._id && questionIdsInGroup.includes(String(q._id))) ||
+            q.groupName === oldName ||
+            (q.groupName && q.groupName.trim().toLowerCase() === oldName.trim().toLowerCase());
+          if (isMatch) {
+            q.groupName = cleanName;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        await StudentTestAssignmentModel.findByIdAndUpdate(a._id, { $set: { questions: a.questions } });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Question Group renamed from '${oldName}' to '${cleanName}' successfully.`,
+      group: formatDoc(group),
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Failed to update question group', details: err.message });
   }
 });
 
@@ -4106,9 +4290,6 @@ router.get('/reports/schools/:schoolId/classes', authenticate, requireRole('supe
     return res.status(500).json({ error: 'Failed to fetch classes for school', details: err.message });
   }
 });
-
-// Helper to escape regex special characters
-const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Get unique sections for a school and class from actual student records in MongoDB Atlas
 router.get('/reports/schools/:schoolId/sections', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {

@@ -3,6 +3,7 @@ import {
   Layers,
   PlusCircle,
   Eye,
+  Edit,
   HelpCircle,
   Search,
   CheckCircle,
@@ -30,6 +31,12 @@ export function QuestionBankSection({
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDesc, setNewGroupDesc] = useState('');
   const [isSubmittingGroup, setIsSubmittingGroup] = useState(false);
+
+  // Edit Question Group (Group Name only)
+  const [editingGroup, setEditingGroup] = useState<any | null>(null);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
+  const [editGroupError, setEditGroupError] = useState<string | null>(null);
 
   // Group View Modal (Read Only)
   const [viewGroupModal, setViewGroupModal] = useState<any | null>(null);
@@ -154,6 +161,47 @@ export function QuestionBankSection({
       });
     } finally {
       setIsDeletingGroup(false);
+    }
+  };
+
+  const handleUpdateGroupName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGroup) return;
+    const gId = editingGroup.id || editingGroup._id;
+    if (!gId) return;
+
+    if (!editGroupName.trim()) {
+      setEditGroupError('Question Group Name cannot be empty.');
+      return;
+    }
+
+    setIsUpdatingGroup(true);
+    setEditGroupError(null);
+    try {
+      const res = await fetch(`/api/question-groups/${gId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ name: editGroupName.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedbackMessage({
+          type: 'success',
+          text: `Question group renamed to "${data.group?.name || editGroupName.trim()}" successfully.`,
+        });
+        setEditingGroup(null);
+        setEditGroupName('');
+        if (viewGroupModal && (viewGroupModal.id === gId || viewGroupModal._id === gId)) {
+          setViewGroupModal((prev: any) => (prev ? { ...prev, name: data.group?.name || editGroupName.trim() } : null));
+        }
+        await onRefreshData();
+      } else {
+        setEditGroupError(data.error || 'Failed to update question group name.');
+      }
+    } catch (err: any) {
+      setEditGroupError(err.message || 'Something went wrong while updating question group.');
+    } finally {
+      setIsUpdatingGroup(false);
     }
   };
 
@@ -555,7 +603,20 @@ export function QuestionBankSection({
                       className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center justify-center gap-1 transition-all flex-1 cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      View Questions
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingGroup(grp);
+                        setEditGroupName(grp.name);
+                        setEditGroupError(null);
+                      }}
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700/80 hover:bg-slate-700 hover:text-white flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      title={`Edit group ${grp.name}`}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edit
                     </button>
                     <button
                       type="button"
@@ -1042,6 +1103,105 @@ export function QuestionBankSection({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Question Group Modal (Group Name Only) */}
+      {editingGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 flex items-center justify-center">
+                  <Edit className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Edit Question Group</h3>
+                  <p className="text-xs text-slate-400">Update Question Group Name</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isUpdatingGroup) {
+                    setEditingGroup(null);
+                    setEditGroupError(null);
+                  }
+                }}
+                disabled={isUpdatingGroup}
+                className="text-slate-400 hover:text-white text-lg font-bold disabled:opacity-40 cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            {editGroupError && (
+              <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{editGroupError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateGroupName} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Question Group Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editGroupName}
+                  onChange={(e) => setEditGroupName(e.target.value)}
+                  placeholder="Enter new question group name"
+                  disabled={isUpdatingGroup}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50"
+                  autoFocus
+                />
+              </div>
+
+              {/* Read-only info / Notice */}
+              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1.5 text-xs text-slate-400">
+                {editingGroup.description && (
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-slate-500 shrink-0">Description:</span>
+                    <span className="text-slate-400 text-right line-clamp-1">{editingGroup.description}</span>
+                  </div>
+                )}
+                <p className="text-[11px] text-indigo-300/80 pt-1">
+                  Note: Only the group name will be updated. Questions, difficulty counts, and descriptions remain unchanged.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingGroup(null);
+                    setEditGroupError(null);
+                  }}
+                  disabled={isUpdatingGroup}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingGroup || !editGroupName.trim()}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isUpdatingGroup ? (
+                    'Saving...'
+                  ) : (
+                    <>
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
