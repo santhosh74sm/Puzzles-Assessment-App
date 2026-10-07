@@ -1542,6 +1542,94 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
     }
 
     await question.save();
+
+    const qIdStr = question._id.toString();
+
+    // Synchronize edited question ONLY to non-completed student assignments (NOT_STARTED, IN_PROGRESS, etc.).
+    // CRITICAL COMPLETED STUDENT RULE:
+    // Completed student historical attempts (status === 'COMPLETED') must remain strictly immutable.
+    const nonCompletedAssignments = await StudentTestAssignmentModel.find({
+      status: { $ne: 'COMPLETED' },
+      $or: [
+        { 'questions.questionId': qIdStr },
+        { 'questions.id': qIdStr },
+        { 'questions._id': qIdStr },
+      ],
+    });
+
+    for (const a of nonCompletedAssignments) {
+      let modified = false;
+      if (Array.isArray(a.questions)) {
+        for (let i = 0; i < a.questions.length; i++) {
+          const q = a.questions[i];
+          const matches =
+            String(q.questionId || '') === qIdStr ||
+            String(q.id || '') === qIdStr ||
+            String(q._id || '') === qIdStr;
+
+          if (matches) {
+            q.content = question.content;
+            q.options = question.options || [];
+            q.difficulty = question.difficulty;
+            q.groupName = question.groupName;
+            q.groupId = question.groupId;
+            q.answerType = question.answerType || 'single';
+            q.points = question.points != null ? Number(question.points) : null;
+            q.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            q.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            q.correctAnswer = question.correctAnswer;
+            q.correctAnswers = question.correctAnswers;
+            if (question.metadata) {
+              q.metadata = question.metadata;
+            }
+            modified = true;
+          }
+        }
+      }
+      if (modified) {
+        a.markModified('questions');
+        await a.save();
+      }
+    }
+
+    // Synchronize active published test snapshots for non-completed / future tests
+    const activePubTests = await PublishedTestModel.find({
+      $or: [
+        { 'questionsSnapshot.questionId': qIdStr },
+        { 'questionsSnapshot.id': qIdStr },
+        { 'questionsSnapshot._id': qIdStr },
+      ],
+    });
+    for (const p of activePubTests) {
+      let modified = false;
+      if (Array.isArray(p.questionsSnapshot)) {
+        for (const snap of p.questionsSnapshot) {
+          const matches =
+            String(snap.questionId || '') === qIdStr ||
+            String(snap.id || '') === qIdStr ||
+            String(snap._id || '') === qIdStr;
+          if (matches) {
+            snap.content = question.content;
+            snap.options = question.options || [];
+            snap.difficulty = question.difficulty;
+            snap.groupName = question.groupName;
+            snap.groupId = question.groupId;
+            snap.points = question.points != null ? Number(question.points) : null;
+            snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            if (question.metadata) {
+              snap.metadata = question.metadata;
+            }
+            modified = true;
+          }
+        }
+      }
+      if (modified) {
+        p.markModified('questionsSnapshot');
+        await p.save();
+      }
+    }
+
     return res.json(formatDoc(question));
   } catch (err: any) {
     return res.status(500).json({ error: 'Failed to update question', details: err.message });

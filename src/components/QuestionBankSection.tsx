@@ -49,7 +49,10 @@ export function QuestionBankSection({
   const [deletingQuestion, setDeletingQuestion] = useState<any | null>(null);
   const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
 
-  // New Question form
+  // Question editing state
+  const [editingQuestionItem, setEditingQuestionItem] = useState<any | null>(null);
+
+  // New / Edit Question form
   const [questionForm, setQuestionForm] = useState<{
     groupId: string;
     difficulty: string;
@@ -101,6 +104,19 @@ export function QuestionBankSection({
           text: `Question deleted successfully. Past test results will not be affected.`,
         });
         setDeletingQuestion(null);
+        if (editingQuestionItem && (editingQuestionItem.id === qId || editingQuestionItem._id === qId)) {
+          setEditingQuestionItem(null);
+          setQuestionForm({
+            groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
+            difficulty: 'Easy',
+            content: '',
+            timeSeconds: '',
+            points: '',
+            options: '',
+            multipleSelection: false,
+            correctAnswer: '',
+          });
+        }
         // If viewGroupModal is open, close it or refresh it
         if (viewGroupModal) {
           setViewGroupModal(null);
@@ -232,6 +248,59 @@ export function QuestionBankSection({
     }
   };
 
+  const handleStartEditQuestion = (q: any) => {
+    setEditingQuestionItem(q);
+    setFeedbackMessage(null);
+
+    let optsStr = '';
+    if (Array.isArray(q.options)) {
+      optsStr = q.options.join(', ');
+    } else if (typeof q.options === 'string') {
+      optsStr = q.options;
+    }
+
+    let corrAnsStr = '';
+    if (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0) {
+      corrAnsStr = q.correctAnswers.join(', ');
+    } else if (Array.isArray(q.correctAnswer)) {
+      corrAnsStr = q.correctAnswer.join(', ');
+    } else if (q.correctAnswer != null && String(q.correctAnswer).trim() !== '') {
+      corrAnsStr = typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer);
+    }
+
+    const isMultiple = q.answerType === 'multiple' || Boolean(q.multipleSelection);
+
+    setQuestionForm({
+      groupId: q.groupId || (questionGroups.length > 0 ? questionGroups[0].id : ''),
+      difficulty: q.difficulty || 'Easy',
+      content: q.content || '',
+      timeSeconds: q.timeSeconds != null ? String(q.timeSeconds) : (q.timeAllowedSeconds != null ? String(q.timeAllowedSeconds) : ''),
+      points: q.points != null ? String(q.points) : '',
+      options: optsStr,
+      multipleSelection: isMultiple,
+      correctAnswer: corrAnsStr,
+    });
+
+    const formElem = document.getElementById('question-form-container');
+    if (formElem) {
+      formElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleCancelEditQuestion = () => {
+    setEditingQuestionItem(null);
+    setQuestionForm({
+      groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
+      difficulty: 'Easy',
+      content: '',
+      timeSeconds: '',
+      points: '',
+      options: '',
+      multipleSelection: false,
+      correctAnswer: '',
+    });
+  };
+
   const handleCreateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionForm.groupId) {
@@ -246,35 +315,63 @@ export function QuestionBankSection({
     setIsSubmittingQuestion(true);
     setFeedbackMessage(null);
     try {
-      const res = await fetch('/api/questions', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          groupId: questionForm.groupId,
-          difficulty: questionForm.difficulty,
-          content: questionForm.content.trim(),
-          timeSeconds: questionForm.timeSeconds ? Number(questionForm.timeSeconds) : null,
-          points: questionForm.points ? Number(questionForm.points) : null,
-          correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
-          options: opts,
-          answerType: questionForm.multipleSelection ? 'multiple' : 'single',
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setQuestionForm((prev) => ({
-          ...prev,
-          content: '',
-          timeSeconds: '',
-          points: '',
-          options: '',
-          multipleSelection: false,
-          correctAnswer: '',
-        }));
-        setFeedbackMessage({ type: 'success', text: 'Question saved successfully.' });
-        await onRefreshData();
+      if (editingQuestionItem) {
+        // Edit Mode: PUT /api/questions/:id
+        const qId = editingQuestionItem.id || editingQuestionItem._id;
+        const res = await fetch(`/api/questions/${qId}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            groupId: questionForm.groupId,
+            difficulty: questionForm.difficulty,
+            content: questionForm.content.trim(),
+            timeSeconds: questionForm.timeSeconds ? Number(questionForm.timeSeconds) : null,
+            points: questionForm.points ? Number(questionForm.points) : null,
+            correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
+            options: opts,
+            answerType: questionForm.multipleSelection ? 'multiple' : 'single',
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          handleCancelEditQuestion();
+          setFeedbackMessage({ type: 'success', text: 'Question updated successfully.' });
+          await onRefreshData();
+        } else {
+          setFeedbackMessage({ type: 'error', text: data.error || 'Unable to update question. Please try again.' });
+        }
       } else {
-        setFeedbackMessage({ type: 'error', text: data.error || 'Unable to save question. Please try again.' });
+        // Add Mode: POST /api/questions
+        const res = await fetch('/api/questions', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            groupId: questionForm.groupId,
+            difficulty: questionForm.difficulty,
+            content: questionForm.content.trim(),
+            timeSeconds: questionForm.timeSeconds ? Number(questionForm.timeSeconds) : null,
+            points: questionForm.points ? Number(questionForm.points) : null,
+            correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
+            options: opts,
+            answerType: questionForm.multipleSelection ? 'multiple' : 'single',
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setQuestionForm((prev) => ({
+            ...prev,
+            content: '',
+            timeSeconds: '',
+            points: '',
+            options: '',
+            multipleSelection: false,
+            correctAnswer: '',
+          }));
+          setFeedbackMessage({ type: 'success', text: 'Question saved successfully.' });
+          await onRefreshData();
+        } else {
+          setFeedbackMessage({ type: 'error', text: data.error || 'Unable to save question. Please try again.' });
+        }
       }
     } catch (e: any) {
       setFeedbackMessage({ type: 'error', text: e.message || 'Unable to save question. Please try again.' });
@@ -427,12 +524,28 @@ export function QuestionBankSection({
           </form>
         </div>
 
-        {/* Create Question */}
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-          <h3 className="font-bold text-lg text-white flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-indigo-400" />
-            Add Question
-          </h3>
+        {/* Create / Edit Question */}
+        <div id="question-form-container" className="lg:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-lg text-white flex items-center gap-2">
+              {editingQuestionItem ? (
+                <>
+                  <Edit className="w-5 h-5 text-indigo-400" />
+                  Edit Question
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="w-5 h-5 text-indigo-400" />
+                  Add Question
+                </>
+              )}
+            </h3>
+            {editingQuestionItem && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-mono">
+                Editing Question
+              </span>
+            )}
+          </div>
           <form onSubmit={handleCreateQuestion} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
@@ -549,13 +662,27 @@ export function QuestionBankSection({
               </label>
             </div>
 
-            <div className="sm:col-span-2 md:col-span-3 flex justify-end">
+            <div className="sm:col-span-2 md:col-span-3 flex items-center justify-end gap-3">
+              {editingQuestionItem && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditQuestion}
+                  disabled={isSubmittingQuestion}
+                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-sm transition-all border border-slate-700 disabled:opacity-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={isSubmittingQuestion || questionGroups.length === 0}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
               >
-                {isSubmittingQuestion ? 'Saving...' : '+ Save Question'}
+                {isSubmittingQuestion
+                  ? 'Saving...'
+                  : editingQuestionItem
+                  ? 'Save Question'
+                  : '+ Save Question'}
               </button>
             </div>
           </form>
@@ -740,9 +867,19 @@ export function QuestionBankSection({
                       </span>
                     )}
                     <button
+                      type="button"
+                      onClick={() => handleStartEditQuestion(q)}
+                      title="Edit question"
+                      className="p-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 font-sans cursor-pointer"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs font-medium">Edit</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setDeletingQuestion(q)}
                       title="Delete question"
-                      className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 transition-all ml-1 flex items-center gap-1 font-sans"
+                      className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 transition-all ml-1 flex items-center gap-1 font-sans cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline text-xs font-medium">Delete</span>
