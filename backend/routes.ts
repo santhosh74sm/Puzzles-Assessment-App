@@ -590,6 +590,21 @@ router.post('/students', authenticate, async (req: Request, res: Response) => {
     const school = await SchoolModel.findById(schoolId);
     if (!school) return res.status(404).json({ error: 'School not found' });
 
+    const cleanAdmissionNo = schoolAdmissionNumber.trim();
+    if (!cleanAdmissionNo) {
+      return res.status(400).json({ error: 'Admission Number is required' });
+    }
+
+    // Check whether the same Admission Number already exists in the same school
+    const existingStudentInSchool = await UserModel.findOne({
+      role: 'student',
+      schoolId: school._id.toString(),
+      schoolAdmissionNumber: { $regex: new RegExp(`^${escapeRegExp(cleanAdmissionNo)}$`, 'i') },
+    });
+    if (existingStudentInSchool) {
+      return res.status(400).json({ error: 'Admission Number already exists in this school.' });
+    }
+
     const cleanClass = className.replace(/[^0-9]/g, '') || '0';
     const cleanSection = section.trim().toUpperCase();
 
@@ -618,7 +633,7 @@ router.post('/students', authenticate, async (req: Request, res: Response) => {
       studentName: studentName.trim(),
       className: className.trim(),
       section: cleanSection,
-      schoolAdmissionNumber: schoolAdmissionNumber.trim(),
+      schoolAdmissionNumber: cleanAdmissionNo,
       uniqueStudentId,
     });
 
@@ -630,6 +645,15 @@ router.post('/students', authenticate, async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
+    if (
+      err.code === 11000 &&
+      (err.keyPattern?.schoolAdmissionNumber ||
+        (err.message &&
+          (err.message.includes('schoolAdmissionNumber') ||
+            err.message.includes('schoolId_1_schoolAdmissionNumber_1'))))
+    ) {
+      return res.status(400).json({ error: 'Admission Number already exists in this school.' });
+    }
     return res.status(500).json({ error: 'Failed to register student', details: err.message });
   }
 });
@@ -709,6 +733,22 @@ router.put('/students/:id', authenticate, async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'Student Full Name, Admission Number, Class, and Section are all required' });
     }
 
+    const cleanAdmissionNo = schoolAdmissionNumber.trim();
+    if (!cleanAdmissionNo) {
+      return res.status(400).json({ error: 'Admission Number is required' });
+    }
+
+    // Check whether the same Admission Number already exists in the same school (excluding current student)
+    const existingStudentInSchool = await UserModel.findOne({
+      _id: { $ne: student._id },
+      role: 'student',
+      schoolId: student.schoolId,
+      schoolAdmissionNumber: { $regex: new RegExp(`^${escapeRegExp(cleanAdmissionNo)}$`, 'i') },
+    });
+    if (existingStudentInSchool) {
+      return res.status(400).json({ error: 'Admission Number already exists in this school.' });
+    }
+
     // Validate class (Class 1 to Class 12)
     const validClasses = [
       'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
@@ -725,7 +765,7 @@ router.put('/students/:id', authenticate, async (req: Request, res: Response) =>
 
     // Update editable fields without altering username, uniqueStudentId, role, schoolId, or passwordHash
     student.studentName = studentName.trim();
-    student.schoolAdmissionNumber = schoolAdmissionNumber.trim();
+    student.schoolAdmissionNumber = cleanAdmissionNo;
     student.className = className.trim();
     student.section = cleanSection;
 
@@ -826,6 +866,15 @@ router.put('/students/:id', authenticate, async (req: Request, res: Response) =>
       student: formatDoc(student),
     });
   } catch (err: any) {
+    if (
+      err.code === 11000 &&
+      (err.keyPattern?.schoolAdmissionNumber ||
+        (err.message &&
+          (err.message.includes('schoolAdmissionNumber') ||
+            err.message.includes('schoolId_1_schoolAdmissionNumber_1'))))
+    ) {
+      return res.status(400).json({ error: 'Admission Number already exists in this school.' });
+    }
     return res.status(500).json({ error: 'Failed to update student', details: err.message });
   }
 });

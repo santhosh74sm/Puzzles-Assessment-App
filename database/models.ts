@@ -36,7 +36,7 @@ export const UserSchema = new Schema<IUserDocument>(
     studentName: { type: String },
     className: { type: String, index: true },
     section: { type: String, index: true },
-    schoolAdmissionNumber: { type: String },
+    schoolAdmissionNumber: { type: String, trim: true },
     uniqueStudentId: { type: String, index: true },
   },
   {
@@ -65,6 +65,17 @@ export const UserSchema = new Schema<IUserDocument>(
 );
 
 UserSchema.index({ role: 1, schoolId: 1, className: 1, section: 1 });
+UserSchema.index(
+  { schoolId: 1, schoolAdmissionNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      role: 'student',
+      schoolId: { $type: 'string' },
+      schoolAdmissionNumber: { $type: 'string' },
+    },
+  }
+);
 
 // ==========================================
 // 2. SCHOOL SCHEMA & MODEL

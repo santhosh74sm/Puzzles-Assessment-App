@@ -92,6 +92,13 @@ export async function ensureCollectionStructures() {
     }
   }
 
+  try {
+    await UserModel.createIndexes();
+    console.log('[Database] Verified UserModel compound unique indexes in puzzles_assessment_dev');
+  } catch (err: any) {
+    console.warn('[Database] UserModel createIndexes notice:', err.message);
+  }
+
   console.log('[Database] puzzles_assessment_dev collections verified ready with zero sample data.');
 }
 
