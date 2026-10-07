@@ -111,6 +111,7 @@ export interface QuestionAttemptLog {
   correctAnswers?: string[];
   isCorrect?: boolean;
   timeAllowedSeconds?: number | null;
+  timeSeconds?: number | null;
   timeTakenSeconds: number;
   earnedPoints?: number;
   options?: string[];

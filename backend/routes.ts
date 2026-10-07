@@ -2529,6 +2529,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
           : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
         isCorrect: false,
         timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+        timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
         timeTakenSeconds: 0,
         earnedPoints: 0,
         options: q.options || [],
@@ -2895,6 +2896,7 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
             : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
           isCorrect: false,
           timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
+          timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
           timeTakenSeconds: 0,
           earnedPoints: 0,
           options: q.options || [],
@@ -4585,6 +4587,32 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         wrongCount: a.wrongCount,
         totalTimeTakenSeconds: a.totalTimeTakenSeconds,
         questions: (a.questions || []).map((q: any) => {
+          if (a.status === 'COMPLETED') {
+            // For a COMPLETED assessment, preserve exactly the immutable historical snapshot used for that assessment.
+            // Do NOT dynamically resolve the completed student's question from the current Question Bank.
+            return {
+              ...q,
+              questionId: q.questionId || q.id || q._id,
+              groupName: q.groupName || 'General',
+              difficulty: q.difficulty || 'Medium',
+              questionType: q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection'),
+              answerType: q.answerType || 'single',
+              content: q.content || 'Question',
+              points: q.points != null ? Number(q.points) : null,
+              timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
+              timeSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
+              options: Array.isArray(q.options) ? q.options : [],
+              correctAnswer: q.correctAnswer ?? null,
+              correctAnswers: Array.isArray(q.correctAnswers)
+                ? q.correctAnswers
+                : (q.correctAnswer ? [String(q.correctAnswer)] : []),
+              studentAnswer: q.studentAnswer !== undefined ? q.studentAnswer : null,
+              isCorrect: Boolean(q.isCorrect),
+              timeTakenSeconds: q.timeTakenSeconds != null ? Number(q.timeTakenSeconds) : 0,
+              earnedPoints: q.earnedPoints != null ? Number(q.earnedPoints) : 0,
+              metadata: q.metadata || {},
+            };
+          }
           const fullQ = q.questionId ? qMap.get(String(q.questionId)) : null;
           const groupFromId = q.groupId ? gMap.get(String(q.groupId))?.name : (fullQ?.groupId ? gMap.get(String(fullQ.groupId))?.name : null);
           return {

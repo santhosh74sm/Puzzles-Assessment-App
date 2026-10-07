@@ -306,7 +306,7 @@ export function StudentReportDetailView({
                               className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-700/80 transition-colors"
                             >
                               <div className="space-y-1.5 flex-1 min-w-0">
-                                {/* Question Group & Difficulty Level */}
+                                {/* Question Group & Difficulty Level & Question Type */}
                                 <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
                                   <span className="text-slate-400">
                                     Group: <strong className="text-indigo-300 font-sans font-semibold">{q.groupName || 'General'}</strong>
@@ -326,12 +326,48 @@ export function StudentReportDetailView({
                                       {q.difficulty || 'Medium'}
                                     </span>
                                   </span>
+                                  <span className="text-slate-600">&bull;</span>
+                                  <span className="text-slate-400 flex items-center gap-1">
+                                    Type:
+                                    <span className="text-slate-200 font-sans font-medium">
+                                      {q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection')}
+                                    </span>
+                                  </span>
                                 </div>
 
                                 <div className="flex items-start gap-2">
                                   <span className="font-mono text-[11px] text-slate-500 font-bold shrink-0 mt-0.5">Q{qIdx + 1} &mdash;</span>
                                   <p className="font-medium text-slate-200 leading-relaxed">{q.content}</p>
                                 </div>
+
+                                {/* Historical Answer Choices / Options snapshot */}
+                                {Array.isArray(q.options) && q.options.length > 0 && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-6 sm:pl-7 pt-1">
+                                    {q.options.map((opt: string, optIdx: number) => {
+                                      const optLetter = String.fromCharCode(65 + optIdx);
+                                      const isStudentChoice = Array.isArray(q.studentAnswer)
+                                        ? q.studentAnswer.includes(opt) || q.studentAnswer.includes(optLetter)
+                                        : String(q.studentAnswer).trim() === opt || String(q.studentAnswer).trim() === optLetter;
+                                      return (
+                                        <div
+                                          key={optIdx}
+                                          className={`px-2.5 py-1 rounded-lg border text-xs flex items-center gap-2 ${
+                                            isStudentChoice
+                                              ? 'bg-indigo-950/60 border-indigo-500/60 text-white font-medium'
+                                              : 'bg-slate-800/40 border-slate-700/40 text-slate-300'
+                                          }`}
+                                        >
+                                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                                            isStudentChoice ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'
+                                          }`}>
+                                            {optLetter}
+                                          </span>
+                                          <span className="truncate">{opt}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
 
                                 <div className="flex flex-wrap items-center gap-2 text-slate-400 pl-6 sm:pl-7">
                                   <span>
