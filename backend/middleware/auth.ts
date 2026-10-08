@@ -18,43 +18,17 @@ function getJwtSecret(): string {
 
 const JWT_SECRET = getJwtSecret();
 
-// SEC-MED-04: In-memory token revocation registry with automatic TTL expiration sweep
-const revokedTokens = new Map<string, number>(); // tokenOrJti -> expiryTimestampMs
+import { sharedStore } from '../services/sharedStore.ts';
 
+// SEC-MED-04 & SCAL-LOW-01: Shared store token revocation registry (Redis + Memory fallback)
 export function revokeToken(token: string): void {
-  try {
-    const decoded = jwt.decode(token) as any;
-    const expiryMs = decoded?.exp ? decoded.exp * 1000 : Date.now() + 2 * 60 * 60 * 1000;
-    const jti = decoded?.jti;
-    if (jti) {
-      revokedTokens.set(jti, expiryMs);
-    }
-    revokedTokens.set(token, expiryMs);
-  } catch (_) {
-    revokedTokens.set(token, Date.now() + 2 * 60 * 60 * 1000);
-  }
+  sharedStore.revokeToken(token).catch((err) => {
+    console.warn('[Auth] Token revocation error:', err.message);
+  });
 }
 
 export function isTokenRevoked(token: string): boolean {
-  if (revokedTokens.has(token)) return true;
-  try {
-    const decoded = jwt.decode(token) as any;
-    if (decoded?.jti && revokedTokens.has(decoded.jti)) return true;
-  } catch (_) {}
-  return false;
-}
-
-// Periodic cleanup of expired entries every 5 minutes
-const tokenCleanupTimer = setInterval(() => {
-  const now = Date.now();
-  for (const [key, expiry] of revokedTokens.entries()) {
-    if (now > expiry) {
-      revokedTokens.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
-if (tokenCleanupTimer.unref) {
-  tokenCleanupTimer.unref();
+  return sharedStore.isTokenRevokedSync(token);
 }
 
 export interface AuthUserPayload {
@@ -85,7 +59,7 @@ export function generateToken(payload: AuthUserPayload): string {
   return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: expiresIn as any });
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Authentication token missing or invalid' });
@@ -94,17 +68,21 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
   const token = authHeader.split(' ')[1];
 
-  // SEC-MED-04: Ensure revoked tokens cannot be reused
-  if (isTokenRevoked(token)) {
+  // SEC-MED-04 & SCAL-LOW-01: Ensure revoked tokens cannot be reused across instances
+  const tokenRevoked = await sharedStore.isTokenRevoked(token);
+  if (tokenRevoked) {
     res.status(401).json({ error: 'Token has been revoked or expired. Please sign in again.' });
     return;
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthUserPayload;
-    if (decoded.jti && isTokenRevoked(decoded.jti)) {
-      res.status(401).json({ error: 'Token has been revoked or expired. Please sign in again.' });
-      return;
+    if (decoded.jti) {
+      const jtiRevoked = await sharedStore.isTokenRevoked(decoded.jti);
+      if (jtiRevoked) {
+        res.status(401).json({ error: 'Token has been revoked or expired. Please sign in again.' });
+        return;
+      }
     }
     req.user = decoded;
     req.token = token;

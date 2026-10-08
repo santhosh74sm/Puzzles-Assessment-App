@@ -3,13 +3,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Sparkles, Shield, User, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Sun, Moon, Monitor, CheckCircle2 } from 'lucide-react';
-import { SuperAdminDashboard } from './components/SuperAdminDashboard.tsx';
-import { SchoolAdminDashboard } from './components/SchoolAdminDashboard.tsx';
-import { StudentPortal } from './components/StudentPortal.tsx';
-import { ForcePasswordModal } from './components/ForcePasswordModal.tsx';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+
+// Lazy-loaded dashboards for code splitting & initial bundle optimization (PERF-LOW-01)
+const SuperAdminDashboard = lazy(() =>
+  import('./components/SuperAdminDashboard.tsx').then((m) => ({ default: m.SuperAdminDashboard }))
+);
+const SchoolAdminDashboard = lazy(() =>
+  import('./components/SchoolAdminDashboard.tsx').then((m) => ({ default: m.SchoolAdminDashboard }))
+);
+const StudentPortal = lazy(() =>
+  import('./components/StudentPortal.tsx').then((m) => ({ default: m.StudentPortal }))
+);
+const ForcePasswordModal = lazy(() =>
+  import('./components/ForcePasswordModal.tsx').then((m) => ({ default: m.ForcePasswordModal }))
+);
+
+function DashboardLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white">
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-xl shadow-indigo-600/30 animate-pulse mb-4">
+        <Sparkles className="w-6 h-6 animate-spin text-white" style={{ animationDuration: '3s' }} />
+      </div>
+      <p className="text-sm font-medium text-slate-400">Loading workspace...</p>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -206,26 +227,28 @@ function AppContent() {
   if (token && currentUser) {
     return (
       <div className="min-h-screen bg-slate-950 font-sans">
-        {/* Force Password Change Modal if first login */}
-        {currentUser.mustChangePassword && (
-          <ForcePasswordModal
-            username={currentUser.username}
-            onSuccess={handlePasswordChangeComplete}
-          />
-        )}
+        <Suspense fallback={<DashboardLoadingFallback />}>
+          {/* Force Password Change Modal if first login */}
+          {currentUser.mustChangePassword && (
+            <ForcePasswordModal
+              username={currentUser.username}
+              onSuccess={handlePasswordChangeComplete}
+            />
+          )}
 
-        {/* Role-based dashboard */}
-        {currentUser.role === 'super_admin' && (
-          <SuperAdminDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />
-        )}
+          {/* Role-based dashboard */}
+          {currentUser.role === 'super_admin' && (
+            <SuperAdminDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />
+          )}
 
-        {currentUser.role === 'school_admin' && (
-          <SchoolAdminDashboard user={currentUser} onLogout={handleLogout} />
-        )}
+          {currentUser.role === 'school_admin' && (
+            <SchoolAdminDashboard user={currentUser} onLogout={handleLogout} />
+          )}
 
-        {currentUser.role === 'student' && (
-          <StudentPortal token={token} user={currentUser} onLogout={handleLogout} />
-        )}
+          {currentUser.role === 'student' && (
+            <StudentPortal token={token} user={currentUser} onLogout={handleLogout} />
+          )}
+        </Suspense>
       </div>
     );
   }

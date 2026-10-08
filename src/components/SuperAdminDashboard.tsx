@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Building2,
@@ -8,14 +8,33 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ProfileMenu } from './ProfileMenu.tsx';
-import { SchoolsSection } from './SchoolsSection.tsx';
-import { QuestionBankSection } from './QuestionBankSection.tsx';
-import {
-  PublishAssessmentSection,
-  PublishAssessmentFormState,
-} from './PublishAssessmentSection.tsx';
-import { PublishHistorySection } from './PublishHistorySection.tsx';
+import type { PublishAssessmentFormState } from './PublishAssessmentSection.tsx';
 import { to12Hour, getLocalTodayDate, getLocalCurrentTime12H, getLocalFutureDate } from '../utils/dateTime.ts';
+
+// Code splitting for large workspace sub-sections (PERF-LOW-01)
+const SchoolsSection = lazy(() =>
+  import('./SchoolsSection.tsx').then((m) => ({ default: m.SchoolsSection }))
+);
+const QuestionBankSection = lazy(() =>
+  import('./QuestionBankSection.tsx').then((m) => ({ default: m.QuestionBankSection }))
+);
+const PublishAssessmentSection = lazy(() =>
+  import('./PublishAssessmentSection.tsx').then((m) => ({ default: m.PublishAssessmentSection }))
+);
+const PublishHistorySection = lazy(() =>
+  import('./PublishHistorySection.tsx').then((m) => ({ default: m.PublishHistorySection }))
+);
+
+function SectionLoadingFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+      <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center animate-pulse mb-3">
+        <Sparkles className="w-4 h-4 animate-spin text-indigo-400" style={{ animationDuration: '3s' }} />
+      </div>
+      <p className="text-xs font-medium">Loading section...</p>
+    </div>
+  );
+}
 
 interface SuperAdminDashboardProps {
   token: string;
@@ -396,56 +415,58 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
 
         {/* Main Content Area - Renders ONLY the selected section */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
-        {activeTab === 'schools' && (
-          <SchoolsSection
-            token={token}
-            schools={schools}
-            onRefreshSchools={loadSchools}
-          />
-        )}
+          <Suspense fallback={<SectionLoadingFallback />}>
+            {activeTab === 'schools' && (
+              <SchoolsSection
+                token={token}
+                schools={schools}
+                onRefreshSchools={loadSchools}
+              />
+            )}
 
-        {activeTab === 'question_bank' && (
-          <QuestionBankSection
-            token={token}
-            questionGroups={questionGroups}
-            allQuestions={allQuestions}
-            onRefreshData={loadQuestionBank}
-          />
-        )}
+            {activeTab === 'question_bank' && (
+              <QuestionBankSection
+                token={token}
+                questionGroups={questionGroups}
+                allQuestions={allQuestions}
+                onRefreshData={loadQuestionBank}
+              />
+            )}
 
-        {activeTab === 'publish' && (
-          <PublishAssessmentSection
-            token={token}
-            schools={schools}
-            allQuestions={allQuestions}
-            formState={publishFormState}
-            onFormStateChange={setPublishFormState}
-            editingPublishId={editingPublishId}
-            onCancelEdit={handleCancelEdit}
-            onResetFormState={() => {
-              setEditingPublishId(null);
-              setPublishFormState(undefined);
-            }}
-            onPublishSuccess={async () => {
-              setEditingPublishId(null);
-              setPublishFormState(undefined);
-              await loadPublishHistory();
-              setActiveTab('history');
-            }}
-          />
-        )}
+            {activeTab === 'publish' && (
+              <PublishAssessmentSection
+                token={token}
+                schools={schools}
+                allQuestions={allQuestions}
+                formState={publishFormState}
+                onFormStateChange={setPublishFormState}
+                editingPublishId={editingPublishId}
+                onCancelEdit={handleCancelEdit}
+                onResetFormState={() => {
+                  setEditingPublishId(null);
+                  setPublishFormState(undefined);
+                }}
+                onPublishSuccess={async () => {
+                  setEditingPublishId(null);
+                  setPublishFormState(undefined);
+                  await loadPublishHistory();
+                  setActiveTab('history');
+                }}
+              />
+            )}
 
-        {activeTab === 'history' && (
-          <PublishHistorySection
-            token={token}
-            schools={schools}
-            historyList={historyList}
-            selectedHistoryDetail={selectedHistoryDetail}
-            onSelectHistory={loadHistoryDetail}
-            onEditAssessment={handleEditAssessment}
-            onRefreshHistory={loadPublishHistory}
-          />
-        )}
+            {activeTab === 'history' && (
+              <PublishHistorySection
+                token={token}
+                schools={schools}
+                historyList={historyList}
+                selectedHistoryDetail={selectedHistoryDetail}
+                onSelectHistory={loadHistoryDetail}
+                onEditAssessment={handleEditAssessment}
+                onRefreshHistory={loadPublishHistory}
+              />
+            )}
+          </Suspense>
         </main>
       </div>
     </div>

@@ -24,20 +24,23 @@ import { to12Hour, to24Hour, toISODate, isScheduledForFuture, isAssessmentExpire
 
 const router = express.Router();
 
-// SEC-HIGH-04: Granular server-side rate limiters for sensitive endpoints
+// SEC-HIGH-04 & SCAL-LOW-01: Granular server-side rate limiters with distributed store support
 const loginRateLimiter = createRateLimiter({
+  prefix: 'login',
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: 'Too many login attempts. Please try again after 15 minutes.',
 });
 
 const forgotPasswordRateLimiter = createRateLimiter({
+  prefix: 'forgot_password',
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: 'Too many password reset requests. Please try again later.',
 });
 
 const answerRateLimiter = createRateLimiter({
+  prefix: 'student_answer',
   windowMs: 60 * 1000,
   max: 60,
   message: 'Too many answer submissions. Please slow down.',
