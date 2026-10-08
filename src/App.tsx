@@ -158,9 +158,18 @@ function AppContent() {
   };
 
   const handleLogout = async () => {
-    if (currentUser?.role === 'student' && token) {
+    if (token) {
       try {
-        await fetch('/api/student/logout', {
+        if (currentUser?.role === 'student') {
+          await fetch('/api/student/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
+        await fetch('/api/auth/logout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

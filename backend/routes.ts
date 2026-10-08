@@ -2,7 +2,7 @@ import express from 'express';
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import fs from 'fs';
+import crypto from 'crypto';
 import {
   UserModel,
   SchoolModel,
@@ -13,7 +13,8 @@ import {
   PublishHistoryModel,
   AssessmentTemplateModel,
 } from '../database/models.ts';
-import { generateToken, authenticate, requireRole } from './middleware/auth.ts';
+import { generateToken, authenticate, requireRole, revokeToken } from './middleware/auth.ts';
+import { createRateLimiter } from './middleware/rateLimiter.ts';
 import {
   computeStudentInsights,
   selectRandomQuestionsForRuleEngine,
@@ -22,6 +23,25 @@ import type { Question, QuestionAttemptLog } from './types.ts';
 import { to12Hour, to24Hour, toISODate, isScheduledForFuture, isAssessmentExpired } from '../src/utils/dateTime.ts';
 
 const router = express.Router();
+
+// SEC-HIGH-04: Granular server-side rate limiters for sensitive endpoints
+const loginRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many login attempts. Please try again after 15 minutes.',
+});
+
+const forgotPasswordRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Too many password reset requests. Please try again later.',
+});
+
+const answerRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Too many answer submissions. Please slow down.',
+});
 
 // Helper to convert Mongoose documents to clean JSON with 'id'
 function formatDoc(doc: any): any {
@@ -39,31 +59,50 @@ function formatDocs(docs: any[]): any[] {
   return docs.map(formatDoc);
 }
 
-// Helper to escape regex special characters
+// Helper to escape regex special characters (SEC-HIGH-02: Prevent ReDoS)
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Helper to determine if an assessment has expired based on client request time / timezone
+// SEC-MED-03: Cryptographically secure temporary password generation
+function generateSecureTemporaryPassword(length: number = 8): string {
+  const chars = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+  let pass = '';
+  for (let i = 0; i < length - 1; i++) {
+    pass += chars.charAt(crypto.randomInt(0, chars.length));
+  }
+  pass += '!';
+  return pass;
+}
+
+// SEC-CRIT-04: Server-authoritative time generation for security-critical validation.
+// Strips security reliance on client-controlled 'x-client-now' headers.
+function getServerAuthoritativeDateTimeStr(req?: Request): string {
+  const nowMs = Date.now();
+  let offsetMs = 0;
+  if (req) {
+    const clientOffsetHeader = req.headers['x-timezone-offset'];
+    if (clientOffsetHeader !== undefined && clientOffsetHeader !== '') {
+      const parsedOffset = Number(clientOffsetHeader);
+      // Valid timezone offsets globally range between UTC-12 (-720 min) and UTC+14 (+840 min)
+      if (!isNaN(parsedOffset) && parsedOffset >= -840 && parsedOffset <= 840) {
+        offsetMs = parsedOffset * 60000;
+      }
+    }
+  }
+  const dateObj = new Date(nowMs - offsetMs);
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getUTCDate()).padStart(2, '0');
+  const hour = String(dateObj.getUTCHours()).padStart(2, '0');
+  const min = String(dateObj.getUTCMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hour}:${min}`;
+}
+
+// SEC-CRIT-04: Authoritative check to determine if an assessment has expired
 function isRequestAssessmentExpired(req: Request, pubTest: any): boolean {
   if (!pubTest?.endDate || pubTest.endDate === 'Open') {
     return false;
   }
-  const clientDateTimeHeader = req.headers['x-client-now'] as string;
-  let currentDateTimeStr = '';
-  if (clientDateTimeHeader && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clientDateTimeHeader)) {
-    currentDateTimeStr = clientDateTimeHeader.slice(0, 16);
-  } else {
-    const clientOffsetHeader = req.headers['x-timezone-offset'];
-    const clientOffset = clientOffsetHeader !== undefined && clientOffsetHeader !== '' ? Number(clientOffsetHeader) : null;
-    const nowMs = Date.now();
-    const clientNow = clientOffset !== null && !isNaN(clientOffset) ? new Date(nowMs - (clientOffset * 60000)) : new Date(nowMs);
-    const clientYear = clientNow.getUTCFullYear();
-    const clientMonth = String(clientNow.getUTCMonth() + 1).padStart(2, '0');
-    const clientDay = String(clientNow.getUTCDate()).padStart(2, '0');
-    const clientHour = String(clientNow.getUTCHours()).padStart(2, '0');
-    const clientMin = String(clientNow.getUTCMinutes()).padStart(2, '0');
-    currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
-  }
-
+  const currentDateTimeStr = getServerAuthoritativeDateTimeStr(req);
   const end24 = to24Hour(pubTest.endTime || '23:59');
   const endStr = `${toISODate(pubTest.endDate)}T${end24}`;
   return isAssessmentExpired(currentDateTimeStr, endStr, 1);
@@ -79,7 +118,7 @@ router.get('/auth/setup-status', async (req: Request, res: Response) => {
     const usersCount = await UserModel.countDocuments();
     return res.json({ hasUsers: usersCount > 0, totalUsers: usersCount });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to check setup status', details: err.message });
+    return res.status(500).json({ error: 'Failed to check setup status' });
   }
 });
 
@@ -121,36 +160,39 @@ router.post('/auth/setup-first-admin', async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Unable to create administrator account. Please try again.', details: err.message });
+    return res.status(500).json({ error: 'Unable to create administrator account. Please try again.' });
   }
 });
 
 // Login (Supports Super Admin, School Admin, Student)
-router.post('/auth/login', async (req: Request, res: Response) => {
+// SEC-HIGH-04: Rate limiting on login attempts
+// SEC-HIGH-02: Safe regex escaping to prevent ReDoS
+// SEC-INFO-01: Removed /tmp/auth.log credential logging
+router.post('/auth/login', loginRateLimiter, async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
-    const logMsg = `[Auth] ${new Date().toISOString()} Incoming login request for username: "${username}" (type: ${typeof username}, length: ${username ? username.length : 0}, passwordLength: ${password ? password.length : 0})\n`;
-    try { fs.appendFileSync('/tmp/auth.log', logMsg); } catch (_) {}
-    console.log(logMsg.trim());
 
-    if (!username || !password) {
-      console.warn('[Auth] Login rejected: missing username or password');
+    if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
     const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    // SEC-HIGH-02: Safely escape user-controlled regex pattern
+    const escapedUsername = escapeRegExp(trimmedUsername);
+
     // Case-insensitive lookup for username or uniqueStudentId
     const user = await UserModel.findOne({
       $or: [
-        { username: { $regex: new RegExp(`^${trimmedUsername}$`, 'i') } },
-        { uniqueStudentId: { $regex: new RegExp(`^${trimmedUsername}$`, 'i') } },
+        { username: { $regex: new RegExp(`^${escapedUsername}$`, 'i') } },
+        { uniqueStudentId: { $regex: new RegExp(`^${escapedUsername}$`, 'i') } },
       ],
     });
 
     if (!user) {
-      const failMsg = `[Auth] ${new Date().toISOString()} Login failed: User "${trimmedUsername}" not found in database.\n`;
-      try { fs.appendFileSync('/tmp/auth.log', failMsg); } catch (_) {}
-      console.warn(failMsg.trim());
       return res.status(401).json({ error: 'Username or password is incorrect.' });
     }
 
@@ -160,14 +202,8 @@ router.post('/auth/login', async (req: Request, res: Response) => {
         (bcrypt.compareSync(password.trim(), user.passwordHash) ||
           bcrypt.compareSync(password.trimEnd(), user.passwordHash) ||
           bcrypt.compareSync(password.trimStart(), user.passwordHash)));
-    const verifyMsg = `[Auth] ${new Date().toISOString()} Password verification for user "${user.username}": isMatch=${isMatch} (role: ${user.role}, mustChangePassword: ${user.mustChangePassword})\n`;
-    try { fs.appendFileSync('/tmp/auth.log', verifyMsg); } catch (_) {}
-    console.log(verifyMsg.trim());
 
     if (!isMatch) {
-      const mismatchMsg = `[Auth] ${new Date().toISOString()} Login failed: Password mismatch for user "${user.username}".\n`;
-      try { fs.appendFileSync('/tmp/auth.log', mismatchMsg); } catch (_) {}
-      console.warn(mismatchMsg.trim());
       return res.status(401).json({ error: 'Username or password is incorrect.' });
     }
 
@@ -179,10 +215,6 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       schoolName: user.schoolName,
       studentId: user.uniqueStudentId,
     });
-
-    const successMsg = `[Auth] ${new Date().toISOString()} Login SUCCESS for user "${user.username}" (role: ${user.role}). Token generated.\n`;
-    try { fs.appendFileSync('/tmp/auth.log', successMsg); } catch (_) {}
-    console.log(successMsg.trim());
 
     return res.json({
       token,
@@ -201,12 +233,28 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Username or password is incorrect.', details: err.message });
+    console.error('[Auth Login Error]:', err.message || err);
+    return res.status(500).json({ error: 'Username or password is incorrect.' });
+  }
+});
+
+// SEC-MED-04: User Logout & Token Revocation
+router.post('/auth/logout', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (req.token) {
+      revokeToken(req.token);
+    }
+    return res.json({ success: true, message: 'Logged out successfully' });
+  } catch (err: any) {
+    console.error('[Auth Logout Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to process logout' });
   }
 });
 
 // Password Reset Request (Students and Admins)
-router.post('/auth/forgot-password', async (req: Request, res: Response) => {
+// SEC-HIGH-04: Rate limiting on forgot-password
+// SEC-HIGH-02: Safe regex escaping to prevent ReDoS
+router.post('/auth/forgot-password', forgotPasswordRateLimiter, async (req: Request, res: Response) => {
   try {
     const { username } = req.body;
     if (!username || typeof username !== 'string') {
@@ -218,11 +266,14 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Username or Student ID is required' });
     }
 
+    // SEC-HIGH-02: Safely escape user-controlled regex pattern
+    const escapedUsername = escapeRegExp(trimmed);
+
     // Lookup user by username or uniqueStudentId
     const user = await UserModel.findOne({
       $or: [
-        { username: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
-        { uniqueStudentId: { $regex: new RegExp(`^${trimmed}$`, 'i') } },
+        { username: { $regex: new RegExp(`^${escapedUsername}$`, 'i') } },
+        { uniqueStudentId: { $regex: new RegExp(`^${escapedUsername}$`, 'i') } },
       ],
     });
 
@@ -230,9 +281,6 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
       user.passwordResetRequested = true;
       user.passwordResetRequestedAt = new Date();
       await user.save();
-      console.log(`[Auth] Password reset requested for user "${user.username}" (role: ${user.role})`);
-    } else {
-      console.log(`[Auth] Password reset requested for non-existent username: "${trimmed}"`);
     }
 
     // Return the required clear message without revealing sensitive account info
@@ -242,9 +290,9 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
         'Please contact your Super Admin. The Super Admin will provide you with a temporary password. Use the temporary password to log in and create a new password.',
     });
   } catch (err: any) {
+    console.error('[Auth Forgot Password Error]:', err.message || err);
     return res.status(500).json({
       error: 'Unable to process reset request. Please try again.',
-      details: err.message,
     });
   }
 });
@@ -276,7 +324,7 @@ router.post('/auth/change-password', authenticate, async (req: Request, res: Res
 
     return res.json({ success: true, message: 'Password updated successfully' });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Unable to update password. Please try again.', details: err.message });
+    return res.status(500).json({ error: 'Unable to update password. Please try again.' });
   }
 });
 
@@ -300,7 +348,7 @@ router.get('/auth/me', authenticate, async (req: Request, res: Response) => {
       uniqueStudentId: user.uniqueStudentId,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to get user profile', details: err.message });
+    return res.status(500).json({ error: 'Failed to get user profile' });
   }
 });
 
@@ -329,7 +377,7 @@ router.post('/schools', authenticate, requireRole('super_admin'), async (req: Re
 
     return res.status(201).json(formatDoc(newSchool));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create school', details: err.message });
+    return res.status(500).json({ error: 'Failed to create school' });
   }
 });
 
@@ -348,7 +396,7 @@ router.get('/schools', authenticate, async (req: Request, res: Response) => {
     const schools = await SchoolModel.find({ _id: user.schoolId });
     return res.json(formatDocs(schools));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch schools', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch schools' });
   }
 });
 
@@ -371,7 +419,7 @@ router.get('/schools/:schoolId/admins', authenticate, requireRole('super_admin')
     }));
     return res.json(formatted);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch school admins', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch school admins' });
   }
 });
 
@@ -388,13 +436,8 @@ router.post('/super-admin/reset-password', authenticate, requireRole('super_admi
       return res.status(404).json({ error: 'User account not found' });
     }
 
-    // Generate secure temporary password
-    const chars = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
-    let tempPass = '';
-    for (let i = 0; i < 7; i++) {
-      tempPass += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    tempPass += '!'; // Add special character
+    // SEC-MED-03: Generate cryptographically secure temporary password
+    const tempPass = generateSecureTemporaryPassword(8);
 
     const salt = bcrypt.genSaltSync(10);
     user.passwordHash = bcrypt.hashSync(tempPass, salt);
@@ -415,9 +458,9 @@ router.post('/super-admin/reset-password', authenticate, requireRole('super_admi
       message: 'Temporary password generated successfully.',
     });
   } catch (err: any) {
+    console.error('[Super Admin Reset Password Error]:', err.message || err);
     return res.status(500).json({
       error: 'Unable to generate temporary password. Please try again.',
-      details: err.message,
     });
   }
 });
@@ -467,7 +510,7 @@ router.post('/schools/:schoolId/admins', authenticate, requireRole('super_admin'
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create school admin', details: err.message });
+    return res.status(500).json({ error: 'Failed to create school admin' });
   }
 });
 
@@ -513,7 +556,7 @@ router.delete('/schools/:schoolId/admins/:adminId', authenticate, requireRole('s
       deletedId: admin._id.toString(),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete school admin', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete school admin' });
   }
 });
 
@@ -556,7 +599,7 @@ router.delete('/schools/:schoolId', authenticate, requireRole('super_admin'), as
       deletedSchoolId: schoolIdStr,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete school workspace', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete school workspace' });
   }
 });
 
@@ -616,17 +659,19 @@ router.post('/students', authenticate, async (req: Request, res: Response) => {
     let uniqueStudentId = '';
     let isUnique = false;
     while (!isUnique) {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const randomSuffix = crypto.randomInt(1000, 10000);
       uniqueStudentId = `STU-${cleanClass}${cleanSection}-${randomSuffix}`;
       const exists = await UserModel.findOne({ username: uniqueStudentId });
       if (!exists) isUnique = true;
     }
 
+    // SEC-HIGH-01 & SEC-MED-03: Generate cryptographically secure initial temporary password
+    const initialPassword = generateSecureTemporaryPassword(8);
     const salt = bcrypt.genSaltSync(10);
     const newStudent = await UserModel.create({
       username: uniqueStudentId,
       role: 'student',
-      passwordHash: bcrypt.hashSync(uniqueStudentId, salt),
+      passwordHash: bcrypt.hashSync(initialPassword, salt),
       mustChangePassword: true,
       schoolId: school._id.toString(),
       schoolName: school.name,
@@ -641,7 +686,7 @@ router.post('/students', authenticate, async (req: Request, res: Response) => {
       student: formatDoc(newStudent),
       credentials: {
         username: uniqueStudentId,
-        initialPassword: uniqueStudentId,
+        initialPassword,
       },
     });
   } catch (err: any) {
@@ -654,11 +699,13 @@ router.post('/students', authenticate, async (req: Request, res: Response) => {
     ) {
       return res.status(400).json({ error: 'Admission Number already exists in this school.' });
     }
-    return res.status(500).json({ error: 'Failed to register student', details: err.message });
+    console.error('[Student Registration Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to register student' });
   }
 });
 
 // List Students (Filtered by school, class, section, search)
+// SEC-HIGH-01: Prevent student accounts from enumerating other students
 router.get('/students', authenticate, async (req: Request, res: Response) => {
   try {
     const { schoolId, className, section, search } = req.query as {
@@ -671,20 +718,27 @@ router.get('/students', authenticate, async (req: Request, res: Response) => {
     const query: any = { role: 'student' };
 
     // Enforce access control
-    if (req.user!.role === 'school_admin' || req.user!.role === 'student') {
+    if (req.user!.role === 'student') {
+      // SEC-HIGH-01: A student can only view their own profile/account record
+      const selfStudentId = req.user!.studentId || req.user!.username;
+      query.$or = [
+        { uniqueStudentId: selfStudentId },
+        { username: selfStudentId },
+      ];
+    } else if (req.user!.role === 'school_admin') {
       query.schoolId = req.user!.schoolId;
     } else if (schoolId) {
       query.schoolId = schoolId;
     }
 
-    if (className) {
-      query.className = { $regex: new RegExp(`^${className}$`, 'i') };
+    if (className && req.user!.role !== 'student') {
+      query.className = { $regex: new RegExp(`^${escapeRegExp(className.trim())}$`, 'i') };
     }
-    if (section) {
-      query.section = { $regex: new RegExp(`^${section}$`, 'i') };
+    if (section && req.user!.role !== 'student') {
+      query.section = { $regex: new RegExp(`^${escapeRegExp(section.trim())}$`, 'i') };
     }
-    if (search) {
-      const q = search.trim();
+    if (search && req.user!.role !== 'student') {
+      const q = escapeRegExp(search.trim());
       query.$or = [
         { studentName: { $regex: q, $options: 'i' } },
         { schoolAdmissionNumber: { $regex: q, $options: 'i' } },
@@ -699,7 +753,8 @@ router.get('/students', authenticate, async (req: Request, res: Response) => {
     );
     return res.json(sorted);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to list students', details: err.message });
+    console.error('[List Students Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to list students' });
   }
 });
 
@@ -875,7 +930,7 @@ router.put('/students/:id', authenticate, async (req: Request, res: Response) =>
     ) {
       return res.status(400).json({ error: 'Admission Number already exists in this school.' });
     }
-    return res.status(500).json({ error: 'Failed to update student', details: err.message });
+    return res.status(500).json({ error: 'Failed to update student' });
   }
 });
 
@@ -939,7 +994,7 @@ router.delete('/students/:id', authenticate, async (req: Request, res: Response)
       deletedId: student._id.toString(),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete student', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete student' });
   }
 });
 
@@ -955,7 +1010,7 @@ router.post('/question-groups', authenticate, requireRole('super_admin'), async 
 
     const cleanName = name.trim();
     const existing = await QuestionGroupModel.findOne({
-      name: { $regex: new RegExp(`^${cleanName}$`, 'i') },
+      name: { $regex: new RegExp(`^${escapeRegExp(cleanName)}$`, 'i') },
     });
     if (existing) {
       return res.status(400).json({ error: `Question Group '${cleanName}' already exists.` });
@@ -968,15 +1023,32 @@ router.post('/question-groups', authenticate, requireRole('super_admin'), async 
 
     return res.status(201).json(formatDoc(newGroup));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to create question group', details: err.message });
+    console.error('[Create Question Group Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to create question group' });
   }
 });
 
 // List Question Groups (With Question Counts & Difficulty Breakdown)
+// SEC-CRIT-01: Sanitize correct answers for student callers to prevent answer key disclosure
 router.get('/question-groups', authenticate, async (req: Request, res: Response) => {
   try {
     const groups = await QuestionGroupModel.find().sort({ createdAt: 1 });
     const questions = await QuestionModel.find();
+    const isStudent = req.user?.role === 'student';
+
+    const sanitizeQuestionForStudent = (q: any) => {
+      const doc = formatDoc(q);
+      delete doc.correctAnswer;
+      delete doc.correctAnswers;
+      return doc;
+    };
+
+    const formatQuestionsList = (qList: any[]) => {
+      if (isStudent) {
+        return qList.map(sanitizeQuestionForStudent);
+      }
+      return formatDocs(qList);
+    };
 
     const withCounts = groups.map((g) => {
       const gIdStr = g._id.toString();
@@ -1005,15 +1077,15 @@ router.get('/question-groups', authenticate, async (req: Request, res: Response)
         breakdown: {
           Easy: {
             count: easyQuestions.length,
-            questions: formatDocs(easyQuestions),
+            questions: formatQuestionsList(easyQuestions),
           },
           Medium: {
             count: mediumQuestions.length,
-            questions: formatDocs(mediumQuestions),
+            questions: formatQuestionsList(mediumQuestions),
           },
           Hard: {
             count: hardQuestions.length,
-            questions: formatDocs(hardQuestions),
+            questions: formatQuestionsList(hardQuestions),
           },
         },
       };
@@ -1021,7 +1093,8 @@ router.get('/question-groups', authenticate, async (req: Request, res: Response)
 
     return res.json(withCounts);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch question groups', details: err.message });
+    console.error('[List Question Groups Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to fetch question groups' });
   }
 });
 
@@ -1202,7 +1275,7 @@ router.put('/question-groups/:id', authenticate, requireRole('super_admin'), asy
       group: formatDoc(group),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update question group', details: err.message });
+    return res.status(500).json({ error: 'Failed to update question group' });
   }
 });
 
@@ -1284,7 +1357,7 @@ router.delete('/question-groups/:id', authenticate, requireRole('super_admin'), 
       deletedQuestionIds: questionIdsToDelete,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete question group', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete question group' });
   }
 });
 
@@ -1498,7 +1571,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
 
     return res.status(201).json(formatDoc(newQuestion));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to add question', details: err.message });
+    return res.status(500).json({ error: 'Failed to add question' });
   }
 });
 
@@ -1729,7 +1802,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
 
     return res.json(formatDoc(question));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update question', details: err.message });
+    return res.status(500).json({ error: 'Failed to update question' });
   }
 });
 
@@ -1760,7 +1833,7 @@ router.get('/questions', authenticate, async (req: Request, res: Response) => {
 
     return res.json(formatDocs(list));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to list questions', details: err.message });
+    return res.status(500).json({ error: 'Failed to list questions' });
   }
 });
 
@@ -1822,7 +1895,7 @@ router.delete('/questions/:id', authenticate, requireRole('super_admin'), async 
       deletedId: deletedIdStr,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete question', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete question' });
   }
 });
 
@@ -1939,9 +2012,9 @@ async function validatePublishTargets(rawTargets: any[]) {
       schoolId: { $in: t.schoolIds },
     };
     if (t.classes.length === 1) {
-      q.className = { $regex: new RegExp(`^${t.classes[0]}$`, 'i') };
+      q.className = { $regex: new RegExp(`^${escapeRegExp(t.classes[0])}$`, 'i') };
     } else if (t.classes.length > 1) {
-      q.className = { $in: t.classes.map((c) => new RegExp(`^${c}$`, 'i')) };
+      q.className = { $in: t.classes.map((c) => new RegExp(`^${escapeRegExp(c)}$`, 'i')) };
     }
     if (t.sections.length > 0) {
       q.section = { $in: t.sections };
@@ -2181,7 +2254,7 @@ router.post('/publish/validate-targets', authenticate, requireRole('super_admin'
     }
     return res.json({ valid: true, message: 'All target configurations are valid and conflict-free.' });
   } catch (err: any) {
-    return res.status(500).json({ valid: false, error: 'Failed to validate targets', details: err.message });
+    return res.status(500).json({ valid: false, error: 'Failed to validate targets' });
   }
 });
 
@@ -2232,7 +2305,7 @@ router.get('/target-classes', authenticate, async (req: Request, res: Response) 
 
     return res.json({ classes: cleanClasses });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch dynamic classes', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch dynamic classes' });
   }
 });
 
@@ -2290,10 +2363,10 @@ router.get('/target-sections', authenticate, async (req: Request, res: Response)
     );
 
     if (classList.length === 1) {
-      query.className = { $regex: new RegExp(`^${classList[0]}$`, 'i') };
+      query.className = { $regex: new RegExp(`^${escapeRegExp(classList[0])}$`, 'i') };
     } else if (classList.length > 1) {
       query.className = {
-        $in: classList.map((c) => new RegExp(`^${c}$`, 'i')),
+        $in: classList.map((c) => new RegExp(`^${escapeRegExp(c)}$`, 'i')),
       };
     }
 
@@ -2309,14 +2382,19 @@ router.get('/target-sections', authenticate, async (req: Request, res: Response)
 
     return res.json({ sections: cleanSections });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch dynamic sections', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch dynamic sections' });
   }
 });
 
 // Dynamic Student List for Target Configuration
 // Fetches students from MongoDB Atlas matching selected school(s), class(es), and section(s)
+// SEC-HIGH-01: Block student role from accessing student enumeration endpoints
 router.get('/target-students', authenticate, async (req: Request, res: Response) => {
   try {
+    if (req.user!.role === 'student') {
+      return res.status(403).json({ error: 'Access forbidden: Insufficient permissions' });
+    }
+
     const { schoolIds, classes, sections } = req.query as {
       schoolIds?: string;
       classes?: string;
@@ -2336,7 +2414,7 @@ router.get('/target-students', authenticate, async (req: Request, res: Response)
       schoolIdList = allSchools.map((s: any) => s._id.toString());
     }
 
-    if (req.user!.role === 'school_admin' || req.user!.role === 'student') {
+    if (req.user!.role === 'school_admin') {
       if (req.user!.schoolId) {
         schoolIdList = [req.user!.schoolId];
       }
@@ -2360,10 +2438,10 @@ router.get('/target-students', authenticate, async (req: Request, res: Response)
     }
 
     if (classList.length === 1) {
-      query.className = { $regex: new RegExp(`^${classList[0]}$`, 'i') };
+      query.className = { $regex: new RegExp(`^${escapeRegExp(classList[0])}$`, 'i') };
     } else if (classList.length > 1) {
       query.className = {
-        $in: classList.map((c) => new RegExp(`^${c}$`, 'i')),
+        $in: classList.map((c) => new RegExp(`^${escapeRegExp(c)}$`, 'i')),
       };
     }
 
@@ -2376,10 +2454,10 @@ router.get('/target-students', authenticate, async (req: Request, res: Response)
     }
 
     if (sectionList.length === 1) {
-      query.section = { $regex: new RegExp(`^${sectionList[0]}$`, 'i') };
+      query.section = { $regex: new RegExp(`^${escapeRegExp(sectionList[0])}$`, 'i') };
     } else if (sectionList.length > 1) {
       query.section = {
-        $in: sectionList.map((s) => new RegExp(`^${s}$`, 'i')),
+        $in: sectionList.map((s) => new RegExp(`^${escapeRegExp(s)}$`, 'i')),
       };
     }
 
@@ -2405,7 +2483,7 @@ router.get('/target-students', authenticate, async (req: Request, res: Response)
 
     return res.json({ students: sorted });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch target students', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch target students' });
   }
 });
 
@@ -2709,7 +2787,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       historyRecordId: historyRecord._id.toString(),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to publish assessment', details: err.message });
+    return res.status(500).json({ error: 'Failed to publish assessment' });
   }
 });
 
@@ -2719,7 +2797,7 @@ router.get('/published-tests', authenticate, requireRole('super_admin'), async (
     const list = await PublishedTestModel.find().sort({ createdAt: -1 });
     return res.json(formatDocs(list));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch published tests', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch published tests' });
   }
 });
 
@@ -2740,7 +2818,7 @@ router.get('/published-tests/:publishId', authenticate, requireRole('super_admin
       historyId: history?._id?.toString(),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch published test', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch published test' });
   }
 });
 
@@ -3181,7 +3259,7 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
       updatedAt: serverNow,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to update assessment', details: err.message });
+    return res.status(500).json({ error: 'Failed to update assessment' });
   }
 };
 
@@ -3210,37 +3288,18 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       pubMap.set(pt._id.toString(), pt);
     }
 
-    const studentUser = (req.user!.userId ? await UserModel.findById(req.user!.userId).lean() : null) ||
+    const escapedStudentId = escapeRegExp(studentId);
+    const hasValidUserId = Boolean(req.user!.userId && mongoose.isValidObjectId(req.user!.userId));
+    const studentUser = (hasValidUserId ? await UserModel.findById(req.user!.userId).lean() : null) ||
       await UserModel.findOne({
         $or: [
-          { uniqueStudentId: { $regex: new RegExp(`^${studentId}$`, 'i') } },
-          { username: { $regex: new RegExp(`^${studentId}$`, 'i') } },
+          { uniqueStudentId: { $regex: new RegExp(`^${escapedStudentId}$`, 'i') } },
+          { username: { $regex: new RegExp(`^${escapedStudentId}$`, 'i') } },
         ],
       }).lean();
 
-    // Determine current date-time string in client timezone if provided, else server time
-    const clientDateTimeHeader = req.headers['x-client-now'] as string;
-    let currentDateTimeStr = '';
-    if (clientDateTimeHeader && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clientDateTimeHeader)) {
-      currentDateTimeStr = clientDateTimeHeader.slice(0, 16);
-    } else {
-      const clientOffsetHeader = req.headers['x-timezone-offset'];
-      const clientOffset = clientOffsetHeader !== undefined && clientOffsetHeader !== ''
-        ? Number(clientOffsetHeader)
-        : null;
-
-      const nowMs = Date.now();
-      const clientNow = clientOffset !== null && !isNaN(clientOffset)
-        ? new Date(nowMs - (clientOffset * 60000))
-        : new Date(nowMs);
-
-      const clientYear = clientNow.getUTCFullYear();
-      const clientMonth = String(clientNow.getUTCMonth() + 1).padStart(2, '0');
-      const clientDay = String(clientNow.getUTCDate()).padStart(2, '0');
-      const clientHour = String(clientNow.getUTCHours()).padStart(2, '0');
-      const clientMin = String(clientNow.getUTCMinutes()).padStart(2, '0');
-      currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
-    }
+    // SEC-CRIT-04: Determine current date-time using server-authoritative time source
+    const currentDateTimeStr = getServerAuthoritativeDateTimeStr(req);
 
     // Pre-fetch active question IDs only for question IDs present in student's NOT_STARTED tests
     const unstartedQuestionIds = Array.from(
@@ -3346,7 +3405,7 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
 
     return res.json(result);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch student tests', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch student tests' });
   }
 });
 
@@ -3373,23 +3432,8 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       return res.status(403).json({ error: 'This test is temporarily paused. Please check back later.' });
     }
 
-    // Finding 3 Fix: Server-side assessment date & time validation
-    const clientDateTimeHeader = req.headers['x-client-now'] as string;
-    let currentDateTimeStr = '';
-    if (clientDateTimeHeader && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(clientDateTimeHeader)) {
-      currentDateTimeStr = clientDateTimeHeader.slice(0, 16);
-    } else {
-      const clientOffsetHeader = req.headers['x-timezone-offset'];
-      const clientOffset = clientOffsetHeader !== undefined && clientOffsetHeader !== '' ? Number(clientOffsetHeader) : null;
-      const nowMs = Date.now();
-      const clientNow = clientOffset !== null && !isNaN(clientOffset) ? new Date(nowMs - (clientOffset * 60000)) : new Date(nowMs);
-      const clientYear = clientNow.getUTCFullYear();
-      const clientMonth = String(clientNow.getUTCMonth() + 1).padStart(2, '0');
-      const clientDay = String(clientNow.getUTCDate()).padStart(2, '0');
-      const clientHour = String(clientNow.getUTCHours()).padStart(2, '0');
-      const clientMin = String(clientNow.getUTCMinutes()).padStart(2, '0');
-      currentDateTimeStr = `${clientYear}-${clientMonth}-${clientDay}T${clientHour}:${clientMin}`;
-    }
+    // SEC-CRIT-04: Server-authoritative assessment date & time validation
+    const currentDateTimeStr = getServerAuthoritativeDateTimeStr(req);
 
     if (pubTest?.startDate && pubTest.startDate !== 'Today') {
       const start24 = to24Hour(pubTest.startTime || '00:00');
@@ -3409,11 +3453,13 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
 
     // Verify student is still targeted under updated target configuration
     if (assignment.status === 'NOT_STARTED') {
-      const studentUser = (req.user!.userId ? await UserModel.findById(req.user!.userId).lean() : null) ||
+      const escapedStudentId = escapeRegExp(studentId);
+      const hasValidUserId = Boolean(req.user!.userId && mongoose.isValidObjectId(req.user!.userId));
+      const studentUser = (hasValidUserId ? await UserModel.findById(req.user!.userId).lean() : null) ||
         await UserModel.findOne({
           $or: [
-            { uniqueStudentId: { $regex: new RegExp(`^${studentId}$`, 'i') } },
-            { username: { $regex: new RegExp(`^${studentId}$`, 'i') } },
+            { uniqueStudentId: { $regex: new RegExp(`^${escapedStudentId}$`, 'i') } },
+            { username: { $regex: new RegExp(`^${escapedStudentId}$`, 'i') } },
           ],
         }).lean();
       if (studentUser && !isStudentTargetedByPublishedTest(studentUser, pubTest)) {
@@ -3533,7 +3579,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       questions: sanitizedQuestions,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Unable to start test. Please try again.', details: err.message });
+    return res.status(500).json({ error: 'Unable to start test. Please try again.' });
   }
 });
 
@@ -3639,7 +3685,7 @@ router.post('/student/tests/:assignmentId/exit', authenticate, async (req: Reque
     }
     return res.json(result);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to record assessment exit', details: err.message });
+    return res.status(500).json({ error: 'Failed to record assessment exit' });
   }
 });
 
@@ -3657,7 +3703,7 @@ router.post('/student/tests/:assignmentId/lock', authenticate, async (req: Reque
     }
     return res.json(result);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to lock assessment', details: err.message });
+    return res.status(500).json({ error: 'Failed to lock assessment' });
   }
 });
 
@@ -3684,6 +3730,11 @@ router.post('/student/logout', authenticate, async (req: Request, res: Response)
       );
     }
 
+    // SEC-MED-04: Revoke authentication token on student logout
+    if (req.token) {
+      revokeToken(req.token);
+    }
+
     return res.json({
       success: true,
       markedIncompleteCount: inProgressList.length,
@@ -3692,12 +3743,15 @@ router.post('/student/logout', authenticate, async (req: Request, res: Response)
         : 'Logged out successfully.'
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to handle student logout', details: err.message });
+    console.error('[Student Logout Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to handle student logout' });
   }
 });
 
 // Answer Question & Real-Time Timing / Correctness Evaluation
-router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Request, res: Response) => {
+// SEC-HIGH-04: Rate limiting on answer submission
+// SEC-CRIT-03: No real-time answer correctness leakage and no repeated answer changes
+router.post('/student/tests/:assignmentId/answer', authenticate, answerRateLimiter, async (req: Request, res: Response) => {
   try {
     const { assignmentId } = req.params;
     const { questionId, answer, timeTakenSeconds } = req.body;
@@ -3738,6 +3792,12 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
 
     const qItem = assignment.questions[questionIndex];
 
+    // SEC-CRIT-03: Once a question answer is accepted, it must not be changed through repeated answer requests
+    const alreadyAnswered = qItem.studentAnswer !== undefined && qItem.studentAnswer !== null;
+    if (alreadyAnswered) {
+      return res.status(400).json({ error: 'Answer for this question has already been submitted and cannot be changed.' });
+    }
+
     // Evaluate answer correctness ONLY if question has a configured correct answer
     const hasCorrectAnswer =
       (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
@@ -3746,7 +3806,7 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
     const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
     const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
 
-    // Finding 10 Fix: Server-side validation and constraint on timeTakenSeconds
+    // Server-side validation and constraint on timeTakenSeconds
     const qAllowedSeconds = qItem.timeAllowedSeconds != null && Number(qItem.timeAllowedSeconds) > 0 ? Number(qItem.timeAllowedSeconds) : null;
     const rawTime = Number(timeTakenSeconds);
     const validTime = isNaN(rawTime) || rawTime < 0 ? 0 : rawTime;
@@ -3762,15 +3822,15 @@ router.post('/student/tests/:assignmentId/answer', authenticate, async (req: Req
       },
     });
 
+    // SEC-CRIT-03: Do NOT return isCorrect or earnedPoints immediately to the student
     return res.json({
       success: true,
       questionId,
       timeTakenSeconds: sanitizedTime,
-      isCorrect,
-      earnedPoints: pointsEarned,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to save question answer', details: err.message });
+    console.error('[Student Answer Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to save question answer' });
   }
 });
 
@@ -3811,22 +3871,27 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
     }
 
     // Process answers payload if sent from frontend
+    // SEC-CRIT-03: Preserve previously submitted answers so they cannot be altered upon submit
     const { answers } = req.body;
     if (answers && Array.isArray(answers)) {
       for (const ansItem of answers) {
         const qIdx = assignment.questions.findIndex((q: any) => q.questionId === ansItem.questionId);
         if (qIdx !== -1) {
           const qItem = assignment.questions[qIdx];
+          const alreadyAnswered = qItem.studentAnswer !== undefined && qItem.studentAnswer !== null;
+          const answerToUse = alreadyAnswered ? qItem.studentAnswer : ansItem.answer;
+          const timeToUse = alreadyAnswered ? qItem.timeTakenSeconds : Math.max(0, Number(ansItem.timeTakenSeconds) || 0);
+
           const hasCorrectAnswer =
             (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
             (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
-          const isCorrect = evaluateQuestionCorrectness(qItem, ansItem.answer);
+          const isCorrect = evaluateQuestionCorrectness(qItem, answerToUse);
           const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
           const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
 
-          assignment.questions[qIdx].studentAnswer = ansItem.answer;
+          assignment.questions[qIdx].studentAnswer = answerToUse;
           assignment.questions[qIdx].isCorrect = hasCorrectAnswer ? (isCorrect ?? false) : false;
-          assignment.questions[qIdx].timeTakenSeconds = Math.max(0, Number(ansItem.timeTakenSeconds) || 0);
+          assignment.questions[qIdx].timeTakenSeconds = timeToUse;
           assignment.questions[qIdx].earnedPoints = pointsEarned;
         }
       }
@@ -3921,7 +3986,7 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
       totalTimeTakenSeconds: totalTime,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Unable to submit test. Please try again.', details: err.message });
+    return res.status(500).json({ error: 'Unable to submit test. Please try again.' });
   }
 });
 
@@ -4005,7 +4070,7 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
 
     return res.json(formatted);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch publish history', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch publish history' });
   }
 });
 
@@ -4378,7 +4443,7 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       totalQuestionsCount: historicalQuestions.length,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch publish history detail', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch publish history detail' });
   }
 });
 
@@ -4411,7 +4476,7 @@ router.post('/publish-history/:publishId/pause', authenticate, requireRole('supe
       message: `Assessment '${history?.publishName || pubTest?.publishName || publishId}' is now temporarily paused.`,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to pause assessment', details: err.message });
+    return res.status(500).json({ error: 'Failed to pause assessment' });
   }
 });
 
@@ -4444,7 +4509,7 @@ router.post('/publish-history/:publishId/resume', authenticate, requireRole('sup
       message: `Assessment '${history?.publishName || pubTest?.publishName || publishId}' has been resumed.`,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to resume assessment', details: err.message });
+    return res.status(500).json({ error: 'Failed to resume assessment' });
   }
 });
 
@@ -4476,7 +4541,7 @@ const handleDeletePublishedAssessment = async (req: Request, res: Response) => {
       deletedAssignmentsCount: deletedAssignments.deletedCount,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete assessment', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete assessment' });
   }
 };
 
@@ -4506,7 +4571,7 @@ router.get('/reports/schools/:schoolId/classes', authenticate, requireRole('supe
 
     return res.json({ classes: cleanClasses });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch classes for school', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch classes for school' });
   }
 });
 
@@ -4537,7 +4602,7 @@ router.get('/reports/schools/:schoolId/sections', authenticate, requireRole('sup
 
     return res.json({ sections: cleanSections });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch sections for school and class', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch sections for school and class' });
   }
 });
 
@@ -4571,7 +4636,7 @@ router.get('/reports/schools/:schoolId/students', authenticate, requireRole('sup
     );
     return res.json(sorted);
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch student reports list', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch student reports list' });
   }
 });
 
@@ -4742,16 +4807,31 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
               metadata: q.metadata || {},
             };
           }
+
+          // SEC-CRIT-02: For NOT_STARTED, IN_PROGRESS, or non-completed assessments,
+          // NEVER expose correctAnswer or correctAnswers!
+          const qCopy = { ...q };
+          delete qCopy.correctAnswer;
+          delete qCopy.correctAnswers;
+
           const fullQ = q.questionId ? qMap.get(String(q.questionId)) : null;
           const groupFromId = q.groupId ? gMap.get(String(q.groupId))?.name : (fullQ?.groupId ? gMap.get(String(fullQ.groupId))?.name : null);
           return {
-            ...q,
+            ...qCopy,
+            questionId: q.questionId || q.id || q._id,
             groupName: q.groupName || groupFromId || fullQ?.groupName || 'General',
             difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
+            questionType: q.questionType || fullQ?.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection'),
+            answerType: q.answerType || fullQ?.answerType || 'single',
             content: q.content || fullQ?.content || 'Question',
             points: q.points != null ? q.points : (fullQ?.points != null ? fullQ.points : null),
             timeAllowedSeconds: q.timeAllowedSeconds != null ? q.timeAllowedSeconds : (fullQ?.timeSeconds != null ? fullQ.timeSeconds : null),
+            timeSeconds: q.timeAllowedSeconds != null ? q.timeAllowedSeconds : (fullQ?.timeSeconds != null ? fullQ.timeSeconds : null),
             options: q.options || fullQ?.options || [],
+            studentAnswer: q.studentAnswer !== undefined ? q.studentAnswer : null,
+            isCorrect: false,
+            earnedPoints: 0,
+            timeTakenSeconds: q.timeTakenSeconds != null ? Number(q.timeTakenSeconds) : 0,
           };
         }),
       };
@@ -4778,7 +4858,8 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
       timeline,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch student timeline report', details: err.message });
+    console.error('[Student Report Error]:', err.message || err);
+    return res.status(500).json({ error: 'Failed to fetch student report' });
   }
 });
 
@@ -4792,7 +4873,7 @@ router.get('/templates', authenticate, requireRole('super_admin'), async (req: R
     const templates = await AssessmentTemplateModel.find().sort({ createdAt: -1 });
     return res.json(formatDocs(templates));
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to fetch templates', details: err.message });
+    return res.status(500).json({ error: 'Failed to fetch templates' });
   }
 });
 
@@ -4870,7 +4951,7 @@ router.post('/templates', authenticate, requireRole('super_admin'), async (req: 
         error: 'A template with this name already exists. Please choose a unique name.',
       });
     }
-    return res.status(500).json({ error: 'Failed to save template', details: err.message });
+    return res.status(500).json({ error: 'Failed to save template' });
   }
 });
 
@@ -4892,7 +4973,7 @@ router.delete('/templates/:id', authenticate, requireRole('super_admin'), async 
     }
     return res.json({ message: 'Template deleted successfully' });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to delete template', details: err.message });
+    return res.status(500).json({ error: 'Failed to delete template' });
   }
 });
 

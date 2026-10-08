@@ -19,9 +19,29 @@ async function startServer() {
     : (Number(process.env.DEFAULT_APP_PORT) || 3000);
   const HOST = '0.0.0.0';
 
+  // SEC-HIGH-03: Fail fast and safely if JWT_SECRET is missing or insecure
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '' || process.env.JWT_SECRET.trim().length < 16) {
+    console.error('[Fatal Security Error] JWT_SECRET environment variable is missing, empty, or insufficient (min 16 characters). Server startup aborted.');
+    process.exit(1);
+  }
+
+  // SEC-MED-05: HTTP Security Headers Middleware
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss:; frame-ancestors 'self' https://*.google.com https://*.run.app;"
+    );
+    next();
+  });
+
   app.use(express.json());
 
   // Root and API health check endpoints for Cloud Run / Nginx container probes
+  // SEC-LOW-01: Public health endpoints must NOT expose hostnames, ports, URIs, or internal topology
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok', service: 'Puzzles Assessment Engine' });
   });
@@ -33,27 +53,18 @@ async function startServer() {
       service: 'Puzzles Assessment Engine (Node.js + Express)',
       uptime: process.uptime(),
       database: {
-        type: 'MongoDB Atlas',
-        targetDatabase: 'puzzles_assessment_dev',
         status: info.isConnected ? 'connected' : 'disconnected',
         readyState: info.readyState,
-        host: info.host,
-        dbName: info.dbName,
-        uri: info.uri,
       },
     });
   });
 
-  // Database status and verification endpoint
+  // Database status and verification endpoint (Sanitized against info leakage)
   app.get('/api/database/status', (_req, res) => {
     const info = getMongoConnectionInfo();
     res.json({
       status: info.isConnected ? 'connected' : 'disconnected',
       readyState: info.readyState,
-      dbName: info.dbName,
-      host: info.host,
-      port: info.port,
-      uri: info.uri,
     });
   });
 

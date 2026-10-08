@@ -134,16 +134,11 @@ export async function ensureInitialSuperAdmin() {
 }
 
 export function getMongoConnectionInfo() {
-  const uri = process.env.MONGO_URI || process.env.MONGODB_URI || '';
-  const maskedUri = uri ? uri.replace(/:([^@/]+)@/, ':****@') : 'Not Configured';
-
+  const isConnected = mongoose.connection.readyState === 1;
   return {
-    isConnected: mongoose.connection.readyState === 1,
+    isConnected,
     readyState: mongoose.connection.readyState,
-    host: mongoose.connection.host || 'unknown',
-    port: mongoose.connection.port || 0,
-    dbName: mongoose.connection.name || 'puzzles_assessment_dev',
-    uri: maskedUri,
+    status: isConnected ? 'connected' : 'disconnected',
   };
 }
 
