@@ -1845,25 +1845,27 @@ export function PublishAssessmentSection({
 
     const standardOrder = ['Easy', 'Medium', 'Hard'];
 
-    return Array.from(groupMap.values()).map((g) => {
-      const presentDiffs = Array.from(g.difficultyMap.keys());
-      const sortedDiffKeys = [
-        ...standardOrder.filter((d) => presentDiffs.includes(d)),
-        ...presentDiffs.filter((d) => !standardOrder.includes(d)),
-      ];
+    return Array.from(groupMap.values())
+      .sort((a, b) => a.groupName.localeCompare(b.groupName, undefined, { sensitivity: 'base' }))
+      .map((g) => {
+        const presentDiffs = Array.from(g.difficultyMap.keys());
+        const sortedDiffKeys = [
+          ...standardOrder.filter((d) => presentDiffs.includes(d)),
+          ...presentDiffs.filter((d) => !standardOrder.includes(d)),
+        ];
 
-      const difficulties = sortedDiffKeys.map((diffName) => ({
-        difficulty: diffName,
-        questions: g.difficultyMap.get(diffName) || [],
-      }));
+        const difficulties = sortedDiffKeys.map((diffName) => ({
+          difficulty: diffName,
+          questions: g.difficultyMap.get(diffName) || [],
+        }));
 
-      return {
-        groupName: g.groupName,
-        groupId: g.groupId,
-        difficulties,
-        allGroupQuestions: g.allQuestions,
-      };
-    });
+        return {
+          groupName: g.groupName,
+          groupId: g.groupId,
+          difficulties,
+          allGroupQuestions: g.allQuestions,
+        };
+      });
   }, [allQuestions]);
 
   // Synchronize randomSelectedDifficulties if in edit mode or formState has initial question IDs

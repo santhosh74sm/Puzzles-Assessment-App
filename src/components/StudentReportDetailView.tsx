@@ -326,13 +326,17 @@ export function StudentReportDetailView({
                                       {q.difficulty || 'Medium'}
                                     </span>
                                   </span>
-                                  <span className="text-slate-600">&bull;</span>
-                                  <span className="text-slate-400 flex items-center gap-1">
-                                    Type:
-                                    <span className="text-slate-200 font-sans font-medium">
-                                      {q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection')}
-                                    </span>
-                                  </span>
+                                  {Array.isArray(q.options) && q.options.length > 0 && (
+                                    <>
+                                      <span className="text-slate-600">&bull;</span>
+                                      <span className="text-slate-400 flex items-center gap-1">
+                                        Choice:
+                                        <span className="text-slate-200 font-sans font-medium">
+                                          {q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection')}
+                                        </span>
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
 
                                 <div className="flex items-start gap-2">

@@ -92,10 +92,12 @@ function ReadOnlyQuestionDetailCard({
           >
             {effectiveDifficulty}
           </span>
-          <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium font-sans">
-            Type: {typeDisplay}
-            {hasSpecificType ? ` (${q.questionType})` : ''}
-          </span>
+          {hasOptions && (
+            <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium font-sans">
+              Choice: {typeDisplay}
+              {hasSpecificType ? ` (${q.questionType})` : ''}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
@@ -134,11 +136,11 @@ function ReadOnlyQuestionDetailCard({
       </div>
 
       {/* Answer Choices / Options */}
-      <div>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
-          Answer Choices / Options
-        </span>
-        {hasOptions ? (
+      {hasOptions && (
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+            Answer Choices / Options
+          </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {q.options.map((opt: string, optIdx: number) => (
               <div
@@ -152,12 +154,8 @@ function ReadOnlyQuestionDetailCard({
               </div>
             ))}
           </div>
-        ) : (
-          <span className="text-xs text-slate-500 italic px-2.5 py-1 rounded-lg bg-slate-800/40 border border-slate-800 inline-block font-mono">
-            Not Applicable
-          </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Correct Answer */}
       <div>
@@ -615,6 +613,13 @@ export function QuestionBankSection({
     [groupBreakdownsMap]
   );
 
+  // Question groups sorted A to Z by name for the Add Question dropdown
+  const sortedQuestionGroups = React.useMemo(() => {
+    return [...questionGroups].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true })
+    );
+  }, [questionGroups]);
+
   return (
     <div className="space-y-8 max-w-7xl">
       {/* Header */}
@@ -717,10 +722,10 @@ export function QuestionBankSection({
                 onChange={(e) => setQuestionForm({ ...questionForm, groupId: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                {questionGroups.length === 0 ? (
+                {sortedQuestionGroups.length === 0 ? (
                   <option value="">No question groups</option>
                 ) : (
-                  questionGroups.map((g) => (
+                  sortedQuestionGroups.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name}
                     </option>
@@ -853,9 +858,9 @@ export function QuestionBankSection({
       {/* Question Groups Breakdown (View Mode) */}
       <div className="space-y-4">
         <h3 className="font-bold text-lg text-white">Question Groups Summary</h3>
-        {questionGroups.length > 0 ? (
+        {sortedQuestionGroups.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {questionGroups.map((grp) => {
+            {sortedQuestionGroups.map((grp) => {
               const breakdown = getGroupBreakdown(grp);
               return (
                 <div
@@ -959,7 +964,7 @@ export function QuestionBankSection({
               className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
             >
               <option value="">All Groups</option>
-              {questionGroups.map((g) => (
+              {sortedQuestionGroups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
                 </option>
