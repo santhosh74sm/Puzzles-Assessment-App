@@ -54,6 +54,8 @@ function ReadOnlyQuestionDetailCard({
 
   // Options
   const hasOptions = Array.isArray(q.options) && q.options.length > 0;
+  const scoringGuide = q.metadata?.source?.scoringGuide || q.metadata?.scoringGuide;
+  const isManualRubric = q.metadata?.scoringMode === 'manual-rubric';
 
   // Correct Answer
   const hasCorrectAnswer =
@@ -96,6 +98,11 @@ function ReadOnlyQuestionDetailCard({
             <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium font-sans">
               Choice: {typeDisplay}
               {hasSpecificType ? ` (${q.questionType})` : ''}
+            </span>
+          )}
+          {isManualRubric && (
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-800 font-medium font-sans">
+              Manual rubric scoring
             </span>
           )}
         </div>
@@ -173,6 +180,15 @@ function ReadOnlyQuestionDetailCard({
           </span>
         )}
       </div>
+
+      {scoringGuide && (
+        <div className="rounded-xl border border-amber-900/70 bg-amber-950/20 px-3 py-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 block mb-1">
+            Scoring Guide
+          </span>
+          <p className="text-xs leading-relaxed text-slate-200 whitespace-pre-wrap">{scoringGuide}</p>
+        </div>
+      )}
     </div>
   );
 }

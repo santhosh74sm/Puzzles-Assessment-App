@@ -19,6 +19,7 @@ import {
   computeStudentInsights,
   selectRandomQuestionsForRuleEngine,
 } from './services/randomEngine.ts';
+import { hasAutomaticallyScorableAnswer } from './services/questionScoring.ts';
 import type { Question, QuestionAttemptLog } from './types.ts';
 import { to12Hour, to24Hour, toISODate, isScheduledForFuture, isAssessmentExpired } from '../src/utils/dateTime.ts';
 
@@ -1428,9 +1429,7 @@ function normalizeToOptionValue(val: string, options?: string[]): string {
 }
 
 function evaluateQuestionCorrectness(qItem: any, studentAnswer: any): boolean | undefined {
-  const hasCorrectAnswer =
-    (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
-    (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
+  const hasCorrectAnswer = hasAutomaticallyScorableAnswer(qItem);
 
   if (!hasCorrectAnswer) return undefined;
 
@@ -3610,9 +3609,7 @@ async function markAssignmentIncomplete(
 
   for (const q of assignment.questions) {
     // Finding 8 Fix: Non-evaluative questions without correctAnswer must not distort possible total
-    const hasCorrectAnswer =
-      (q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '') ||
-      (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0);
+    const hasCorrectAnswer = hasAutomaticallyScorableAnswer(q);
     const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
     if (hasCorrectAnswer && hasPoints) {
       possibleTotal += Number(q.points);
@@ -3802,9 +3799,7 @@ router.post('/student/tests/:assignmentId/answer', authenticate, answerRateLimit
     }
 
     // Evaluate answer correctness ONLY if question has a configured correct answer
-    const hasCorrectAnswer =
-      (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
-      (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
+    const hasCorrectAnswer = hasAutomaticallyScorableAnswer(qItem);
     const isCorrect = evaluateQuestionCorrectness(qItem, answer);
     const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
     const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
@@ -3885,9 +3880,7 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
           const answerToUse = alreadyAnswered ? qItem.studentAnswer : ansItem.answer;
           const timeToUse = alreadyAnswered ? qItem.timeTakenSeconds : Math.max(0, Number(ansItem.timeTakenSeconds) || 0);
 
-          const hasCorrectAnswer =
-            (qItem.correctAnswer !== undefined && qItem.correctAnswer !== null && String(qItem.correctAnswer).trim() !== '') ||
-            (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0);
+          const hasCorrectAnswer = hasAutomaticallyScorableAnswer(qItem);
           const isCorrect = evaluateQuestionCorrectness(qItem, answerToUse);
           const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
           const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
@@ -3909,9 +3902,7 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
 
     for (const q of assignment.questions) {
       const hasPoints = q.points != null && !isNaN(Number(q.points)) && Number(q.points) > 0;
-      const hasCorrectAnswer =
-        (q.correctAnswer !== undefined && q.correctAnswer !== null && String(q.correctAnswer).trim() !== '') ||
-        (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0);
+      const hasCorrectAnswer = hasAutomaticallyScorableAnswer(q);
       // Finding 8 Fix: Non-evaluative questions without correctAnswer must not distort possible points
       if (hasCorrectAnswer && hasPoints) {
         possiblePointsTotal += Number(q.points);
