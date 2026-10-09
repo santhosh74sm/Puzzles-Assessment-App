@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Layers,
   PlusCircle,
@@ -199,6 +199,13 @@ export function QuestionBankSection({
   allQuestions,
   onRefreshData,
 }: QuestionBankSectionProps) {
+  // Question groups sorted A to Z by name (matches the displayed dropdown options)
+  const sortedQuestionGroups = useMemo(() => {
+    return [...questionGroups].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true })
+    );
+  }, [questionGroups]);
+
   // New Question Group
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDesc, setNewGroupDesc] = useState('');
@@ -238,7 +245,7 @@ export function QuestionBankSection({
     multipleSelection: boolean;
     correctAnswer: string;
   }>({
-    groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
+    groupId: sortedQuestionGroups.length > 0 ? sortedQuestionGroups[0].id : '',
     difficulty: 'Easy',
     content: '',
     timeSeconds: '',
@@ -248,6 +255,27 @@ export function QuestionBankSection({
     correctAnswer: '',
   });
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+
+  // Ensure the Group dropdown defaults to the first available group in the displayed dropdown options.
+  // Handles asynchronous data loading, page refreshes, and group removals while preserving active user selection.
+  useEffect(() => {
+    if (editingQuestionItem) return;
+
+    if (sortedQuestionGroups.length === 0) {
+      if (questionForm.groupId !== '') {
+        setQuestionForm((prev) => ({ ...prev, groupId: '' }));
+      }
+      return;
+    }
+
+    const currentGroupStillExists = sortedQuestionGroups.some(
+      (g) => g.id === questionForm.groupId
+    );
+
+    if (!questionForm.groupId || !currentGroupStillExists) {
+      setQuestionForm((prev) => ({ ...prev, groupId: sortedQuestionGroups[0].id }));
+    }
+  }, [sortedQuestionGroups, editingQuestionItem, questionForm.groupId]);
 
   // Filters for question list
   const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
@@ -282,7 +310,7 @@ export function QuestionBankSection({
         if (editingQuestionItem && (editingQuestionItem.id === qId || editingQuestionItem._id === qId)) {
           setEditingQuestionItem(null);
           setQuestionForm({
-            groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
+            groupId: sortedQuestionGroups.length > 0 ? sortedQuestionGroups[0].id : '',
             difficulty: 'Easy',
             content: '',
             timeSeconds: '',
@@ -446,7 +474,7 @@ export function QuestionBankSection({
     const isMultiple = q.answerType === 'multiple' || Boolean(q.multipleSelection);
 
     setQuestionForm({
-      groupId: q.groupId || (questionGroups.length > 0 ? questionGroups[0].id : ''),
+      groupId: q.groupId || (sortedQuestionGroups.length > 0 ? sortedQuestionGroups[0].id : ''),
       difficulty: q.difficulty || 'Easy',
       content: q.content || '',
       timeSeconds: q.timeSeconds != null ? String(q.timeSeconds) : (q.timeAllowedSeconds != null ? String(q.timeAllowedSeconds) : ''),
@@ -465,7 +493,7 @@ export function QuestionBankSection({
   const handleCancelEditQuestion = () => {
     setEditingQuestionItem(null);
     setQuestionForm({
-      groupId: questionGroups.length > 0 ? questionGroups[0].id : '',
+      groupId: sortedQuestionGroups.length > 0 ? sortedQuestionGroups[0].id : '',
       difficulty: 'Easy',
       content: '',
       timeSeconds: '',
@@ -629,13 +657,6 @@ export function QuestionBankSection({
     [groupBreakdownsMap]
   );
 
-  // Question groups sorted A to Z by name for the Add Question dropdown
-  const sortedQuestionGroups = React.useMemo(() => {
-    return [...questionGroups].sort((a, b) =>
-      (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base', numeric: true })
-    );
-  }, [questionGroups]);
-
   return (
     <div className="space-y-8 max-w-7xl">
       {/* Header */}
@@ -734,7 +755,11 @@ export function QuestionBankSection({
                 Group
               </label>
               <select
-                value={questionForm.groupId}
+                value={
+                  questionForm.groupId && sortedQuestionGroups.some((g) => g.id === questionForm.groupId)
+                    ? questionForm.groupId
+                    : (sortedQuestionGroups[0]?.id || '')
+                }
                 onChange={(e) => setQuestionForm({ ...questionForm, groupId: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
               >
