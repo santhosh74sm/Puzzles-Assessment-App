@@ -109,10 +109,12 @@ async function startServer() {
   console.log('[System] Initializing MongoDB database connection...');
   connectMongoDB()
     .then((dbInfo) => {
-      console.log(`[System] Verified MongoDB connection to: ${dbInfo.dbName} (${dbInfo.uri})`);
+      console.log(`[System] Verified MongoDB connection to database: ${dbInfo.dbName}`);
     })
     .catch((err: any) => {
-      console.warn(`[System] MongoDB connection notice:`, err.message);
+      const errorName = typeof err?.name === 'string' ? err.name : 'UnknownError';
+      const errorCode = typeof err?.code === 'string' || typeof err?.code === 'number' ? `, code: ${err.code}` : '';
+      console.warn(`[System] MongoDB connection unavailable (${errorName}${errorCode}).`);
     });
 }
 

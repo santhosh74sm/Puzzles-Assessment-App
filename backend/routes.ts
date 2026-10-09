@@ -20,10 +20,59 @@ import {
   selectRandomQuestionsForRuleEngine,
 } from './services/randomEngine.ts';
 import { hasAutomaticallyScorableAnswer } from './services/questionScoring.ts';
+import { serializeQuestionForRole, serializeStudentQuestion } from './services/studentQuestionSerializer.ts';
 import type { Question, QuestionAttemptLog } from './types.ts';
 import { to12Hour, to24Hour, toISODate, isScheduledForFuture, isAssessmentExpired } from '../src/utils/dateTime.ts';
 
 const router = express.Router();
+
+function canonicalizeRequestValue(value: any): any {
+  if (Array.isArray(value)) return value.map(canonicalizeRequestValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalizeRequestValue(value[key])]));
+  }
+  return value;
+}
+
+/** Return question snapshots only from assessments the authenticated student can currently access. */
+async function getStudentAccessibleAssignments(req: Request) {
+  const studentId = req.user!.studentId || req.user!.username;
+  const assignments = await StudentTestAssignmentModel.find({
+    studentId,
+    status: { $in: ['NOT_STARTED', 'IN_PROGRESS'] },
+  });
+  const publishIds = Array.from(new Set(assignments.map((a: any) => String(a.publishedTestId))));
+  const publishedTests = publishIds.length
+    ? await PublishedTestModel.find({ _id: { $in: publishIds } })
+    : [];
+  const publishById = new Map(publishedTests.map((p: any) => [String(p._id), p]));
+  const hasValidUserId = Boolean(req.user!.userId && mongoose.isValidObjectId(req.user!.userId));
+  const escapedStudentId = escapeRegExp(studentId);
+  const student = (hasValidUserId ? await UserModel.findById(req.user!.userId).lean() : null) ||
+    await UserModel.findOne({
+      $or: [
+        { uniqueStudentId: { $regex: new RegExp(`^${escapedStudentId}$`, 'i') } },
+        { username: { $regex: new RegExp(`^${escapedStudentId}$`, 'i') } },
+      ],
+    }).lean();
+  if (!student) return [];
+
+  const now = getServerAuthoritativeDateTimeStr(req);
+  return assignments.filter((assignment: any) => {
+    const pub = publishById.get(String(assignment.publishedTestId));
+    if (!pub || pub.isPaused || pub.status === 'PAUSED') return false;
+    if (assignment.status === 'NOT_STARTED' && !isStudentTargetedByPublishedTest(student, pub)) return false;
+    if (pub.startDate && pub.startDate !== 'Today') {
+      const start = `${toISODate(pub.startDate)}T${to24Hour(pub.startTime || '00:00')}`;
+      if (isScheduledForFuture(now, start, 0)) return false;
+    }
+    if (pub.endDate && pub.endDate !== 'Open') {
+      const end = `${toISODate(pub.endDate)}T${to24Hour(pub.endTime || '23:59')}`;
+      if (isAssessmentExpired(now, end, 0)) return false;
+    }
+    return true;
+  });
+}
 
 // SEC-HIGH-04 & SCAL-LOW-01: Granular server-side rate limiters with distributed store support
 const loginRateLimiter = createRateLimiter({
@@ -1036,22 +1085,45 @@ router.post('/question-groups', authenticate, requireRole('super_admin'), async 
 // SEC-CRIT-01: Sanitize correct answers for student callers to prevent answer key disclosure
 router.get('/question-groups', authenticate, async (req: Request, res: Response) => {
   try {
+    if (req.user!.role === 'student') {
+      const assignments = await getStudentAccessibleAssignments(req);
+      const assignedQuestions = assignments.flatMap((a: any) => a.questions || []);
+      const groups = await QuestionGroupModel.find().sort({ createdAt: 1 });
+      const assignedGroupKeys = new Set(assignedQuestions.flatMap((q: any) => [
+        String(q.groupId || '').trim(),
+        String(q.groupName || '').trim().toLowerCase(),
+      ]).filter(Boolean));
+      const visibleGroups = groups.filter((g: any) =>
+        assignedGroupKeys.has(String(g._id)) || assignedGroupKeys.has(String(g.name || '').trim().toLowerCase())
+      );
+      return res.json(visibleGroups.map((g: any) => {
+        const groupQuestions = assignedQuestions.filter((q: any) =>
+          String(q.groupId || '').trim() === String(g._id) ||
+          String(q.groupName || '').trim().toLowerCase() === String(g.name || '').trim().toLowerCase()
+        );
+        const byDifficulty = (difficulty: string) => groupQuestions
+          .filter((q: any) => String(q.difficulty || '').trim().toLowerCase() === difficulty.toLowerCase())
+          .map((q: any) => serializeStudentQuestion(q));
+        const easy = byDifficulty('Easy');
+        const medium = byDifficulty('Medium');
+        const hard = byDifficulty('Hard');
+        return {
+          id: String(g._id), _id: String(g._id), name: g.name, description: g.description,
+          createdAt: g.createdAt, questionCount: groupQuestions.length,
+          easyCount: easy.length, mediumCount: medium.length, hardCount: hard.length,
+          breakdown: {
+            Easy: { count: easy.length, questions: easy },
+            Medium: { count: medium.length, questions: medium },
+            Hard: { count: hard.length, questions: hard },
+          },
+        };
+      }));
+    }
+
     const groups = await QuestionGroupModel.find().sort({ createdAt: 1 });
     const questions = await QuestionModel.find();
-    const isStudent = req.user?.role === 'student';
-
-    const sanitizeQuestionForStudent = (q: any) => {
-      const doc = formatDoc(q);
-      delete doc.correctAnswer;
-      delete doc.correctAnswers;
-      return doc;
-    };
-
     const formatQuestionsList = (qList: any[]) => {
-      if (isStudent) {
-        return qList.map(sanitizeQuestionForStudent);
-      }
-      return formatDocs(qList);
+      return qList.map((q) => serializeQuestionForRole(q, req.user?.role));
     };
 
     const withCounts = groups.map((g) => {
@@ -1816,22 +1888,21 @@ router.get('/questions', authenticate, async (req: Request, res: Response) => {
       difficulty?: string;
     };
 
+    if (req.user!.role === 'student') {
+      const assignments = await getStudentAccessibleAssignments(req);
+      const questions = assignments.flatMap((a: any) => a.questions || []).filter((q: any) => {
+        if (groupId && String(q.groupId || '') !== groupId) return false;
+        if (difficulty && String(q.difficulty || '').toLowerCase() !== difficulty.toLowerCase()) return false;
+        return true;
+      });
+      return res.json(questions.map((q: any) => serializeStudentQuestion(q)));
+    }
+
     const query: any = {};
     if (groupId) query.groupId = groupId;
     if (difficulty) query.difficulty = difficulty;
 
     const list = await QuestionModel.find(query).sort({ createdAt: -1 });
-
-    // Sanitize correct answers for student callers
-    if (req.user!.role === 'student') {
-      const sanitized = list.map((q) => {
-        const doc = formatDoc(q);
-        delete doc.correctAnswer;
-        delete doc.correctAnswers;
-        return doc;
-      });
-      return res.json(sanitized);
-    }
 
     return res.json(formatDocs(list));
   } catch (err: any) {
@@ -2505,6 +2576,41 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       shuffle,
     } = req.body;
 
+    const idempotencyKey = String(req.get('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 128) {
+      return res.status(400).json({ error: 'A valid Idempotency-Key header is required to publish safely.' });
+    }
+    const requestFingerprint = crypto.createHash('sha256').update(JSON.stringify(canonicalizeRequestValue({
+      publishName, publishMode, target, targets, startDate, startTime, endDate, endTime,
+      selectedQuestionIds, randomCount, shuffle,
+    }))).digest('hex');
+    const previousRequest = await PublishedTestModel.findOne({ idempotencyKey });
+    if (previousRequest) {
+      if (previousRequest.requestFingerprint === requestFingerprint && previousRequest.publishState === 'FAILED') {
+        // Repair a prior failed attempt by removing only records tied to this request before retrying.
+        await StudentTestAssignmentModel.deleteMany({ publishedTestId: String(previousRequest._id) });
+        await PublishHistoryModel.deleteOne({ publishId: String(previousRequest._id) });
+        await PublishedTestModel.deleteOne({ _id: previousRequest._id, publishState: 'FAILED' });
+      } else {
+        if (previousRequest.requestFingerprint !== requestFingerprint) {
+          return res.status(409).json({ error: 'This Idempotency-Key was already used for a different publication request.' });
+        }
+        if (previousRequest.publishState === 'COMPLETE') {
+          const history = await PublishHistoryModel.findOne({ publishId: String(previousRequest._id) });
+          const assignmentCount = await StudentTestAssignmentModel.countDocuments({ publishedTestId: String(previousRequest._id) });
+          return res.status(200).json({
+            message: `Assessment '${previousRequest.publishName}' was already published for this request.`,
+            publishedTest: formatDoc(previousRequest),
+            assignedStudentCount: assignmentCount,
+            totalAssignedStudents: assignmentCount,
+            historyRecordId: history?._id?.toString(),
+            idempotentReplay: true,
+          });
+        }
+        return res.status(409).json({ error: 'This publication request is still in progress. Retry with the same key shortly.' });
+      }
+    }
+
     const targetList = Array.isArray(targets) && targets.length > 0 ? targets : target ? [target] : [];
 
     if (!publishName || !publishMode || targetList.length === 0 || !startDate || !endDate) {
@@ -2623,7 +2729,12 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
     );
 
     // Create Published Test Record with targets array
-    const newPublish = await PublishedTestModel.create({
+    let newPublish: any;
+    try {
+      newPublish = await PublishedTestModel.create({
+      idempotencyKey,
+      requestFingerprint,
+      publishState: 'PUBLISHING',
       publishName: publishName.trim(),
       publishMode,
       target: {
@@ -2648,23 +2759,43 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       status: 'ACTIVE',
       isPaused: false,
       publishedAt: new Date(),
-    });
+      });
+    } catch (createError: any) {
+      if (createError?.code === 11000) {
+        const racedRequest = await PublishedTestModel.findOne({ idempotencyKey });
+        if (racedRequest?.requestFingerprint === requestFingerprint && racedRequest?.publishState === 'COMPLETE') {
+          const history = await PublishHistoryModel.findOne({ publishId: String(racedRequest._id) });
+          const assignmentCount = await StudentTestAssignmentModel.countDocuments({ publishedTestId: String(racedRequest._id) });
+          return res.status(200).json({
+            message: `Assessment '${racedRequest.publishName}' was already published for this request.`,
+            publishedTest: formatDoc(racedRequest),
+            assignedStudentCount: assignmentCount,
+            totalAssignedStudents: assignmentCount,
+            historyRecordId: history?._id?.toString(),
+            idempotentReplay: true,
+          });
+        }
+        if (racedRequest) return res.status(409).json({ error: 'This publication request is already being processed.' });
+      }
+      throw createError;
+    }
 
     const publishedTestId = newPublish._id.toString();
     const newAssignments: any[] = [];
 
-    // Pre-fetch past assignments only for candidate students if in Random mode
-    const candidateStudentIds = candidateStudents.map((s) => s.uniqueStudentId).filter(Boolean);
-    const pastAssignmentsDocs = publishMode === 'Random Questions' && candidateStudentIds.length > 0
-      ? await StudentTestAssignmentModel.find(
-          { studentId: { $in: candidateStudentIds } },
-          { studentId: 1, questions: 1, status: 1, scoreOutOf100: 1, startedAt: 1, completedAt: 1 }
-        )
-      : [];
-    const pastAssignments = formatDocs(pastAssignmentsDocs);
+    try {
+      // Pre-fetch past assignments only for candidate students if in Random mode
+      const candidateStudentIds = candidateStudents.map((s) => s.uniqueStudentId).filter(Boolean);
+      const pastAssignmentsDocs = publishMode === 'Random Questions' && candidateStudentIds.length > 0
+        ? await StudentTestAssignmentModel.find(
+            { studentId: { $in: candidateStudentIds } },
+            { studentId: 1, questions: 1, status: 1, scoreOutOf100: 1, startedAt: 1, completedAt: 1 }
+          )
+        : [];
+      const pastAssignments = formatDocs(pastAssignmentsDocs);
 
-    // Create assignments for every unique target student (guarantees exactly 1 assignment per student)
-    for (const student of candidateStudents) {
+      // Create assignments for every unique target student (guarantees exactly 1 assignment per student)
+      for (const student of candidateStudents) {
       let studentQuestionList: Question[] = [];
 
       if (publishMode === 'Selected Questions') {
@@ -2716,7 +2847,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
 
       const stSchool = schoolMap.get(student.schoolId);
 
-      newAssignments.push({
+        newAssignments.push({
         publishedTestId,
         publishName: publishName.trim(),
         studentId: student.uniqueStudentId!,
@@ -2734,14 +2865,20 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         scoreOutOf100: 0,
         totalTimeTakenSeconds: 0,
         questions: questionLogs,
-      });
+        });
+      }
+    } catch (buildError) {
+      await PublishedTestModel.deleteOne({ _id: newPublish._id, publishState: 'PUBLISHING' }).catch(() => undefined);
+      throw buildError;
     }
 
-    // Insert student assignments into MongoDB Atlas
-    await StudentTestAssignmentModel.insertMany(newAssignments);
+    let historyRecord: any;
+    try {
+      // Insert student assignments into MongoDB Atlas
+      await StudentTestAssignmentModel.insertMany(newAssignments);
 
-    // Create permanent history record in MongoDB Atlas
-    const historyRecord = await PublishHistoryModel.create({
+      // Create permanent history record in MongoDB Atlas
+      historyRecord = await PublishHistoryModel.create({
       publishId: publishedTestId,
       publishName: publishName.trim(),
       date: startDate,
@@ -2779,7 +2916,41 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         section: s.section!,
         status: 'NOT_STARTED',
       })),
-    });
+      });
+      const finalized = await PublishedTestModel.updateOne(
+        { _id: newPublish._id, publishState: 'PUBLISHING' },
+        { $set: { publishState: 'COMPLETE' } }
+      );
+      if (finalized.matchedCount !== 1) throw new Error('Publication completion state was not persisted.');
+      newPublish.publishState = 'COMPLETE';
+    } catch (publishError: any) {
+      // Compensating cleanup keeps a failed publish from leaving visible partial records.
+      // If completion was acknowledged despite a transport error, retain the completed publication.
+      const persisted = await PublishedTestModel.findById(newPublish._id).catch(() => null);
+      if (!persisted) {
+        console.error('[Publish] Could not confirm publication state after a write failure; records were retained for safe recovery.');
+        throw publishError;
+      }
+      if (persisted.publishState !== 'COMPLETE') {
+        const cleanup = await Promise.allSettled([
+          StudentTestAssignmentModel.deleteMany({ publishedTestId }),
+          PublishHistoryModel.deleteOne({ publishId: publishedTestId }),
+        ]);
+        if (cleanup.some((result) => result.status === 'rejected')) {
+          await PublishedTestModel.updateOne(
+            { _id: newPublish._id, publishState: 'PUBLISHING' },
+            { $set: { publishState: 'FAILED' } }
+          ).catch(() => undefined);
+          console.error('[Publish] Partial publish cleanup was incomplete; operator recovery is required.');
+        } else {
+          await PublishedTestModel.deleteOne({ _id: newPublish._id, publishState: 'PUBLISHING' });
+        }
+      } else {
+        newPublish = persisted;
+        historyRecord = await PublishHistoryModel.findOne({ publishId: publishedTestId });
+      }
+      if (!historyRecord || persisted?.publishState !== 'COMPLETE') throw publishError;
+    }
 
     return res.status(201).json({
       message: `Assessment '${publishName}' published successfully to ${candidateStudents.length} students across ${schools.length} school(s).`,
@@ -3335,8 +3506,6 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
         }
       }
 
-      const doc = formatDoc(a);
-
       let isUpcoming = false;
       let isExpired = false;
 
@@ -3379,16 +3548,16 @@ router.get('/student/tests', authenticate, async (req: Request, res: Response) =
       const canResume = a.status === 'IN_PROGRESS' && !isPaused && !isExpired;
 
       result.push({
-        ...doc,
-        studentName: studentUser?.studentName || a.studentName || doc.studentName,
-        schoolAdmissionNumber: studentUser?.schoolAdmissionNumber || a.schoolAdmissionNumber || doc.schoolAdmissionNumber || '',
+        id: a._id.toString(),
+        _id: a._id.toString(),
+        assignmentId: a._id.toString(),
+        publishedTestId: pubId,
+        studentName: studentUser?.studentName || a.studentName || '',
+        schoolAdmissionNumber: studentUser?.schoolAdmissionNumber || a.schoolAdmissionNumber || '',
+        publishName: pub?.publishName || a.publishName,
         status: a.status,
         exitType: a.exitType || null,
         totalQuestions: activeQuestionsCount,
-        assignmentId: a._id.toString(),
-        id: a._id.toString(),
-        publishedTestId: pubId,
-        publishName: pub?.publishName || a.publishName,
         startDate: pub?.startDate || 'Today',
         startTime: to12Hour(pub?.startTime || a.startTime || '12:00 AM'),
         endDate: pub?.endDate || 'Open',
@@ -3487,7 +3656,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
       }
       const sanitizedQuestions = (assignment.questions || []).map((q: any) => {
         const fullQ = qMap.get(String(q.questionId || q.id || q._id));
-        return {
+        return serializeStudentQuestion({
           questionId: q.questionId || q.id || q._id,
           groupName: q.groupName || fullQ?.groupName || 'General',
           difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
@@ -3500,14 +3669,16 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
           pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
           timeTakenSeconds: q.timeTakenSeconds || 0,
           studentAnswer: q.studentAnswer !== undefined ? q.studentAnswer : null,
-        };
+        });
       });
 
-      const doc = formatDoc(assignment);
       return res.json({
-        ...doc,
         assignmentId: assignment._id.toString(),
         id: assignment._id.toString(),
+        publishedTestId: assignment.publishedTestId,
+        publishName: assignment.publishName,
+        status: assignment.status,
+        startedAt: assignment.startedAt,
         questions: sanitizedQuestions,
         isResumed: true,
       });
@@ -3557,7 +3728,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
 
     const sanitizedQuestions = assignment.questions.map((q: any) => {
       const fullQ = qMap.get(String(q.questionId || q.id || q._id));
-      return {
+      return serializeStudentQuestion({
         questionId: q.questionId || q.id || q._id,
         groupName: q.groupName || fullQ?.groupName || 'General',
         difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
@@ -3570,14 +3741,16 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
         pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
         timeTakenSeconds: q.timeTakenSeconds || 0,
         studentAnswer: q.studentAnswer,
-      };
+      });
     });
 
-    const doc = formatDoc(assignment);
     return res.json({
-      ...doc,
       assignmentId: assignment._id.toString(),
       id: assignment._id.toString(),
+      publishedTestId: assignment.publishedTestId,
+      publishName: assignment.publishName,
+      status: assignment.status,
+      startedAt: assignment.startedAt,
       questions: sanitizedQuestions,
     });
   } catch (err: any) {
@@ -4778,7 +4951,7 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
           if (a.status === 'COMPLETED') {
             // For a COMPLETED assessment, preserve exactly the immutable historical snapshot used for that assessment.
             // Do NOT dynamically resolve the completed student's question from the current Question Bank.
-            return {
+            const reportQuestion = {
               ...q,
               questionId: q.questionId || q.id || q._id,
               groupName: q.groupName || 'General',
@@ -4800,6 +4973,9 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
               earnedPoints: q.earnedPoints != null ? Number(q.earnedPoints) : 0,
               metadata: q.metadata || {},
             };
+            return req.user!.role === 'student'
+              ? serializeStudentQuestion(reportQuestion)
+              : reportQuestion;
           }
 
           // SEC-CRIT-02: For NOT_STARTED, IN_PROGRESS, or non-completed assessments,
@@ -4810,7 +4986,7 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
 
           const fullQ = q.questionId ? qMap.get(String(q.questionId)) : null;
           const groupFromId = q.groupId ? gMap.get(String(q.groupId))?.name : (fullQ?.groupId ? gMap.get(String(fullQ.groupId))?.name : null);
-          return {
+          const reportQuestion = {
             ...qCopy,
             questionId: q.questionId || q.id || q._id,
             groupName: q.groupName || groupFromId || fullQ?.groupName || 'General',
@@ -4827,6 +5003,9 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
             earnedPoints: 0,
             timeTakenSeconds: q.timeTakenSeconds != null ? Number(q.timeTakenSeconds) : 0,
           };
+          return req.user!.role === 'student'
+            ? serializeStudentQuestion(reportQuestion)
+            : reportQuestion;
         }),
       };
     });

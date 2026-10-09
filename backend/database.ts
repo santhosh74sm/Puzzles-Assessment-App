@@ -11,7 +11,7 @@ import {
 } from '../database/models.ts';
 import bcrypt from 'bcryptjs';
 
-export async function connectMongoDB(): Promise<{ uri: string; isConnected: boolean; dbName: string }> {
+export async function connectMongoDB(): Promise<{ isConnected: boolean; dbName: string }> {
   try {
     const rawUri = (process.env.MONGO_URI || process.env.MONGODB_URI || '').trim();
 
@@ -33,9 +33,7 @@ export async function connectMongoDB(): Promise<{ uri: string; isConnected: bool
       }
     }
 
-    // Mask credentials for logs
-    const maskedUri = finalUri.replace(/:([^@/]+)@/, ':****@');
-    console.log(`[Database] Connecting exclusively to MongoDB Atlas at: ${maskedUri}`);
+    console.log('[Database] Connecting to configured MongoDB deployment (target database: puzzles_assessment_dev).');
 
     await mongoose.connect(finalUri, {
       dbName: 'puzzles_assessment_dev',
@@ -51,9 +49,11 @@ export async function connectMongoDB(): Promise<{ uri: string; isConnected: bool
     // Ensure initial Super Admin ('san' / 'san' with mustChangePassword: true) in Atlas if not existing
     await ensureInitialSuperAdmin();
 
-    return { uri: maskedUri, isConnected: true, dbName: mongoose.connection.name };
+    return { isConnected: true, dbName: mongoose.connection.name };
   } catch (err: any) {
-    console.error(`[Database] Error connecting to MongoDB:`, err.message);
+    const errorName = typeof err?.name === 'string' ? err.name : 'UnknownError';
+    const errorCode = typeof err?.code === 'string' || typeof err?.code === 'number' ? `, code: ${err.code}` : '';
+    console.error(`[Database] MongoDB connection failed (${errorName}${errorCode}).`);
     throw err;
   }
 }

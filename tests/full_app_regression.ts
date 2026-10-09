@@ -136,6 +136,7 @@ async function runFullRegression() {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${superAdminToken}`,
+        'Idempotency-Key': crypto.randomUUID(),
       },
       body: JSON.stringify({
         name: `Regression Test School ${Date.now()}`,
@@ -168,6 +169,7 @@ async function runFullRegression() {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${superAdminToken}`,
+        'Idempotency-Key': crypto.randomUUID(),
       },
       body: JSON.stringify({
         studentName: 'Alice Regression Student',
@@ -244,6 +246,7 @@ async function runFullRegression() {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${superAdminToken}`,
+        'Idempotency-Key': crypto.randomUUID(),
       },
       body: JSON.stringify({
         studentName: 'Duplicate Admission Student',
@@ -275,6 +278,7 @@ async function runFullRegression() {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${superAdminToken}`,
+        'Idempotency-Key': crypto.randomUUID(),
       },
       body: JSON.stringify({
         name: groupName,

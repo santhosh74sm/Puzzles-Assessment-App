@@ -1686,6 +1686,7 @@ export function PublishAssessmentSection({
   // Feedback notification state (strictly typed for semantic green success vs red error)
   const [publishFeedback, setPublishFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const publishRequestRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const showSuccessFeedback = (message: string) => {
     setPublishFeedback({ type: 'success', message });
@@ -2622,33 +2623,40 @@ export function PublishAssessmentSection({
 
       const url = isEditMode ? `/api/publish/${currentEditId}` : '/api/publish';
       const method = isEditMode ? 'PUT' : 'POST';
+      const publishPayload = {
+        publishName: publishName.trim(),
+        publishMode,
+        targets: normalizedTargetsForApi,
+        // Aggregated target for backward compatibility
+        target: {
+          schoolId: allSelectedSchoolIds[0] || '',
+          schoolIds: allSelectedSchoolIds,
+          classes: allSelectedClasses,
+          sections: allSelectedSections,
+          studentIds: allSelectedStudentIds,
+        },
+        startDate,
+        startTime: to12Hour(startTime),
+        endDate,
+        endTime: to12Hour(endTime),
+        selectedQuestionIds:
+          publishMode === 'Random Questions'
+            ? randomEligibleQuestions.map((q) => q.id)
+            : selectedQuestionsForPublish,
+        randomCount: Number(randomCount),
+        shuffle: shuffleQuestions,
+      };
+      const requestFingerprint = JSON.stringify(publishPayload);
+      if (!isEditMode && publishRequestRef.current?.fingerprint !== requestFingerprint) {
+        publishRequestRef.current = { fingerprint: requestFingerprint, key: crypto.randomUUID() };
+      }
 
       const res = await fetch(url, {
         method,
-        headers,
-        body: JSON.stringify({
-          publishName: publishName.trim(),
-          publishMode,
-          targets: normalizedTargetsForApi,
-          // Aggregated target for backward compatibility
-          target: {
-            schoolId: allSelectedSchoolIds[0] || '',
-            schoolIds: allSelectedSchoolIds,
-            classes: allSelectedClasses,
-            sections: allSelectedSections,
-            studentIds: allSelectedStudentIds,
-          },
-          startDate,
-          startTime: to12Hour(startTime),
-          endDate,
-          endTime: to12Hour(endTime),
-          selectedQuestionIds:
-            publishMode === 'Random Questions'
-              ? randomEligibleQuestions.map((q) => q.id)
-              : selectedQuestionsForPublish,
-          randomCount: Number(randomCount),
-          shuffle: shuffleQuestions,
-        }),
+        headers: !isEditMode
+          ? { ...headers, 'Idempotency-Key': publishRequestRef.current!.key }
+          : headers,
+        body: JSON.stringify(publishPayload),
       });
 
       const data = await res.json();
@@ -2663,6 +2671,7 @@ export function PublishAssessmentSection({
             onCancelEdit();
           }
         } else {
+          publishRequestRef.current = null;
           showSuccessFeedback(`Successfully published to ${data.assignedStudentCount ?? data.totalAssignedStudents} students!`);
           setPublishName('');
           setSelectedQuestionsForPublish([]);

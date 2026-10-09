@@ -221,6 +221,9 @@ QuestionSchema.index({ groupId: 1, difficulty: 1, createdAt: -1 });
 // ==========================================
 export interface IPublishedTestDocument extends Document {
   id?: string;
+  idempotencyKey?: string;
+  requestFingerprint?: string;
+  publishState?: 'PUBLISHING' | 'COMPLETE' | 'FAILED';
   publishName: string;
   publishMode: 'Selected Questions' | 'Random Questions';
   target: {
@@ -258,6 +261,9 @@ export interface IPublishedTestDocument extends Document {
 export const PublishedTestSchema = new Schema<IPublishedTestDocument>(
   {
     publishName: { type: String, required: true, index: true },
+    idempotencyKey: { type: String },
+    requestFingerprint: { type: String },
+    publishState: { type: String, enum: ['PUBLISHING', 'COMPLETE', 'FAILED'] },
     publishMode: { type: String, required: true, enum: ['Selected Questions', 'Random Questions'] },
     status: { type: String, enum: ['ACTIVE', 'PAUSED'], default: 'ACTIVE', index: true },
     isPaused: { type: Boolean, default: false, index: true },
@@ -315,6 +321,8 @@ export const PublishedTestSchema = new Schema<IPublishedTestDocument>(
     },
   }
 );
+
+PublishedTestSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 // ==========================================
 // 6. STUDENT TEST ASSIGNMENT SCHEMA & MODEL
