@@ -1927,8 +1927,14 @@ function HistoricalAuditDrillDown({
                           {/* Question Items (View Only) */}
                           <div className="space-y-2 pl-2 border-l-2 border-slate-800">
                             {diff.questions.map((q: any, qIdx: number) => {
-                              const qType = q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : (q.answerType === 'type' ? 'Type' : 'Single Selection'));
-                              const isMultiple = (q.answerType === 'multiple') || qType === 'Multiple Selection';
+                              const validOptions = Array.isArray(q.options)
+                                ? q.options.filter((opt: any) => opt != null && String(opt).trim().length > 0)
+                                : [];
+                              const hasValidOptions = validOptions.length > 0;
+                              const isMultiple = (q.answerType === 'multiple') || (q.multipleSelection === true) || (q.questionType === 'Multiple Selection');
+                              const choiceLabel = hasValidOptions
+                                ? (isMultiple ? 'Choice: Multiple Selection' : 'Choice: Single Selection')
+                                : null;
                               const correctAnsList: string[] = Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0
                                 ? q.correctAnswers.map((a: any) => String(a))
                                 : (q.correctAnswer != null && String(q.correctAnswer).trim() !== '' ? [String(q.correctAnswer)] : []);
@@ -1944,9 +1950,11 @@ function HistoricalAuditDrillDown({
                                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold">
                                           Q{qIdx + 1}
                                         </span>
-                                        <span className="px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 text-[10px] font-mono font-semibold">
-                                          {qType}
-                                        </span>
+                                        {choiceLabel && (
+                                          <span className="px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 text-[10px] font-mono font-semibold">
+                                            {choiceLabel}
+                                          </span>
+                                        )}
                                         <span
                                           className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
                                             q.difficulty === 'Easy'
@@ -1989,13 +1997,13 @@ function HistoricalAuditDrillDown({
                                   </div>
 
                                   {/* Options Preview if any */}
-                                  {Array.isArray(q.options) && q.options.length > 0 && (
+                                  {hasValidOptions && (
                                     <div className="space-y-1.5 pt-1">
                                       <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold block">
                                         Answer Choices:
                                       </span>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                        {q.options.map((opt: string, optIdx: number) => {
+                                        {validOptions.map((opt: string, optIdx: number) => {
                                           const optLetter = String.fromCharCode(65 + optIdx);
                                           const isCorrect = correctAnsList.some((ans: string) => {
                                             const a = ans.trim().toLowerCase();
