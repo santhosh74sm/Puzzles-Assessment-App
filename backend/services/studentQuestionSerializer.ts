@@ -21,6 +21,7 @@ export function serializeStudentQuestion(question: any): Record<string, any> {
     'points',
     'options',
     'studentAnswer',
+    'writtenExplanation',
     'timeTakenSeconds',
   ];
 
@@ -32,6 +33,9 @@ export function serializeStudentQuestion(question: any): Record<string, any> {
   for (const field of allowedFields) {
     if (source[field] !== undefined) safe[field] = source[field];
   }
+
+  // Always supply a boolean for enableWrittenExplanation (default false for older questions)
+  safe.enableWrittenExplanation = Boolean(source.enableWrittenExplanation);
 
   const pairs = source.pairs ?? source.metadata?.pairs;
   if (Array.isArray(pairs) && pairs.length >= 2 && pairs.every((pair) =>

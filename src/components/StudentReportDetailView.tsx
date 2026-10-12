@@ -400,6 +400,13 @@ export function StudentReportDetailView({
                                     </>
                                   )}
                                 </div>
+
+                                {q.writtenExplanation && (
+                                  <div className="text-xs text-slate-300 pl-6 sm:pl-7 pt-0.5">
+                                    <span className="text-slate-400 font-medium">Written Explanation: </span>
+                                    <span className="italic text-slate-200">"{q.writtenExplanation}"</span>
+                                  </div>
+                                )}
                               </div>
 
                               <div className="flex items-center gap-3 shrink-0 font-mono self-end sm:self-auto">

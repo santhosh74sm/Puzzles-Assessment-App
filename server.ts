@@ -9,13 +9,15 @@ import { connectMongoDB, getMongoConnectionInfo } from './backend/database.ts';
 
 async function startServer() {
   const app = express();
-  // In AI Studio Cloud Run, Nginx reverse proxy listens on 8080 and proxies traffic to 3000.
-  // Cloud Run sets PORT=8080 in the container environment. If the app tries to bind to 8080,
-  // it collides with Nginx (EADDRINUSE: address already in use 0.0.0.0:8080).
-  // The app must always listen on port 3000 (DEFAULT_APP_PORT).
-  const PORT = (process.env.PORT && process.env.PORT !== '8080')
-    ? Number(process.env.PORT)
-    : (Number(process.env.DEFAULT_APP_PORT) || 3000);
+  // Port configuration:
+  // - In development (e.g. `npm run dev`), the dev server listens on port 3000 (proxied by Nginx).
+  // - In Cloud Run production deployment, Cloud Run injects PORT (typically 8080) and sends
+  //   deployment health checks to that port. The server must bind to process.env.PORT.
+  const isDevCommand = process.env.npm_lifecycle_event === 'dev';
+  const targetPort = isDevCommand
+    ? (Number(process.env.DEFAULT_APP_PORT) || 3000)
+    : (Number(process.env.PORT) || Number(process.env.DEFAULT_APP_PORT) || 8080);
+  const fallbackPort = 3000;
   const HOST = '0.0.0.0';
 
   // JWT_SECRET validation with safe fallback
@@ -76,7 +78,6 @@ async function startServer() {
   // Determine whether running in production mode
   const distPath = path.resolve(process.cwd(), 'dist');
   const hasDist = fs.existsSync(path.resolve(distPath, 'index.html'));
-  const isDevCommand = process.env.npm_lifecycle_event === 'dev';
   const isProduction = hasDist && (process.env.NODE_ENV === 'production' || !isDevCommand);
 
   if (isProduction && hasDist) {
@@ -97,13 +98,24 @@ async function startServer() {
     app.use(vite.middlewares);
   }
 
-  const server = app.listen(PORT, HOST, () => {
-    console.log(`[System] Server listening on ${HOST}:${PORT} (mode: ${isProduction ? 'production' : 'development'})`);
-  });
+  function startListening(port: number, fallback?: number) {
+    const serverInstance = app.listen(port, HOST, () => {
+      console.log(`[System] Server listening on ${HOST}:${port} (mode: ${isProduction ? 'production' : 'development'})`);
+    });
 
-  server.on('error', (err: any) => {
-    console.error(`[System] Server listen error on port ${PORT}:`, err.message);
-  });
+    serverInstance.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE' && fallback && fallback !== port) {
+        console.warn(`[System] Port ${port} is in use (EADDRINUSE), attempting fallback to port ${fallback}...`);
+        startListening(fallback);
+      } else {
+        console.error(`[System] Server listen error on port ${port}:`, err.message);
+      }
+    });
+
+    return serverInstance;
+  }
+
+  startListening(targetPort, fallbackPort);
 
   // Establish and verify MongoDB Connection asynchronously so server startup is instantaneous
   console.log('[System] Initializing MongoDB database connection...');

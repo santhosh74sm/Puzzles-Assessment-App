@@ -98,6 +98,11 @@ function ReadOnlyQuestionDetailCard({
               {hasSpecificType ? ` (${q.questionType})` : ''}
             </span>
           )}
+          {Boolean(q.enableWrittenExplanation) && (
+            <span className="px-2.5 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-700/80 font-medium font-sans">
+              Written Explanation: Enabled
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
@@ -227,6 +232,7 @@ export function QuestionBankSection({
     points: string;
     options: string;
     multipleSelection: boolean;
+    enableWrittenExplanation: boolean;
     correctAnswer: string;
   }>({
     groupId: sortedQuestionGroups.length > 0 ? sortedQuestionGroups[0].id : '',
@@ -236,6 +242,7 @@ export function QuestionBankSection({
     points: '',
     options: '',
     multipleSelection: false,
+    enableWrittenExplanation: false,
     correctAnswer: '',
   });
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
@@ -301,6 +308,7 @@ export function QuestionBankSection({
             points: '',
             options: '',
             multipleSelection: false,
+            enableWrittenExplanation: false,
             correctAnswer: '',
           });
         }
@@ -465,6 +473,7 @@ export function QuestionBankSection({
       points: q.points != null ? String(q.points) : '',
       options: optsStr,
       multipleSelection: isMultiple,
+      enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
       correctAnswer: corrAnsStr,
     });
 
@@ -484,6 +493,7 @@ export function QuestionBankSection({
       points: '',
       options: '',
       multipleSelection: false,
+      enableWrittenExplanation: false,
       correctAnswer: '',
     });
   };
@@ -517,6 +527,7 @@ export function QuestionBankSection({
             correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
             options: opts,
             answerType: questionForm.multipleSelection ? 'multiple' : 'single',
+            enableWrittenExplanation: questionForm.enableWrittenExplanation,
           }),
         });
         const data = await res.json();
@@ -541,6 +552,7 @@ export function QuestionBankSection({
             correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
             options: opts,
             answerType: questionForm.multipleSelection ? 'multiple' : 'single',
+            enableWrittenExplanation: questionForm.enableWrittenExplanation,
           }),
         });
         const data = await res.json();
@@ -552,6 +564,7 @@ export function QuestionBankSection({
             points: '',
             options: '',
             multipleSelection: false,
+            enableWrittenExplanation: false,
             correctAnswer: '',
           }));
           setFeedbackMessage({ type: 'success', text: 'Question saved successfully.' });
@@ -849,6 +862,17 @@ export function QuestionBankSection({
                 />
                 <span className="text-xs font-medium text-slate-300">
                   Multiple Selection
+                </span>
+              </label>
+              <label className="mt-2.5 flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={questionForm.enableWrittenExplanation}
+                  onChange={(e) => setQuestionForm({ ...questionForm, enableWrittenExplanation: e.target.checked })}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-xs font-medium text-slate-300">
+                  Enable Written Explanation
                 </span>
               </label>
             </div>

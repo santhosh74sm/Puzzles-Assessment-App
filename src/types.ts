@@ -54,6 +54,7 @@ export interface Question {
   options?: string[];
   correctAnswer?: any; // string, number, or record of match pairs
   correctAnswers?: string[];
+  enableWrittenExplanation?: boolean;
   metadata?: Record<string, any>;
   createdAt: string;
 }
@@ -107,6 +108,8 @@ export interface QuestionAttemptLog {
   content: string;
   points?: number | null;
   studentAnswer: any;
+  writtenExplanation?: string;
+  enableWrittenExplanation?: boolean;
   correctAnswer?: any;
   correctAnswers?: string[];
   isCorrect?: boolean;

@@ -171,6 +171,7 @@ export interface IQuestionDocument extends Document {
   options: string[];
   correctAnswer?: any;
   correctAnswers?: string[];
+  enableWrittenExplanation?: boolean;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -189,6 +190,7 @@ export const QuestionSchema = new Schema<IQuestionDocument>(
     options: { type: [String], default: [] },
     correctAnswer: { type: Schema.Types.Mixed, required: false, default: null },
     correctAnswers: { type: [String], default: [] },
+    enableWrittenExplanation: { type: Boolean, default: false },
     metadata: { type: Schema.Types.Mixed, default: {} },
   },
   {

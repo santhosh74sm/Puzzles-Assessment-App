@@ -26,12 +26,14 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   const [assignedTests, setAssignedTests] = useState<any[]>([]);
   const [activeTest, setActiveTest] = useState<any | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answersMap, setAnswersMap] = useState<Record<string, { answer: any; timeTaken: number }>>({});
+  const [answersMap, setAnswersMap] = useState<Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }>>({});
   const [currentSelectedAnswer, setCurrentSelectedAnswer] = useState<any | null>(null);
+  const [currentWrittenExplanation, setCurrentWrittenExplanation] = useState<string>('');
 
   // Refs to guarantee fresh, non-stale state access inside timer callbacks
   const currentSelectedAnswerRef = useRef<any | null>(null);
-  const answersMapRef = useRef<Record<string, { answer: any; timeTaken: number }>>({});
+  const currentWrittenExplanationRef = useRef<string>('');
+  const answersMapRef = useRef<Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }>>({});
   const activeTestRef = useRef<any | null>(null);
   const currentQuestionIndexRef = useRef<number>(0);
   const isSubmittingRef = useRef<boolean>(false);
@@ -49,6 +51,10 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   useEffect(() => {
     currentSelectedAnswerRef.current = currentSelectedAnswer;
   }, [currentSelectedAnswer]);
+
+  useEffect(() => {
+    currentWrittenExplanationRef.current = currentWrittenExplanation;
+  }, [currentWrittenExplanation]);
 
   useEffect(() => {
     answersMapRef.current = answersMap;
@@ -181,16 +187,17 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       };
 
       // Restore previously saved answers if any (for IN_PROGRESS resumption)
-      const initialAnswers: Record<string, { answer: any; timeTaken: number }> = {};
+      const initialAnswers: Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }> = {};
       let firstUnansweredIdx = 0;
       if (Array.isArray(testData.questions)) {
         testData.questions.forEach((q: any, idx: number) => {
-          if (q.studentAnswer !== undefined && q.studentAnswer !== null) {
+          if ((q.studentAnswer !== undefined && q.studentAnswer !== null) || (q.writtenExplanation !== undefined && q.writtenExplanation !== '')) {
             initialAnswers[q.questionId] = {
               answer: q.studentAnswer,
+              writtenExplanation: q.writtenExplanation || '',
               timeTaken: q.timeTakenSeconds || 0,
             };
-            if (firstUnansweredIdx === idx) {
+            if (firstUnansweredIdx === idx && q.studentAnswer !== undefined && q.studentAnswer !== null) {
               firstUnansweredIdx = idx + 1;
             }
           }
@@ -201,6 +208,9 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       const initialAns =
         initialAnswers[firstQ?.questionId]?.answer ??
         (firstQ?.answerType === 'multiple' ? [] : null);
+      const initialExplanation =
+        initialAnswers[firstQ?.questionId]?.writtenExplanation ??
+        (firstQ?.writtenExplanation || '');
 
       setActiveTest(testData);
       activeTestRef.current = testData;
@@ -210,6 +220,8 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       answersMapRef.current = initialAnswers;
       setCurrentSelectedAnswer(initialAns);
       currentSelectedAnswerRef.current = initialAns;
+      setCurrentWrittenExplanation(initialExplanation);
+      currentWrittenExplanationRef.current = initialExplanation;
       setTestResult(null);
     } catch (err: any) {
       setErrorMsg(err.message);
@@ -279,10 +291,12 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       : elapsedSeconds;
 
     const answerToRecord = answer !== undefined ? answer : currentSelectedAnswerRef.current;
-    const updatedAnswers: Record<string, { answer: any; timeTaken: number }> = {
+    const explanationToRecord = currentWrittenExplanationRef.current || '';
+    const updatedAnswers: Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }> = {
       ...answersMapRef.current,
       [currentQ.questionId]: {
         answer: answerToRecord,
+        writtenExplanation: explanationToRecord,
         timeTaken: timeSpent || 1,
       },
     };
@@ -302,6 +316,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
         body: JSON.stringify({
           questionId: currentQ.questionId,
           answer: answerToRecord,
+          writtenExplanation: explanationToRecord,
           timeTakenSeconds: timeSpent || 1,
         }),
       }).catch(console.error);
@@ -313,8 +328,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       const nextAns =
         updatedAnswers[nextQ?.questionId]?.answer ??
         (nextQ?.answerType === 'multiple' ? [] : null);
+      const nextExplanation =
+        updatedAnswers[nextQ?.questionId]?.writtenExplanation ??
+        (nextQ?.writtenExplanation || '');
       currentSelectedAnswerRef.current = nextAns;
       setCurrentSelectedAnswer(nextAns);
+      currentWrittenExplanationRef.current = nextExplanation;
+      setCurrentWrittenExplanation(nextExplanation);
     } else {
       // Last question completed -> submit test
       submitFullTest(updatedAnswers);
@@ -327,7 +347,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   const handleAutoAdvanceOnTimerExpireRef = useRef(handleAutoAdvanceOnTimerExpire);
   handleAutoAdvanceOnTimerExpireRef.current = handleAutoAdvanceOnTimerExpire;
 
-  const submitFullTest = async (finalAnswers: Record<string, { answer: any; timeTaken: number }>) => {
+  const submitFullTest = async (finalAnswers: Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }>) => {
     const test = activeTestRef.current || activeTest;
     if (!test || isSubmittingRef.current) return;
     if (timerIntervalRef.current) {
@@ -344,6 +364,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       return {
         questionId: q.questionId,
         answer: entry?.answer !== undefined ? entry.answer : (q.studentAnswer ?? null),
+        writtenExplanation: entry?.writtenExplanation !== undefined ? entry.writtenExplanation : (q.writtenExplanation || ''),
         timeTakenSeconds: Math.max(0, Number(entry?.timeTaken ?? q.timeTakenSeconds) || 0),
       };
     });
@@ -510,6 +531,26 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
               selectedAnswer={currentSelectedAnswer}
               disabled={false}
             />
+
+            {/* Written Explanation (Optional) - Shown only when enabled */}
+            {Boolean(currentQ.enableWrittenExplanation) && (
+              <div className="space-y-1.5 pt-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Your Explanation (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={currentWrittenExplanation}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCurrentWrittenExplanation(val);
+                    currentWrittenExplanationRef.current = val;
+                  }}
+                  placeholder="Write your reason here..."
+                  className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all resize-y min-h-[80px]"
+                />
+              </div>
+            )}
 
             {/* Next / Submit Question Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4">

@@ -1580,6 +1580,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       answerType,
       correctAnswer,
       correctAnswers,
+      enableWrittenExplanation,
       metadata,
     } = req.body;
 
@@ -1640,6 +1641,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       answerType: normalizedAnswerType,
       correctAnswer: finalCorrectAnswer,
       correctAnswers: finalCorrectAnswers,
+      enableWrittenExplanation: Boolean(enableWrittenExplanation),
       metadata: metadata || {},
     });
 
@@ -1663,6 +1665,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
       answerType,
       correctAnswer,
       correctAnswers,
+      enableWrittenExplanation,
       metadata,
     } = req.body;
 
@@ -1733,6 +1736,10 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
       }
     }
 
+    if (enableWrittenExplanation !== undefined) {
+      question.enableWrittenExplanation = Boolean(enableWrittenExplanation);
+    }
+
     if (metadata) {
       question.metadata = metadata;
     }
@@ -1773,6 +1780,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             q.points = question.points != null ? Number(question.points) : null;
             q.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             q.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
+            q.enableWrittenExplanation = Boolean(question.enableWrittenExplanation);
             q.correctAnswer = question.correctAnswer;
             q.correctAnswers = question.correctAnswers;
             if (question.metadata) {
@@ -1814,6 +1822,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.answerType = question.answerType || 'single';
+            snap.enableWrittenExplanation = Boolean(question.enableWrittenExplanation);
             snap.correctAnswer = question.correctAnswer ?? null;
             snap.correctAnswers = Array.isArray(question.correctAnswers)
               ? question.correctAnswers
@@ -1857,6 +1866,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.answerType = question.answerType || 'single';
+            snap.enableWrittenExplanation = Boolean(question.enableWrittenExplanation);
             snap.correctAnswer = question.correctAnswer ?? null;
             snap.correctAnswers = Array.isArray(question.correctAnswers)
               ? question.correctAnswers
@@ -2720,6 +2730,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         correctAnswers: Array.isArray(q.correctAnswers)
           ? q.correctAnswers
           : (Array.isArray(q.correctAnswer) ? q.correctAnswer : (q.correctAnswer ? [String(q.correctAnswer)] : [])),
+        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
         metadata: q.metadata || {},
         pairs: q.metadata?.pairs || [],
       }));
@@ -2832,6 +2843,8 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         content: q.content,
         points: q.points != null ? Number(q.points) : null,
         studentAnswer: null,
+        writtenExplanation: '',
+        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
         correctAnswer: q.correctAnswer ?? null,
         correctAnswers: Array.isArray(q.correctAnswers)
           ? q.correctAnswers
@@ -3120,6 +3133,7 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
       timeAllowedSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
       timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
       options: q.options || [],
+      enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
       metadata: q.metadata || {},
       pairs: q.metadata?.pairs || [],
     }));
@@ -3239,6 +3253,8 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
           content: q.content,
           points: q.points != null ? Number(q.points) : null,
           studentAnswer: null,
+          writtenExplanation: '',
+          enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
           correctAnswer: q.correctAnswer ?? null,
           correctAnswers: Array.isArray(q.correctAnswers)
             ? q.correctAnswers
@@ -3297,6 +3313,8 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
               content: q.content,
               points: q.points != null ? Number(q.points) : null,
               studentAnswer: null,
+              writtenExplanation: '',
+              enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
               answerType: q.answerType || 'single',
               correctAnswer: q.correctAnswer ?? null,
               correctAnswers: Array.isArray(q.correctAnswers)
@@ -3327,6 +3345,8 @@ const handleUpdatePublishedAssessment = async (req: Request, res: Response) => {
               content: q.content,
               points: q.points != null ? Number(q.points) : null,
               studentAnswer: null,
+              writtenExplanation: '',
+              enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
               answerType: q.answerType || 'single',
               correctAnswer: q.correctAnswer ?? null,
               correctAnswers: Array.isArray(q.correctAnswers)
@@ -3665,6 +3685,8 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
           timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
           options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
           answerType: q.answerType || fullQ?.answerType || 'single',
+          enableWrittenExplanation: q.enableWrittenExplanation !== undefined ? q.enableWrittenExplanation : fullQ?.enableWrittenExplanation,
+          writtenExplanation: q.writtenExplanation !== undefined ? q.writtenExplanation : '',
           metadata: q.metadata || fullQ?.metadata || {},
           pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
           timeTakenSeconds: q.timeTakenSeconds || 0,
@@ -3737,6 +3759,8 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
         timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
         options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
         answerType: q.answerType || fullQ?.answerType || 'single',
+        enableWrittenExplanation: q.enableWrittenExplanation !== undefined ? q.enableWrittenExplanation : fullQ?.enableWrittenExplanation,
+        writtenExplanation: q.writtenExplanation !== undefined ? q.writtenExplanation : '',
         metadata: q.metadata || fullQ?.metadata || {},
         pairs: q.pairs || fullQ?.pairs || fullQ?.metadata?.pairs || q.metadata?.pairs || [],
         timeTakenSeconds: q.timeTakenSeconds || 0,
@@ -3927,7 +3951,7 @@ router.post('/student/logout', authenticate, async (req: Request, res: Response)
 router.post('/student/tests/:assignmentId/answer', authenticate, answerRateLimiter, async (req: Request, res: Response) => {
   try {
     const { assignmentId } = req.params;
-    const { questionId, answer, timeTakenSeconds } = req.body;
+    const { questionId, answer, writtenExplanation, timeTakenSeconds } = req.body;
     const studentId = req.user!.studentId || req.user!.username;
 
     const assignment = await StudentTestAssignmentModel.findById(assignmentId);
@@ -3984,13 +4008,18 @@ router.post('/student/tests/:assignmentId/answer', authenticate, answerRateLimit
     const sanitizedTime = qAllowedSeconds != null ? Math.min(validTime, qAllowedSeconds) : validTime;
 
     // Use atomic update to prevent Mongoose document version conflicts
+    const updatePayload: Record<string, any> = {
+      [`questions.${questionIndex}.studentAnswer`]: answer,
+      [`questions.${questionIndex}.isCorrect`]: hasCorrectAnswer ? (isCorrect ?? false) : false,
+      [`questions.${questionIndex}.timeTakenSeconds`]: sanitizedTime,
+      [`questions.${questionIndex}.earnedPoints`]: pointsEarned,
+    };
+    if (writtenExplanation !== undefined) {
+      updatePayload[`questions.${questionIndex}.writtenExplanation`] = String(writtenExplanation);
+    }
+
     await StudentTestAssignmentModel.findByIdAndUpdate(assignmentId, {
-      $set: {
-        [`questions.${questionIndex}.studentAnswer`]: answer,
-        [`questions.${questionIndex}.isCorrect`]: hasCorrectAnswer ? (isCorrect ?? false) : false,
-        [`questions.${questionIndex}.timeTakenSeconds`]: sanitizedTime,
-        [`questions.${questionIndex}.earnedPoints`]: pointsEarned,
-      },
+      $set: updatePayload,
     });
 
     // SEC-CRIT-03: Do NOT return isCorrect or earnedPoints immediately to the student
@@ -4057,8 +4086,12 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
           const isCorrect = evaluateQuestionCorrectness(qItem, answerToUse);
           const hasPoints = qItem.points != null && !isNaN(Number(qItem.points)) && Number(qItem.points) > 0;
           const pointsEarned = (hasCorrectAnswer && isCorrect && hasPoints) ? Number(qItem.points) : 0;
+          const explanationToUse = ansItem.writtenExplanation !== undefined
+            ? String(ansItem.writtenExplanation)
+            : (qItem.writtenExplanation || '');
 
           assignment.questions[qIdx].studentAnswer = answerToUse;
+          assignment.questions[qIdx].writtenExplanation = explanationToUse;
           assignment.questions[qIdx].isCorrect = hasCorrectAnswer ? (isCorrect ?? false) : false;
           assignment.questions[qIdx].timeTakenSeconds = timeToUse;
           assignment.questions[qIdx].earnedPoints = pointsEarned;
