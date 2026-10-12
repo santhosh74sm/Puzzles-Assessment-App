@@ -29,10 +29,14 @@ function ReadOnlyQuestionDetailCard({
   question,
   index,
   groupName,
+  onEdit,
+  onDelete,
 }: {
   question: any;
   index?: number;
   groupName?: string;
+  onEdit?: (question: any) => void;
+  onDelete?: (question: any) => void;
 }) {
   const q = question;
   const effectiveGroup = q.groupName || groupName || 'General';
@@ -127,6 +131,33 @@ function ReadOnlyQuestionDetailCard({
               Time Limit: Not Applicable
             </span>
           )}
+
+          {(onEdit || onDelete) && (
+            <div className="flex items-center gap-1.5 ml-auto sm:ml-2">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(q)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white flex items-center gap-1 text-xs font-sans font-medium transition-all cursor-pointer"
+                  title="Edit question"
+                >
+                  <Edit className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Edit</span>
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(q)}
+                  className="px-2.5 py-1 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 flex items-center gap-1 text-xs font-sans font-medium transition-all cursor-pointer"
+                  title="Delete question"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -206,8 +237,9 @@ export function QuestionBankSection({
   const [isUpdatingGroup, setIsUpdatingGroup] = useState(false);
   const [editGroupError, setEditGroupError] = useState<string | null>(null);
 
-  // Group View Modal (Read Only)
+  // Group View Modal
   const [viewGroupModal, setViewGroupModal] = useState<any | null>(null);
+  const [modalSearch, setModalSearch] = useState('');
 
   // Single Question View Modal (Read Only)
   const [viewSingleQuestion, setViewSingleQuestion] = useState<any | null>(null);
@@ -268,10 +300,6 @@ export function QuestionBankSection({
     }
   }, [sortedQuestionGroups, editingQuestionItem, questionForm.groupId]);
 
-  // Filters for question list
-  const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
-  const [selectedDifficultyFilter, setSelectedDifficultyFilter] = useState('');
-  const [questionSearch, setQuestionSearch] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const headers = {
@@ -312,10 +340,7 @@ export function QuestionBankSection({
             correctAnswer: '',
           });
         }
-        // If viewGroupModal is open, close it or refresh it
-        if (viewGroupModal) {
-          setViewGroupModal(null);
-        }
+        // Refresh question bank and group counts without closing viewGroupModal
         await onRefreshData();
       } else {
         setFeedbackMessage({
@@ -354,9 +379,7 @@ export function QuestionBankSection({
         setDeletingGroup(null);
         if (viewGroupModal && (viewGroupModal.id === gId || viewGroupModal._id === gId)) {
           setViewGroupModal(null);
-        }
-        if (selectedGroupFilter === gId) {
-          setSelectedGroupFilter('');
+          setModalSearch('');
         }
         await onRefreshData();
       } else {
@@ -483,6 +506,12 @@ export function QuestionBankSection({
     }
   };
 
+  const handleEditFromModal = (q: any) => {
+    setViewGroupModal(null);
+    setModalSearch('');
+    handleStartEditQuestion(q);
+  };
+
   const handleCancelEditQuestion = () => {
     setEditingQuestionItem(null);
     setQuestionForm({
@@ -580,20 +609,6 @@ export function QuestionBankSection({
     }
   };
 
-  const [visibleQuestionsCount, setVisibleQuestionsCount] = useState(50);
-
-  const filteredQuestions = React.useMemo(() => {
-    const qLower = questionSearch.trim().toLowerCase();
-    return allQuestions.filter((q) => {
-      const matchesGroup = !selectedGroupFilter || q.groupId === selectedGroupFilter;
-      const matchesDiff = !selectedDifficultyFilter || q.difficulty === selectedDifficultyFilter;
-      const matchesSearch =
-        !qLower ||
-        (q.content && q.content.toLowerCase().includes(qLower));
-      return matchesGroup && matchesDiff && matchesSearch;
-    });
-  }, [allQuestions, selectedGroupFilter, selectedDifficultyFilter, questionSearch]);
-
   // Pre-calculate single-pass difficulty breakdown per group
   const groupBreakdownsMap = React.useMemo(() => {
     const map = new Map<string, { Easy: any[]; Medium: any[]; Hard: any[] }>();
@@ -653,6 +668,23 @@ export function QuestionBankSection({
     },
     [groupBreakdownsMap]
   );
+
+  // Dynamically derive the view group data and questions from the latest allQuestions and questionGroups
+  const activeViewGroup = useMemo(() => {
+    if (!viewGroupModal) return null;
+    const gId = (viewGroupModal.id || viewGroupModal._id || '').toString().trim();
+    const gName = (viewGroupModal.name || '').trim().toLowerCase();
+    const currentGrp =
+      questionGroups.find(
+        (g) => (g.id || g._id || '').toString().trim() === gId || (g.name || '').trim().toLowerCase() === gName
+      ) || viewGroupModal;
+
+    const breakdown = getGroupBreakdown(currentGrp);
+    return {
+      ...currentGrp,
+      breakdown,
+    };
+  }, [viewGroupModal, questionGroups, getGroupBreakdown]);
 
   return (
     <div className="space-y-8 max-w-7xl">
@@ -906,7 +938,12 @@ export function QuestionBankSection({
 
       {/* Question Groups Breakdown (View Mode) */}
       <div className="space-y-4">
-        <h3 className="font-bold text-lg text-white">Question Groups Summary</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+          <h3 className="font-bold text-lg text-white">Question Groups Summary</h3>
+          <span className="font-bold text-lg text-black">
+            Total Questions: {allQuestions.length}
+          </span>
+        </div>
         {sortedQuestionGroups.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {sortedQuestionGroups.map((grp) => {
@@ -941,7 +978,10 @@ export function QuestionBankSection({
                   <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-800/80">
                     <button
                       type="button"
-                      onClick={() => setViewGroupModal({ ...grp, breakdown })}
+                      onClick={() => {
+                        setViewGroupModal(grp);
+                        setModalSearch('');
+                      }}
                       className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center justify-center gap-1 transition-all flex-1 cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -985,264 +1025,171 @@ export function QuestionBankSection({
         )}
       </div>
 
-      {/* Question Bank Roster Table */}
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-lg text-white">
-              Questions ({filteredQuestions.length} of {allQuestions.length})
-            </h3>
-            <p className="text-xs text-slate-400">All questions saved across your groups and difficulty levels</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder="Search questions..."
-                value={questionSearch}
-                onChange={(e) => setQuestionSearch(e.target.value)}
-                className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none w-56"
-              />
-            </div>
-
-            <select
-              value={selectedGroupFilter}
-              onChange={(e) => setSelectedGroupFilter(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
-            >
-              <option value="">All Groups</option>
-              {sortedQuestionGroups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={selectedDifficultyFilter}
-              onChange={(e) => setSelectedDifficultyFilter(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none"
-            >
-              <option value="">All Difficulty Levels</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
-            </select>
-          </div>
-        </div>
-
-        {filteredQuestions.length > 0 ? (
-          <div className="space-y-3">
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-              {filteredQuestions.slice(0, visibleQuestionsCount).map((q) => (
-                <div
-                  key={q.id}
-                  className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium text-white">{q.content}</p>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="text-indigo-400 font-semibold">{q.groupName || 'Unassigned'}</span>
-                      <span className="text-slate-500">&bull;</span>
-                      <span
-                        className={`px-2 py-0.5 rounded font-mono font-bold ${
-                          q.difficulty === 'Easy'
-                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
-                            : q.difficulty === 'Medium'
-                            ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
-                            : 'bg-rose-950 text-rose-300 border border-rose-800/60'
-                        }`}
-                      >
-                        {q.difficulty}
-                      </span>
-                      {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
-                        <>
-                          <span className="text-slate-500">&bull;</span>
-                          <span className="text-slate-400">
-                            Ans: <strong className="text-emerald-400">{typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer)}</strong>
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
-                    {q.timeSeconds != null && q.timeSeconds > 0 && (
-                      <span className="px-2.5 py-1 rounded bg-slate-700/80 text-slate-300 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        {q.timeSeconds}s
-                      </span>
-                    )}
-                    {q.points != null && q.points > 0 && (
-                      <span className="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold">
-                        <Award className="w-3 h-3 text-emerald-400" />
-                        {q.points} pts
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setViewSingleQuestion(q)}
-                      title="View question details"
-                      className="p-1.5 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 transition-all flex items-center gap-1 font-sans cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-xs font-medium">View</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleStartEditQuestion(q)}
-                      title="Edit question"
-                      className="p-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1 font-sans cursor-pointer"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-xs font-medium">Edit</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeletingQuestion(q)}
-                      title="Delete question"
-                      className="p-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 transition-all ml-1 flex items-center gap-1 font-sans cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-xs font-medium">Delete</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredQuestions.length > visibleQuestionsCount && (
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs text-slate-400">
-                <span>
-                  Showing {visibleQuestionsCount} of {filteredQuestions.length} questions
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setVisibleQuestionsCount((prev) => prev + 50)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 font-semibold border border-slate-700 transition-all cursor-pointer"
-                  >
-                    + Show More ({filteredQuestions.length - visibleQuestionsCount} left)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVisibleQuestionsCount(filteredQuestions.length)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer"
-                  >
-                    Show All
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="p-8 rounded-xl bg-slate-800/30 border border-slate-800 text-center py-8">
-            <HelpCircle className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-            <h5 className="text-sm font-semibold text-slate-300">No questions found</h5>
-            <p className="text-xs text-slate-500 mt-1">
-              {allQuestions.length === 0
-                ? 'No questions added yet. Use the form above to add questions.'
-                : 'No questions match your search or filter.'}
-            </p>
-          </div>
-        )}
-      </div>
-
       {/* Read-Only Question Group View Modal */}
       {viewGroupModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
-          onClick={() => setViewGroupModal(null)}
+          onClick={() => {
+            setViewGroupModal(null);
+            setModalSearch('');
+          }}
         >
           <div
             className="w-full max-w-3xl bg-slate-900 border border-indigo-500/50 rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col my-8 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800 shrink-0">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase tracking-wider">
-                    Read-Only &bull; Question Review
+                    Question Group Review
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
-                    Total: {viewGroupModal.breakdown?.total ?? 0} Questions
+                    Total: {activeViewGroup?.breakdown?.total ?? 0} Questions
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                  <span>{viewGroupModal.name} Group</span>
-                  {viewGroupModal.description && (
+                  <span>{activeViewGroup?.name} Group</span>
+                  {activeViewGroup?.description && (
                     <span className="text-xs font-normal text-slate-400 font-sans line-clamp-1">
-                      &mdash; {viewGroupModal.description}
+                      &mdash; {activeViewGroup.description}
                     </span>
                   )}
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setViewGroupModal(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer"
-                title="Close Review"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              {/* Compact Search Field & Close Button */}
+              <div className="flex items-center gap-2 self-stretch sm:self-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search questions..."
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  />
+                  {modalSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setModalSearch('')}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewGroupModal(null);
+                    setModalSearch('');
+                  }}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer shrink-0"
+                  title="Close Review"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body: Grouped by Difficulty */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-6">
-              {(['Easy', 'Medium', 'Hard'] as const).map((diff) => {
-                const tier = viewGroupModal.breakdown?.[diff];
-                const questions = tier?.questions || [];
-                return (
-                  <div key={diff} className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border font-mono ${
-                          diff === 'Easy'
-                            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
-                            : diff === 'Hard'
-                            ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                            : 'bg-amber-950/80 text-amber-300 border-amber-800'
-                        }`}
-                      >
-                        {diff}
-                      </span>
-                      <span className="text-xs font-mono text-slate-400">
-                        ({questions.length} {questions.length === 1 ? 'Question' : 'Questions'})
-                      </span>
-                    </div>
+              {(() => {
+                const searchLower = modalSearch.trim().toLowerCase();
+                const filterQuestion = (q: any) => {
+                  if (!searchLower) return true;
+                  const inContent = q.content && q.content.toLowerCase().includes(searchLower);
+                  const inOptions = Array.isArray(q.options) && q.options.some((opt: string) => opt.toLowerCase().includes(searchLower));
+                  const inAns = q.correctAnswer != null && String(q.correctAnswer).toLowerCase().includes(searchLower);
+                  return inContent || inOptions || inAns;
+                };
 
-                    {questions.length > 0 ? (
-                      <div className="space-y-3 pl-2 border-l-2 border-slate-800">
-                        {questions.map((q: any, qIdx: number) => (
-                          <ReadOnlyQuestionDetailCard
-                            key={q.id || q._id || qIdx}
-                            question={q}
-                            index={qIdx}
-                            groupName={viewGroupModal.name}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-500 italic pl-3 border-l-2 border-slate-800 py-1">
-                        No questions in this difficulty level yet.
+                const easyList = (activeViewGroup?.breakdown?.Easy?.questions || []).filter(filterQuestion);
+                const mediumList = (activeViewGroup?.breakdown?.Medium?.questions || []).filter(filterQuestion);
+                const hardList = (activeViewGroup?.breakdown?.Hard?.questions || []).filter(filterQuestion);
+                const totalFiltered = easyList.length + mediumList.length + hardList.length;
+
+                if (searchLower && totalFiltered === 0) {
+                  return (
+                    <div className="p-8 rounded-2xl bg-slate-800/40 border border-slate-800 text-center py-12 space-y-2">
+                      <HelpCircle className="w-10 h-10 text-slate-500 mx-auto mb-1" />
+                      <h4 className="text-base font-semibold text-slate-200">No questions found</h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        No questions in "{activeViewGroup?.name}" match your search query "{modalSearch}".
                       </p>
-                    )}
-                  </div>
-                );
-              })}
+                      <button
+                        type="button"
+                        onClick={() => setModalSearch('')}
+                        className="mt-2 text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-indigo-400 hover:text-indigo-300 border border-slate-700 transition-colors cursor-pointer"
+                      >
+                        Clear search
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (['Easy', 'Medium', 'Hard'] as const).map((diff) => {
+                  const questions = diff === 'Easy' ? easyList : diff === 'Medium' ? mediumList : hardList;
+                  const totalInTier = (activeViewGroup?.breakdown?.[diff]?.questions || []).length;
+                  return (
+                    <div key={diff} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border font-mono ${
+                            diff === 'Easy'
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                              : diff === 'Hard'
+                              ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                              : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                          }`}
+                        >
+                          {diff}
+                        </span>
+                        <span className="text-xs font-mono text-slate-400">
+                          ({questions.length}{searchLower ? ` of ${totalInTier}` : ''} {questions.length === 1 ? 'Question' : 'Questions'})
+                        </span>
+                      </div>
+
+                      {questions.length > 0 ? (
+                        <div className="space-y-3 pl-2 border-l-2 border-slate-800">
+                          {questions.map((q: any, qIdx: number) => (
+                            <ReadOnlyQuestionDetailCard
+                              key={q.id || q._id || qIdx}
+                              question={q}
+                              index={qIdx}
+                              groupName={activeViewGroup?.name}
+                              onEdit={handleEditFromModal}
+                              onDelete={(questionToDelete) => setDeletingQuestion(questionToDelete)}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500 italic pl-3 border-l-2 border-slate-800 py-1">
+                          {searchLower
+                            ? `No ${diff.toLowerCase()} questions match your search.`
+                            : `No questions in this difficulty level yet.`}
+                        </p>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Modal Footer */}
             <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
-              <span className="text-[11px] text-slate-500 font-mono">
-                Review is read-only. Questions cannot be edited from this view.
+              <span className="text-[11px] text-slate-400 font-mono">
+                Click Edit or Delete on any question to manage it.
               </span>
               <button
                 type="button"
-                onClick={() => setViewGroupModal(null)}
+                onClick={() => {
+                  setViewGroupModal(null);
+                  setModalSearch('');
+                }}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer transition-colors"
               >
                 Close Review
