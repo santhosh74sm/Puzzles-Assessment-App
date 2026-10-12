@@ -641,7 +641,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                     onClick={() => setActiveSchoolId(sch.id)}
                     className={`p-5 rounded-2xl border flex flex-col justify-between cursor-pointer transition-all ${
                       isSelected
-                        ? 'bg-indigo-50 border-indigo-500 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500 dark:bg-indigo-950/40 dark:border-indigo-500'
+                        ? 'selected-school-card bg-indigo-50 border-indigo-500 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500 dark:bg-indigo-950/40 dark:border-indigo-500'
                         : 'bg-white border-slate-200 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700'
                     }`}
                   >

@@ -811,6 +811,12 @@ html.light .student-no-tests-empty-card p {
   color: #475569 !important;
 }
 
+/* 6. Schools Section: Selected school card border visibility in Light Theme */
+html.light .selected-school-card,
+html[data-theme="light"] .selected-school-card {
+  border-color: #6366f1 !important;
+}
+
 html.light label {
   color: #334155 !important;
 }
