@@ -30,6 +30,7 @@ import {
   formatDateTime12H,
   formatAvailabilityWindow,
 } from '../utils/dateTime.ts';
+import { StudentAssessmentPreviewModal } from './StudentAssessmentPreviewModal.tsx';
 
 interface PublishHistorySectionProps {
   token: string;
@@ -1029,6 +1030,26 @@ function HistoricalAuditDrillDown({
     return detail?.assignedQuestionsCount || 0;
   }, [detail, questionSummaryData]);
 
+  // Normalized student-style preview questions for StudentAssessmentPreviewModal
+  const previewStudentQuestions = useMemo(() => {
+    const rawQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
+    return rawQuestions.map((q: any) => ({
+      id: q.id || q._id || q.questionId,
+      questionId: q.questionId || q.id || q._id,
+      groupName: q.groupName,
+      difficulty: q.difficulty,
+      content: q.content,
+      points: q.points != null ? Number(q.points) : null,
+      timeSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
+      timeAllowedSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
+      options: q.options || [],
+      answerType: q.answerType || 'single',
+      enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
+      metadata: q.metadata || {},
+      pairs: q.pairs || q.metadata?.pairs || [],
+    }));
+  }, [detail?.questions]);
+
   // Hierarchical question grouping for View-Only Preview Modal (Group -> Difficulty -> Questions)
   const previewGroupedHierarchy = useMemo(() => {
     const rawQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
@@ -1577,16 +1598,6 @@ function HistoricalAuditDrillDown({
                   </span>
                 )}
               </div>
-              {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowQuestionsPreview(true)}
-                  className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Preview Published Questions</span>
-                </button>
-              )}
             </div>
           </div>
         ) : (
@@ -1841,254 +1852,23 @@ function HistoricalAuditDrillDown({
         </div>
       </div>
 
-      {/* Historical Questions View-Only Preview Modal */}
+      {/* Student-Style Interactive Preview Modal */}
       {showQuestionsPreview && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
-          onClick={() => setShowQuestionsPreview(false)}
-        >
-          <div
-            className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-6 max-w-3xl w-full shadow-2xl space-y-5 my-8 max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase tracking-wider">
-                    View Only &bull; Saved Record
-                  </span>
-                  <span className="text-xs text-slate-400 font-mono">
-                    Total: {totalHistoricalQuestionsCount} Questions
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>{detail.publishName}</span>
-                  <span className="text-xs font-normal text-slate-400 font-mono">
-                    ({detail.publishMode}{detail.publishMode === 'Selected Questions' && (detail.shuffle || detail.shuffleQuestions) ? ' · Shuffled' : ''})
-                  </span>
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowQuestionsPreview(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer"
-                title="Close Preview"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body: Grouped by Group -> Difficulty -> Questions */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
-              {previewGroupedHierarchy.length > 0 ? (
-                previewGroupedHierarchy.map((group) => (
-                  <div
-                    key={group.groupName}
-                    className="rounded-2xl bg-slate-950/60 border border-slate-800 overflow-hidden"
-                  >
-                    {/* Group Title */}
-                    <div className="p-3.5 bg-slate-800/80 border-b border-slate-800 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-white">{group.groupName}</span>
-                        {group.isGroupDeleted && (
-                          <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800 text-[10px] font-mono font-bold flex items-center gap-1">
-                            ⚠️ Group Deleted
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs font-mono text-indigo-400">
-                        {group.totalCount} {group.totalCount === 1 ? 'Question' : 'Questions'}
-                      </span>
-                    </div>
-
-                    {/* Difficulties */}
-                    <div className="p-3.5 space-y-3">
-                      {group.difficulties.map((diff) => (
-                        <div key={diff.difficulty} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-xs font-semibold px-2.5 py-0.5 rounded border font-mono ${
-                                diff.difficulty === 'Easy'
-                                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
-                                  : diff.difficulty === 'Hard'
-                                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                                  : 'bg-amber-950/80 text-amber-300 border-amber-800'
-                              }`}
-                            >
-                              {diff.difficulty}
-                            </span>
-                            <span className="text-xs font-mono text-slate-400">
-                              ({diff.questions.length} {diff.questions.length === 1 ? 'Question' : 'Questions'})
-                            </span>
-                          </div>
-
-                          {/* Question Items (View Only) */}
-                          <div className="space-y-2 pl-2 border-l-2 border-slate-800">
-                            {diff.questions.map((q: any, qIdx: number) => {
-                              const validOptions = Array.isArray(q.options)
-                                ? q.options.filter((opt: any) => opt != null && String(opt).trim().length > 0)
-                                : [];
-                              const hasValidOptions = validOptions.length > 0;
-                              const isMultiple = (q.answerType === 'multiple') || (q.multipleSelection === true) || (q.questionType === 'Multiple Selection');
-                              const choiceLabel = hasValidOptions
-                                ? (isMultiple ? 'Choice: Multiple Selection' : 'Choice: Single Selection')
-                                : null;
-                              const correctAnsList: string[] = Array.isArray(q.correctAnswers) && q.correctAnswers.length > 0
-                                ? q.correctAnswers.map((a: any) => String(a))
-                                : (q.correctAnswer != null && String(q.correctAnswer).trim() !== '' ? [String(q.correctAnswer)] : []);
-
-                              return (
-                                <div
-                                  key={q.id || q.questionId || qIdx}
-                                  className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3 text-xs"
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="space-y-1.5 flex-1">
-                                      <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-bold">
-                                          Q{qIdx + 1}
-                                        </span>
-                                        {choiceLabel && (
-                                          <span className="px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 text-[10px] font-mono font-semibold">
-                                            {choiceLabel}
-                                          </span>
-                                        )}
-                                        <span
-                                          className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
-                                            q.difficulty === 'Easy'
-                                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
-                                              : q.difficulty === 'Hard'
-                                              ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                                              : 'bg-amber-950/80 text-amber-300 border-amber-800'
-                                          }`}
-                                        >
-                                          {q.difficulty || 'Medium'}
-                                        </span>
-                                        {q.isQuestionDeleted && (
-                                          <span className="px-2 py-0.5 rounded bg-amber-950/90 text-amber-300 border border-amber-700/80 text-[10px] font-mono font-bold flex items-center gap-1 shadow-sm">
-                                            ⚠️ Question Deleted
-                                          </span>
-                                        )}
-                                        {q.isGroupDeleted && !group.isGroupDeleted && (
-                                          <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800 text-[10px] font-mono font-bold flex items-center gap-1">
-                                            ⚠️ Group Deleted
-                                          </span>
-                                        )}
-                                      </div>
-                                      <span className="font-medium text-slate-200 text-sm block">{q.content}</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
-                                      {((q.timeSeconds != null && q.timeSeconds > 0) || (q.timeAllowedSeconds != null && q.timeAllowedSeconds > 0)) && (
-                                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 flex items-center gap-1">
-                                          <Clock className="w-3 h-3" />
-                                          {q.timeSeconds ?? q.timeAllowedSeconds}s
-                                        </span>
-                                      )}
-                                      {q.points != null && q.points > 0 && (
-                                        <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
-                                          <Award className="w-3 h-3" />
-                                          {q.points} pts
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Options Preview if any */}
-                                  {hasValidOptions && (
-                                    <div className="space-y-1.5 pt-1">
-                                      <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold block">
-                                        Answer Choices:
-                                      </span>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                        {validOptions.map((opt: string, optIdx: number) => {
-                                          const optLetter = String.fromCharCode(65 + optIdx);
-                                          const isCorrect = correctAnsList.some((ans: string) => {
-                                            const a = ans.trim().toLowerCase();
-                                            return (
-                                              a === opt.trim().toLowerCase() ||
-                                              a === optLetter.toLowerCase() ||
-                                              a === String(optIdx + 1)
-                                            );
-                                          });
-
-                                          return (
-                                            <div
-                                              key={optIdx}
-                                              className={`px-2.5 py-2 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all ${
-                                                isCorrect
-                                                  ? 'bg-emerald-950/40 border-emerald-600/70 text-emerald-200 font-medium'
-                                                  : 'bg-slate-800/60 border-slate-700/50 text-slate-300'
-                                              }`}
-                                            >
-                                              <div className="flex items-center gap-2 min-w-0">
-                                                <span
-                                                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                                    isCorrect
-                                                      ? 'bg-emerald-600 text-white'
-                                                      : 'bg-slate-700 text-slate-300'
-                                                  }`}
-                                                >
-                                                  {optLetter}
-                                                </span>
-                                                <span className="truncate">{opt}</span>
-                                              </div>
-                                              {isCorrect && (
-                                                <span className="text-[10px] font-mono text-emerald-400 font-bold shrink-0 flex items-center gap-0.5">
-                                                  <CheckCircle className="w-3 h-3" /> Correct
-                                                </span>
-                                              )}
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Correct Answer Display */}
-                                  {correctAnsList.length > 0 && (
-                                    <div className="pt-1 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-[11px] font-mono">
-                                      <span className="text-slate-400 font-medium">
-                                        {isMultiple ? 'Correct Answers:' : 'Correct Answer:'}
-                                      </span>
-                                      <span className="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-800 font-bold">
-                                        {correctAnsList.join(', ')}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-8 text-center text-slate-500 text-xs">
-                  No questions recorded for this published assessment snapshot.
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
-              <span className="text-[11px] text-slate-500 font-mono">
-                Preview is read-only. Questions cannot be edited from history.
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowQuestionsPreview(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer transition-colors"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
+        <StudentAssessmentPreviewModal
+          title={detail?.publishName || 'Published Assessment'}
+          subtitle={
+            detail?.publishMode
+              ? `${detail.publishMode}${
+                  detail.publishMode === 'Selected Questions' &&
+                  (detail.shuffle || detail.shuffleQuestions)
+                    ? ' · Shuffled'
+                    : ''
+                }`
+              : undefined
+          }
+          questions={previewStudentQuestions}
+          onClose={() => setShowQuestionsPreview(false)}
+        />
       )}
     </div>
   );

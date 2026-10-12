@@ -27,6 +27,10 @@ import {
 import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
 import { Time12HourPicker } from './Time12HourPicker.tsx';
 import {
+  StudentAssessmentPreviewModal,
+  AssessmentPreviewQuestion,
+} from './StudentAssessmentPreviewModal.tsx';
+import {
   to12Hour,
   to24Hour,
   toISODate,
@@ -1788,7 +1792,6 @@ export function PublishAssessmentSection({
   ]);
 
   // In-section preview modal
-  const [previewActiveIndex, setPreviewActiveIndex] = useState(0);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   // Template management state
@@ -1909,6 +1912,76 @@ export function PublishAssessmentSection({
   }, [allQuestions, randomSelectedDifficulties]);
 
   const randomEligiblePoolCount = randomEligibleQuestions.length;
+
+  // Questions prepared for student-style preview based on current publish mode and shuffle
+  const previewQuestionsList: AssessmentPreviewQuestion[] = React.useMemo(() => {
+    if (publishMode === 'Selected Questions') {
+      const qMap = new Map(allQuestions.map((q) => [q.id, q]));
+      let ordered = selectedQuestionsForPublish
+        .map((id) => qMap.get(id))
+        .filter(Boolean) as any[];
+
+      if (shuffleQuestions) {
+        ordered = [...ordered];
+        for (let i = ordered.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+        }
+      }
+
+      return ordered.map((q) => ({
+        id: q.id,
+        questionId: q.id,
+        groupName: q.groupName,
+        difficulty: q.difficulty,
+        content: q.content,
+        points: q.points != null ? Number(q.points) : null,
+        timeSeconds: q.timeSeconds,
+        timeAllowedSeconds: q.timeSeconds,
+        options: q.options || [],
+        answerType: q.answerType || 'single',
+        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
+        metadata: q.metadata || {},
+        pairs: q.pairs || q.metadata?.pairs || [],
+      }));
+    } else {
+      // Random Questions mode: preview a representative sample from eligible pool
+      let pool = [...randomEligibleQuestions];
+      // Shuffle pool to simulate random draw
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const targetCount =
+        randomCount !== '' && Number(randomCount) > 0
+          ? Math.min(Number(randomCount), pool.length)
+          : Math.min(5, pool.length);
+      const sampled = pool.slice(0, targetCount);
+
+      return sampled.map((q) => ({
+        id: q.id,
+        questionId: q.id,
+        groupName: q.groupName,
+        difficulty: q.difficulty,
+        content: q.content,
+        points: q.points != null ? Number(q.points) : null,
+        timeSeconds: q.timeSeconds,
+        timeAllowedSeconds: q.timeSeconds,
+        options: q.options || [],
+        answerType: q.answerType || 'single',
+        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
+        metadata: q.metadata || {},
+        pairs: q.pairs || q.metadata?.pairs || [],
+      }));
+    }
+  }, [
+    publishMode,
+    allQuestions,
+    selectedQuestionsForPublish,
+    shuffleQuestions,
+    randomEligibleQuestions,
+    randomCount,
+  ]);
 
   // Immediate validation warning for Random Questions mode
   const randomValidationWarning = React.useMemo(() => {
@@ -3013,10 +3086,7 @@ export function PublishAssessmentSection({
                 <button
                   type="button"
                   disabled={selectedQuestionsForPublish.length === 0}
-                  onClick={() => {
-                    setPreviewActiveIndex(0);
-                    setShowPreviewModal(true);
-                  }}
+                  onClick={() => setShowPreviewModal(true)}
                   className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40 cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5" />
@@ -3322,8 +3392,19 @@ export function PublishAssessmentSection({
                   Choose question groups and difficulty levels. The system will automatically select suitable questions for each student.
                 </p>
               </div>
-              <div className="text-xs font-mono text-indigo-300 px-3 py-1.5 rounded-xl bg-indigo-950 border border-indigo-800 shrink-0">
-                Available Questions: <strong className="text-white">{randomEligiblePoolCount}</strong>
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <div className="text-xs font-mono text-indigo-300 px-3 py-1.5 rounded-xl bg-indigo-950 border border-indigo-800">
+                  Available Questions: <strong className="text-white">{randomEligiblePoolCount}</strong>
+                </div>
+                <button
+                  type="button"
+                  disabled={previewQuestionsList.length === 0}
+                  onClick={() => setShowPreviewModal(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40 cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  Preview Test ({previewQuestionsList.length})
+                </button>
               </div>
             </div>
 
@@ -3595,85 +3676,19 @@ export function PublishAssessmentSection({
         </div>
       </form>
 
-      {/* Interactive Preview Modal */}
+      {/* Student-Style Interactive Preview Modal */}
       {showPreviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <span className="text-xs font-mono uppercase text-indigo-400">Test Preview</span>
-                <h3 className="text-xl font-bold text-white">Preview Test</h3>
-                <p className="text-xs text-slate-400">
-                  Preview what students will see for these {selectedQuestionsForPublish.length} questions.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-all cursor-pointer"
-              >
-                &times; Close
-              </button>
-            </div>
-
-            {selectedQuestionsForPublish.length > 0 ? (
-              <div className="space-y-6">
-                {(() => {
-                  const qId = selectedQuestionsForPublish[previewActiveIndex];
-                  const q = allQuestions.find((item) => item.id === qId);
-                  if (!q) return <p className="text-slate-400">Question not found.</p>;
-
-                  return (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-xs text-slate-400">
-                        <span>
-                          Question {previewActiveIndex + 1} of {selectedQuestionsForPublish.length}
-                        </span>
-                        <span>
-                          Configured Timer: {q.timeSeconds != null && q.timeSeconds > 0 ? `${q.timeSeconds}s` : 'None'} | Points: {q.points != null && q.points > 0 ? q.points : 'None'}
-                        </span>
-                      </div>
-
-                      <FlameMiniGameCanvas
-                        content={q.content}
-                        points={q.points}
-                        timeRemaining={q.timeSeconds || undefined}
-                        options={q.options}
-                        pairs={q.metadata?.pairs || []}
-                        onAnswerSubmit={() => {}}
-                        selectedAnswer={null}
-                        disabled={false}
-                      />
-
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                        <button
-                          disabled={previewActiveIndex === 0}
-                          onClick={() => setPreviewActiveIndex(previewActiveIndex - 1)}
-                          className="px-4 py-2 rounded-xl bg-slate-800 disabled:opacity-40 text-sm text-slate-300 hover:bg-slate-700 cursor-pointer"
-                        >
-                          &larr; Previous
-                        </button>
-                        <span className="text-xs text-slate-400 font-mono">
-                          {previewActiveIndex + 1} / {selectedQuestionsForPublish.length}
-                        </span>
-                        <button
-                          disabled={previewActiveIndex >= selectedQuestionsForPublish.length - 1}
-                          onClick={() => setPreviewActiveIndex(previewActiveIndex + 1)}
-                          className="px-4 py-2 rounded-xl bg-indigo-600 disabled:opacity-40 text-white text-sm hover:bg-indigo-500 cursor-pointer"
-                        >
-                          Next Preview Question &rarr;
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-              <p className="text-slate-400">No questions selected for preview.</p>
-            )}
-          </div>
-        </div>
+        <StudentAssessmentPreviewModal
+          title={publishName.trim() || 'New Assessment Preview'}
+          subtitle={`${publishMode}${
+            publishMode === 'Selected Questions' && shuffleQuestions
+              ? ' · Shuffled'
+              : ''
+          }`}
+          questions={previewQuestionsList}
+          onClose={() => setShowPreviewModal(false)}
+        />
       )}
-
       {/* Save Template Modal */}
       {showSaveTemplateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
