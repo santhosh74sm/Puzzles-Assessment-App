@@ -130,25 +130,25 @@ function DrillDownSchoolMultiSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-xs ${
+        className={`w-full px-3 py-2 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-xs cursor-pointer shadow-2xs ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } cursor-pointer`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <Building2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {availableSchools.length === 0 ? (
-            <span className="text-slate-500">No schools found</span>
+            <span className="text-slate-400 dark:text-slate-500">No schools found</span>
           ) : isAllSchoolsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Schools</span>
-              <span className="text-[11px] text-indigo-300 font-mono">
+              <span className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono">
                 ({availableSchools.length})
               </span>
             </div>
           ) : selectedSchoolNames.length === 0 ? (
-            <span className="text-amber-400 font-medium">None Selected</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">None Selected</span>
           ) : selectedSchoolNames.length === 1 ? (
             <span className="text-slate-900 dark:text-white font-medium truncate">{selectedSchoolNames[0]}</span>
           ) : (
@@ -160,44 +160,41 @@ function DrillDownSchoolMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllSchoolsSelected && availableSchools.length > 0 ? (
-            <span
-              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               All
             </span>
           ) : selectedSchoolNames.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               {selectedSchoolNames.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
       </button>
 
       {isOpen && (
-        <div className="mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-10 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Filter School ({isAllSchoolsSelected ? `All (${availableSchools.length})` : `${selectedSchoolNames.length}/${availableSchools.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:underline font-medium cursor-pointer"
               >
                 Clear
               </button>
@@ -210,7 +207,7 @@ function DrillDownSchoolMultiSelect({
               placeholder="Search school name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
             />
           )}
 
@@ -218,10 +215,10 @@ function DrillDownSchoolMultiSelect({
             {(!search || 'all schools'.includes(search.toLowerCase())) && availableSchools.length > 0 && (
               <div
                 onClick={toggleAllSchools}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllSchoolsSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                    : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -229,11 +226,11 @@ function DrillDownSchoolMultiSelect({
                     type="checkbox"
                     checked={isAllSchoolsSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Schools</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Schools</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableSchools.length} Schools
                 </span>
               </div>
@@ -245,10 +242,10 @@ function DrillDownSchoolMultiSelect({
                 <div
                   key={s.id || s.name}
                   onClick={() => toggleSchool(s.name)}
-                  className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                  className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                      : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                      : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
@@ -256,20 +253,20 @@ function DrillDownSchoolMultiSelect({
                       type="checkbox"
                       checked={isSelected}
                       readOnly
-                      className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                      className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                     />
-                    <span className="truncate font-medium text-white">{s.name}</span>
+                    <span className="truncate font-medium">{s.name}</span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -343,25 +340,25 @@ function DrillDownClassMultiSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-xs ${
+        className={`w-full px-3 py-2 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-xs cursor-pointer shadow-2xs ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } cursor-pointer`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Layers className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {availableClasses.length === 0 ? (
-            <span className="text-slate-500">No classes found</span>
+            <span className="text-slate-400 dark:text-slate-500">No classes found</span>
           ) : isAllClassesSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Classes</span>
-              <span className="text-[11px] text-indigo-300 font-mono">
+              <span className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono">
                 ({availableClasses.length})
               </span>
             </div>
           ) : selectedClasses.length === 0 ? (
-            <span className="text-amber-400 font-medium">None Selected</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">None Selected</span>
           ) : selectedClasses.length === 1 ? (
             <span className="text-slate-900 dark:text-white font-medium">{selectedClasses[0]}</span>
           ) : (
@@ -373,44 +370,41 @@ function DrillDownClassMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllClassesSelected && availableClasses.length > 0 ? (
-            <span
-              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               All
             </span>
           ) : selectedClasses.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               {selectedClasses.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
       </button>
 
       {isOpen && (
-        <div className="mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-10 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Filter Class ({isAllClassesSelected ? `All (${availableClasses.length})` : `${selectedClasses.length}/${availableClasses.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:underline font-medium cursor-pointer"
               >
                 Clear
               </button>
@@ -421,10 +415,10 @@ function DrillDownClassMultiSelect({
             {availableClasses.length > 0 && (
               <div
                 onClick={toggleAllClasses}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllClassesSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                    : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -432,11 +426,11 @@ function DrillDownClassMultiSelect({
                     type="checkbox"
                     checked={isAllClassesSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Classes</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Classes</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableClasses.length} Classes
                 </span>
               </div>
@@ -448,10 +442,10 @@ function DrillDownClassMultiSelect({
                 <div
                   key={cls}
                   onClick={() => toggleClass(cls)}
-                  className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                  className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                      : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                      : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
@@ -459,20 +453,20 @@ function DrillDownClassMultiSelect({
                       type="checkbox"
                       checked={isSelected}
                       readOnly
-                      className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                      className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                     />
-                    <span className="truncate font-medium text-white">{cls}</span>
+                    <span className="truncate font-medium">{cls}</span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -546,25 +540,25 @@ function DrillDownSectionMultiSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-xs ${
+        className={`w-full px-3 py-2 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-xs cursor-pointer shadow-2xs ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } cursor-pointer`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Hash className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <Hash className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {availableSections.length === 0 ? (
-            <span className="text-slate-500">No sections found</span>
+            <span className="text-slate-400 dark:text-slate-500">No sections found</span>
           ) : isAllSectionsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Sections</span>
-              <span className="text-[11px] text-indigo-300 font-mono">
+              <span className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono">
                 ({availableSections.length})
               </span>
             </div>
           ) : selectedSections.length === 0 ? (
-            <span className="text-amber-400 font-medium">None Selected</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">None Selected</span>
           ) : selectedSections.length === 1 ? (
             <span className="text-slate-900 dark:text-white font-medium">Sec {selectedSections[0]}</span>
           ) : (
@@ -576,44 +570,41 @@ function DrillDownSectionMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllSectionsSelected && availableSections.length > 0 ? (
-            <span
-              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               All
             </span>
           ) : selectedSections.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               {selectedSections.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
       </button>
 
       {isOpen && (
-        <div className="mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-10 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Filter Section ({isAllSectionsSelected ? `All (${availableSections.length})` : `${selectedSections.length}/${availableSections.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:underline font-medium cursor-pointer"
               >
                 Clear
               </button>
@@ -624,10 +615,10 @@ function DrillDownSectionMultiSelect({
             {availableSections.length > 0 && (
               <div
                 onClick={toggleAllSections}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllSectionsSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                    : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -635,11 +626,11 @@ function DrillDownSectionMultiSelect({
                     type="checkbox"
                     checked={isAllSectionsSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Sections</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Sections</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableSections.length} Sections
                 </span>
               </div>
@@ -651,10 +642,10 @@ function DrillDownSectionMultiSelect({
                 <div
                   key={sec}
                   onClick={() => toggleSection(sec)}
-                  className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                  className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                      : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                      : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate">
@@ -662,20 +653,20 @@ function DrillDownSectionMultiSelect({
                       type="checkbox"
                       checked={isSelected}
                       readOnly
-                      className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                      className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                     />
-                    <span className="truncate font-medium text-white">Section {sec}</span>
+                    <span className="truncate font-medium">Section {sec}</span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -762,34 +753,34 @@ function DrillDownStudentMultiSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-xs ${
+        className={`w-full px-3 py-2 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-xs cursor-pointer shadow-2xs ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } cursor-pointer`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {availableStudents.length === 0 ? (
-            <span className="text-slate-500">No students found</span>
+            <span className="text-slate-400 dark:text-slate-500">No students found</span>
           ) : isAllStudentsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
-              <span className="text-white font-semibold">All Students</span>
-              <span className="text-[11px] text-indigo-300 font-mono">
+              <span className="text-slate-900 dark:text-white font-semibold">All Students</span>
+              <span className="text-[11px] text-indigo-600 dark:text-indigo-300 font-mono">
                 ({availableStudents.length})
               </span>
             </div>
           ) : selectedStudentIds.length === 0 ? (
-            <span className="text-amber-400 font-medium">None Selected</span>
+            <span className="text-amber-600 dark:text-amber-400 font-medium">None Selected</span>
           ) : selectedStudentIds.length === 1 ? (
-            <span className="text-white font-medium truncate">
+            <span className="text-slate-900 dark:text-white font-medium truncate">
               {availableStudents.find((s) => {
                 const ids = [s.uniqueStudentId, s.studentId, s.id, s._id].filter(Boolean);
                 return ids.includes(selectedStudentIds[0]);
               })?.studentName || '1 Student'}
             </span>
           ) : (
-            <span className="text-white font-medium">
+            <span className="text-slate-900 dark:text-white font-medium">
               {selectedStudentIds.length} Students Selected
             </span>
           )}
@@ -797,44 +788,41 @@ function DrillDownStudentMultiSelect({
 
         <div className="flex items-center gap-1.5 shrink-0">
           {isAllStudentsSelected && availableStudents.length > 0 ? (
-            <span
-              className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               All
             </span>
           ) : selectedStudentIds.length > 0 ? (
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold">
               {selectedStudentIds.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
       </button>
 
       {isOpen && (
-        <div className="mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-10 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-20 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Filter Student ({isAllStudentsSelected ? `All (${availableStudents.length})` : `${selectedStudentIds.length}/${availableStudents.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:underline font-medium cursor-pointer"
               >
                 Clear
               </button>
@@ -849,13 +837,13 @@ function DrillDownStudentMultiSelect({
               placeholder="Search student name, ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-2 text-slate-400 hover:text-white p-0.5"
+                className="absolute right-2 top-2 text-slate-400 hover:text-slate-700 dark:hover:text-white p-0.5 cursor-pointer"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -866,10 +854,10 @@ function DrillDownStudentMultiSelect({
             {(!search || 'all students'.includes(search.toLowerCase())) && availableStudents.length > 0 && (
               <div
                 onClick={toggleAllStudents}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllStudentsSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                    : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -877,11 +865,11 @@ function DrillDownStudentMultiSelect({
                     type="checkbox"
                     checked={isAllStudentsSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Students</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Students</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableStudents.length} Students
                 </span>
               </div>
@@ -902,10 +890,10 @@ function DrillDownStudentMultiSelect({
                   <div
                     key={stuKey}
                     onClick={() => toggleStudent(stuKey)}
-                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                        : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-950 dark:text-white font-medium'
+                        : 'bg-transparent border border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
@@ -913,12 +901,12 @@ function DrillDownStudentMultiSelect({
                         type="checkbox"
                         checked={isSelected}
                         readOnly
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                       />
                       <div className="truncate">
-                        <span className="truncate font-medium text-white">{stu.studentName}</span>
-                        <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
-                          <span className="text-indigo-400">{stu.uniqueStudentId || stu.studentId}</span>
+                        <span className="truncate font-medium text-slate-900 dark:text-white">{stu.studentName}</span>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                          <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{stu.uniqueStudentId || stu.studentId}</span>
                           {stu.schoolAdmissionNumber && (
                             <span>&bull; Adm: {stu.schoolAdmissionNumber}</span>
                           )}
@@ -937,11 +925,11 @@ function DrillDownStudentMultiSelect({
             )}
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -1324,15 +1312,15 @@ function HistoricalAuditDrillDown({
   );
 
   return (
-    <div className="border-t border-indigo-500/30 bg-slate-950/80 p-4 sm:p-6 space-y-5 sm:space-y-6">
+    <div className="border-t border-indigo-200 dark:border-indigo-500/30 bg-slate-50/50 dark:bg-slate-950/80 p-4 sm:p-6 space-y-5 sm:space-y-6">
       {/* Top Header of Drill-Down */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-800 gap-2">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 gap-2">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-semibold block">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-semibold block">
             Test Details
           </span>
-          <h3 className="font-bold text-base text-white flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+          <h3 className="font-semibold text-base text-slate-900 dark:text-white flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-500" />
             Test Information & Students
           </h3>
         </div>
@@ -1342,46 +1330,46 @@ function HistoricalAuditDrillDown({
             e.stopPropagation();
             onClose();
           }}
-          className="text-xs text-slate-400 hover:text-white font-medium px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer shrink-0"
+          className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer shrink-0"
         >
           Close &uarr;
         </button>
       </div>
 
       {/* Published & Test Availability Window & Status */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-3.5 sm:p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs font-mono shadow-2xs">
         <div className="space-y-1">
-          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
+          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
             Published:
           </span>
-          <div className="text-white font-semibold flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="text-slate-900 dark:text-white font-semibold flex items-center gap-2">
+            <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span className="break-words">{publishDateTimeDisplay}</span>
           </div>
         </div>
 
         <div className="space-y-1">
-          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
+          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
             Available:
           </span>
-          <div className="text-white font-semibold flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="text-slate-900 dark:text-white font-semibold flex items-center gap-2">
+            <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span className="break-words">{availabilityWindowDisplay}</span>
           </div>
         </div>
 
         <div className="space-y-1">
-          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-400 block">
+          <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
             Status:
           </span>
           <div className="flex items-center gap-1.5 pt-0.5">
             {detail.status === 'PAUSED' || detail.isPaused ? (
-              <span className="px-2.5 py-0.5 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-800 text-[11px] uppercase tracking-wide inline-flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-md font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800 text-[11px] uppercase tracking-wide inline-flex items-center gap-1">
                 <Pause className="w-3 h-3" />
                 PAUSED
               </span>
             ) : (
-              <span className="px-2.5 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 text-[11px] uppercase tracking-wide inline-flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-md font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800 text-[11px] uppercase tracking-wide inline-flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
                 ACTIVE
               </span>
@@ -1395,8 +1383,8 @@ function HistoricalAuditDrillDown({
       {/* ======================================================== */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5 text-indigo-400" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             Who Can Take This Test ({targetsList.length} {targetsList.length === 1 ? 'Group' : 'Groups'})
           </h4>
         </div>
@@ -1490,33 +1478,33 @@ function HistoricalAuditDrillDown({
             return (
               <div
                 key={tgt.id || tgt._id || tIdx}
-                className="p-3.5 sm:p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5 shadow-sm"
+                className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-2xs"
               >
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                  <span className="px-2.5 py-0.5 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700/80 text-xs font-bold font-mono">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold font-mono">
                     Target {tIdx + 1}
                   </span>
-                  <span className="text-xs font-mono text-slate-400 font-semibold">
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-semibold">
                     {targetStudentCount} {targetStudentCount === 1 ? 'Student' : 'Students'}
                   </span>
                 </div>
 
                 <div className="space-y-1.5 text-xs font-mono">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-slate-400 font-sans font-medium w-16 shrink-0">School:</span>
-                    <span className="text-white font-semibold break-words flex-1 min-w-0">{schoolDisplay}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-sans font-medium w-16 shrink-0">School:</span>
+                    <span className="text-slate-900 dark:text-white font-semibold break-words flex-1 min-w-0">{schoolDisplay}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-slate-400 font-sans font-medium w-16 shrink-0">Class:</span>
-                    <span className="text-white font-semibold break-words flex-1 min-w-0">{classDisplay}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-sans font-medium w-16 shrink-0">Class:</span>
+                    <span className="text-slate-900 dark:text-white font-semibold break-words flex-1 min-w-0">{classDisplay}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-slate-400 font-sans font-medium w-16 shrink-0">Section:</span>
-                    <span className="text-white font-semibold break-words flex-1 min-w-0">{sectionDisplay}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-sans font-medium w-16 shrink-0">Section:</span>
+                    <span className="text-slate-900 dark:text-white font-semibold break-words flex-1 min-w-0">{sectionDisplay}</span>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-slate-400 font-sans font-medium w-16 shrink-0">Students:</span>
-                    <span className="text-indigo-400 font-bold">{targetStudentCount}</span>
+                    <span className="text-slate-500 dark:text-slate-400 font-sans font-medium w-16 shrink-0">Students:</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">{targetStudentCount}</span>
                   </div>
                 </div>
               </div>
@@ -1528,17 +1516,17 @@ function HistoricalAuditDrillDown({
       {/* ======================================================== */}
       {/* STEP 2: QUESTIONS CONFIGURATION SUMMARY                  */}
       {/* ======================================================== */}
-      <div className="space-y-3 pt-3 border-t border-slate-800">
+      <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             Questions ({totalHistoricalQuestionsCount} {totalHistoricalQuestionsCount === 1 ? 'Question' : 'Questions'})
           </h4>
           {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
             <button
               type="button"
               onClick={() => setShowQuestionsPreview(true)}
-              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />
               <span>Preview</span>
@@ -1547,17 +1535,17 @@ function HistoricalAuditDrillDown({
         </div>
 
         {questionSummaryData.length > 0 ? (
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3.5 shadow-sm">
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3.5 shadow-2xs">
             <div className="space-y-3">
               {questionSummaryData.map((g: any) => (
                 <div
                   key={g.groupName}
-                  className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
+                  className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-600 dark:border-indigo-500/60"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="font-bold text-slate-200 text-sm">{g.groupName}</div>
+                    <div className="font-semibold text-slate-900 dark:text-slate-200 text-sm">{g.groupName}</div>
                     {g.isGroupDeleted && (
-                      <span className="px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800 text-[10px] font-mono font-bold flex items-center gap-1">
+                      <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/90 dark:text-rose-300 dark:border-rose-800 text-[10px] font-mono font-medium flex items-center gap-1">
                         ⚠️ Group Deleted
                       </span>
                     )}
@@ -1566,21 +1554,21 @@ function HistoricalAuditDrillDown({
                     {g.difficulties.map((d: any) => (
                       <div
                         key={d.difficulty}
-                        className="text-xs font-mono text-slate-300 flex items-center gap-2"
+                        className="text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-2"
                       >
                         <span
-                          className={`px-2 py-0.5 rounded font-semibold text-[11px] border ${
+                          className={`px-1.5 py-0.5 rounded font-medium text-[11px] border ${
                             d.difficulty === 'Easy'
-                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800'
                               : d.difficulty === 'Hard'
-                              ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                              : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800'
                           }`}
                         >
                           {d.difficulty}
                         </span>
-                        <span className="text-slate-400">&mdash;</span>
-                        <span className="text-indigo-300 font-semibold">
+                        <span className="text-slate-400 dark:text-slate-500">&mdash;</span>
+                        <span className="text-indigo-600 dark:text-indigo-300 font-semibold">
                           {d.count} {d.count === 1 ? 'Question' : 'Questions'}
                         </span>
                       </div>
@@ -1590,34 +1578,34 @@ function HistoricalAuditDrillDown({
               ))}
             </div>
 
-            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-mono">
                 {detail?.publishMode === 'Random Questions' ? (
                   <>
-                    <span className="text-slate-400">
-                      Total Eligible Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Total Eligible Questions: <strong className="text-slate-900 dark:text-white text-sm">{totalHistoricalQuestionsCount}</strong>
                     </span>
-                    <span className="text-slate-600 hidden sm:inline">&bull;</span>
-                    <span className="text-slate-400">
-                      Questions Per Student: <strong className="text-indigo-300 text-sm">{detail.randomCount || detail.assignedQuestionsCount || '—'}</strong>
+                    <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">&bull;</span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Questions Per Student: <strong className="text-indigo-600 dark:text-indigo-300 text-sm">{detail.randomCount || detail.assignedQuestionsCount || '—'}</strong>
                     </span>
                   </>
                 ) : (
-                  <span className="text-slate-400">
-                    Total Selected Questions: <strong className="text-white text-sm">{totalHistoricalQuestionsCount}</strong>
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Total Selected Questions: <strong className="text-slate-900 dark:text-white text-sm">{totalHistoricalQuestionsCount}</strong>
                   </span>
                 )}
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400 flex items-center justify-between">
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center justify-between shadow-2xs">
             <span>Total Assigned Questions: {detail?.assignedQuestionsCount || 'N/A'}</span>
             {Array.isArray(detail?.questions) && detail.questions.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowQuestionsPreview(true)}
-                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>Preview</span>
@@ -1630,10 +1618,10 @@ function HistoricalAuditDrillDown({
       {/* ======================================================== */}
       {/* STEP 3: MULTI-SELECT FILTERS (School -> Class -> Sec -> Stu) */}
       {/* ======================================================== */}
-      <div className="space-y-2.5 pt-3 border-t border-slate-800">
+      <div className="space-y-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400 flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             Filter Assigned Roster
           </span>
           {(!isAllSchools || !isAllClasses || !isAllSections || !isAllStudents) && (
@@ -1645,7 +1633,7 @@ function HistoricalAuditDrillDown({
                 setSelectedSections(['ALL']);
                 setSelectedStudentIds(['ALL']);
               }}
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium underline cursor-pointer"
+              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium underline cursor-pointer"
             >
               Reset All Filters
             </button>
@@ -1655,7 +1643,7 @@ function HistoricalAuditDrillDown({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
           {/* 1. School Filter */}
           <div className="space-y-1">
-            <label className="block text-[11px] font-semibold uppercase text-slate-400">
+            <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
               1. School
             </label>
             <DrillDownSchoolMultiSelect
@@ -1667,7 +1655,7 @@ function HistoricalAuditDrillDown({
 
           {/* 2. Class Filter */}
           <div className="space-y-1">
-            <label className="block text-[11px] font-semibold uppercase text-slate-400">
+            <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
               2. Class
             </label>
             <DrillDownClassMultiSelect
@@ -1679,7 +1667,7 @@ function HistoricalAuditDrillDown({
 
           {/* 3. Section Filter */}
           <div className="space-y-1">
-            <label className="block text-[11px] font-semibold uppercase text-slate-400">
+            <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
               3. Section
             </label>
             <DrillDownSectionMultiSelect
@@ -1691,7 +1679,7 @@ function HistoricalAuditDrillDown({
 
           {/* 4. Student Filter */}
           <div className="space-y-1">
-            <label className="block text-[11px] font-semibold uppercase text-slate-400">
+            <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
               4. Student
             </label>
             <DrillDownStudentMultiSelect
@@ -1706,16 +1694,16 @@ function HistoricalAuditDrillDown({
       {/* ======================================================== */}
       {/* STEP 3: STUDENT STATUS LIST                             */}
       {/* ======================================================== */}
-      <div className="space-y-3 pt-3 border-t border-slate-800">
+      <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
         {/* Roster Status Filter Tabs */}
-        <div className="flex flex-col sm:flex-row gap-1.5 p-1 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs">
+        <div className="flex flex-col sm:flex-row gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs">
           <button
             type="button"
             onClick={() => setDrillDownTab('all')}
             className={`w-full sm:flex-1 py-2 sm:py-1.5 px-2 rounded-lg font-medium transition-all text-center cursor-pointer ${
               drillDownTab === 'all'
-                ? 'bg-indigo-600 text-white shadow font-semibold'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-indigo-600 text-white shadow-2xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             All ({studentsFinal.length})
@@ -1725,8 +1713,8 @@ function HistoricalAuditDrillDown({
             onClick={() => setDrillDownTab('completed')}
             className={`w-full sm:flex-1 py-2 sm:py-1.5 px-2 rounded-lg font-medium transition-all flex items-center justify-center gap-1 text-center cursor-pointer ${
               drillDownTab === 'completed'
-                ? 'bg-emerald-600 text-white shadow font-semibold'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-emerald-600 text-white shadow-2xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <CheckCircle className="w-3 h-3 shrink-0" />
@@ -1737,8 +1725,8 @@ function HistoricalAuditDrillDown({
             onClick={() => setDrillDownTab('not_completed')}
             className={`w-full sm:flex-1 py-2 sm:py-1.5 px-2 rounded-lg font-medium transition-all flex items-center justify-center gap-1 text-center cursor-pointer ${
               drillDownTab === 'not_completed'
-                ? 'bg-rose-600 text-white shadow font-semibold'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-rose-600 text-white shadow-2xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <XCircle className="w-3 h-3 shrink-0" />
@@ -1749,7 +1737,7 @@ function HistoricalAuditDrillDown({
         {/* Student Cards List */}
         <div className="space-y-2 pr-1 min-h-[80px]">
           {displayedStudents.length === 0 ? (
-            <p className="text-xs text-slate-500 italic p-6 text-center bg-slate-900/40 rounded-xl border border-slate-800">
+            <p className="text-xs text-slate-500 italic p-6 text-center bg-slate-100/50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
               {drillDownTab === 'completed'
                 ? 'No matching students have completed this assessment.'
                 : drillDownTab === 'not_completed'
@@ -1763,47 +1751,47 @@ function HistoricalAuditDrillDown({
                   key={s.studentId || s.uniqueStudentId || s.id || s._id}
                   className={`p-3 rounded-xl border text-xs space-y-2 transition-all ${
                     s.status === 'COMPLETED'
-                      ? 'bg-emerald-950/20 border-emerald-800/40'
+                      ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40'
                       : s.status === 'INCOMPLETE'
-                      ? 'bg-rose-950/20 border-rose-800/40'
-                      : 'bg-slate-800/40 border-slate-700/50'
+                      ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/40'
+                      : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-white text-sm break-words">{s.studentName}</p>
-                      <span className="text-[11px] text-slate-400 font-mono break-words block">
+                      <p className="font-semibold text-slate-900 dark:text-white text-sm break-words">{s.studentName}</p>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono break-words block">
                         {s.className} {s.section ? `(${s.section})` : ''} &bull; ID: {s.uniqueStudentId || s.studentId}
-                        {s.schoolAdmissionNumber && <span className="text-slate-400"> &bull; Adm: {s.schoolAdmissionNumber}</span>}
-                        {s.schoolName && <span className="text-slate-400"> &bull; {s.schoolName}</span>}
+                        {s.schoolAdmissionNumber && <span className="text-slate-500 dark:text-slate-400"> &bull; Adm: {s.schoolAdmissionNumber}</span>}
+                        {s.schoolName && <span className="text-slate-500 dark:text-slate-400"> &bull; {s.schoolName}</span>}
                       </span>
                     </div>
                     {s.status === 'COMPLETED' && s.scoreOutOf100 != null && (
-                      <span className="font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-[11px] shrink-0 self-start sm:self-auto">
+                      <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 text-[11px] shrink-0 self-start sm:self-auto">
                         {s.scoreOutOf100}/100
                       </span>
                     )}
                   </div>
 
-                  <div className="text-[11px] text-slate-400 font-mono">
-                    <span className="text-slate-500">Assessment Name:</span>{' '}
-                    <span className="text-slate-200 font-medium">
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    <span className="text-slate-400 dark:text-slate-500">Assessment Name:</span>{' '}
+                    <span className="text-slate-800 dark:text-slate-200 font-medium">
                       {s.assessmentName || detail.publishName}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 font-mono text-xs">
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60 font-mono text-xs">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-slate-400">Status:</span>
+                      <span className="text-slate-500 dark:text-slate-400">Status:</span>
                       <span
                         className={`px-1.5 py-0.5 rounded font-bold uppercase text-[10px] ${
                           s.status === 'COMPLETED'
-                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
                             : s.status === 'INCOMPLETE'
-                            ? 'bg-rose-950 text-rose-400 border border-rose-800'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:text-rose-400 dark:border-rose-800'
                             : s.status === 'IN_PROGRESS'
-                            ? 'bg-amber-950 text-amber-400 border border-amber-800'
-                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                         }`}
                       >
                         {s.status}
@@ -1812,12 +1800,12 @@ function HistoricalAuditDrillDown({
 
                     {(s.status === 'INCOMPLETE' || s.status === 'LOCKED_INCOMPLETE') && (s.exitType === 'EXIT' || s.exitType === 'LOGOUT') && (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-slate-400">Exit Type:</span>
+                        <span className="text-slate-500 dark:text-slate-400">Exit Type:</span>
                         <span
                           className={`font-semibold font-mono text-xs ${
                             s.exitType === 'EXIT'
-                              ? 'text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800 font-bold'
-                              : 'text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800 font-bold'
+                              ? 'text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 dark:text-amber-400 dark:bg-amber-950/80 dark:border-amber-800 font-bold'
+                              : 'text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200 dark:text-sky-400 dark:bg-sky-950/80 dark:border-sky-800 font-bold'
                           }`}
                         >
                           {s.exitType}
@@ -1830,8 +1818,8 @@ function HistoricalAuditDrillDown({
 
               {/* Student pagination controls */}
               {totalStudentPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-800 text-xs font-mono">
-                  <span className="text-slate-400 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs font-mono">
+                  <span className="text-slate-500 dark:text-slate-400 text-center sm:text-left">
                     Showing {(safeStudentPage - 1) * studentPageSize + 1}&ndash;{Math.min(safeStudentPage * studentPageSize, displayedStudents.length)} of {displayedStudents.length} students
                   </span>
                   <div className="flex items-center gap-2">
@@ -1839,18 +1827,18 @@ function HistoricalAuditDrillDown({
                       type="button"
                       disabled={safeStudentPage <= 1}
                       onClick={() => setStudentPage((p) => Math.max(1, p - 1))}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                     >
                       &larr; Prev
                     </button>
-                    <span className="px-2.5 py-1 text-slate-300 font-bold bg-slate-800/60 rounded-lg">
+                    <span className="px-2.5 py-1 text-slate-700 dark:text-slate-300 font-bold bg-slate-100 dark:bg-slate-800/60 rounded-lg">
                       {safeStudentPage} / {totalStudentPages}
                     </span>
                     <button
                       type="button"
                       disabled={safeStudentPage >= totalStudentPages}
                       onClick={() => setStudentPage((p) => Math.min(totalStudentPages, p + 1))}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                     >
                       Next &rarr;
                     </button>
@@ -2058,9 +2046,9 @@ export function PublishHistorySection({
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Past Tests</span>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Test History</h2>
-        <p className="text-sm text-slate-400">
+        <span className="text-xs font-mono uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">Past Tests</span>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-0.5">Test History</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           Records of all published tests with student completion and scores.
         </p>
       </div>
@@ -2070,15 +2058,15 @@ export function PublishHistorySection({
         <div
           className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between gap-3 ${
             actionFeedback.type === 'success'
-              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
-              : 'bg-rose-950/90 border border-rose-500/70 text-rose-200'
+              ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-50 dark:bg-rose-950/90 border border-rose-200 dark:border-rose-500/70 text-rose-800 dark:text-rose-200'
           }`}
         >
           <div className="flex items-center gap-2">
             {actionFeedback.type === 'success' ? (
-              <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
             )}
             <span>{actionFeedback.message}</span>
           </div>
@@ -2092,10 +2080,10 @@ export function PublishHistorySection({
       )}
 
       {/* Filter / Search bar */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 shadow-2xs">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase text-slate-400">Total Tests:</span>
-          <span className="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-400 font-mono text-xs font-bold border border-indigo-800">
+          <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Total Tests:</span>
+          <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 font-mono text-xs font-bold border border-indigo-200 dark:border-indigo-800">
             {historyList.length}
           </span>
         </div>
@@ -2107,7 +2095,7 @@ export function PublishHistorySection({
             placeholder="Search test name or school..."
             value={historySearch}
             onChange={(e) => setHistorySearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
           />
         </div>
       </div>
@@ -2124,10 +2112,10 @@ export function PublishHistorySection({
             return (
               <div
                 key={hist.id || hist.publishId}
-                className={`rounded-2xl border transition-all ${
+                className={`rounded-xl border transition-all shadow-2xs ${
                   isSelected
-                    ? 'bg-slate-900 border-indigo-500/80 shadow-xl shadow-indigo-500/10 ring-1 ring-indigo-500/50 overflow-visible'
-                    : 'bg-slate-900 border-slate-800 hover:border-slate-700 overflow-hidden'
+                    ? 'bg-white dark:bg-slate-900 border-indigo-500 dark:border-indigo-500/80 shadow-md ring-1 ring-indigo-500/30 dark:ring-indigo-500/50 overflow-visible'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 overflow-hidden'
                 }`}
               >
                 {/* Clickable Card Summary */}
@@ -2138,31 +2126,31 @@ export function PublishHistorySection({
                   <div className="flex items-start justify-between gap-3 w-full sm:w-auto">
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
+                        <span className="text-[11px] px-2 py-0.5 rounded-md font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 font-medium">
                           {hist.publishMode}
                         </span>
                         {hist.publishMode === 'Selected Questions' && (hist.shuffle || hist.shuffleQuestions) && (
-                          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800 font-semibold">
+                          <span className="text-[11px] px-2 py-0.5 rounded-md font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
                             Shuffled
                           </span>
                         )}
                         {isPaused && (
-                          <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide flex items-center gap-1">
+                          <span className="text-[11px] px-2 py-0.5 rounded-md font-mono bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 font-semibold uppercase tracking-wide flex items-center gap-1">
                             <Pause className="w-3 h-3" />
                             Paused
                           </span>
                         )}
                       </div>
 
-                      <h4 className="font-bold text-base text-white break-words">{hist.publishName}</h4>
+                      <h4 className="font-semibold text-base text-slate-900 dark:text-white break-words">{hist.publishName}</h4>
 
                       {/* School-wise assigned student counts */}
                       <div className="space-y-0.5 pt-0.5">
                         {schoolSummaries.map((sc, scIdx) => (
-                          <div key={scIdx} className="text-xs font-mono text-slate-300 flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-200">{sc.schoolName}</span>
-                            <span className="text-slate-500">&mdash;</span>
-                            <span className="text-indigo-400 font-semibold">{sc.count} Assigned</span>
+                          <div key={scIdx} className="text-xs font-mono text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{sc.schoolName}</span>
+                            <span className="text-slate-400 dark:text-slate-500">&mdash;</span>
+                            <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{sc.count} Assigned</span>
                           </div>
                         ))}
                       </div>
@@ -2171,16 +2159,16 @@ export function PublishHistorySection({
                     {/* Mobile-only stats and chevron at top right of the card */}
                     <div className="sm:hidden flex items-center gap-2.5 shrink-0 text-right font-mono text-xs">
                       <div>
-                        <span className="text-emerald-400 block font-bold text-[11px]">
+                        <span className="text-emerald-600 dark:text-emerald-400 block font-bold text-[11px]">
                           {hist.completedCount || 0} Done
                         </span>
-                        <span className="text-rose-400 block text-[11px]">
+                        <span className="text-rose-600 dark:text-rose-400 block text-[11px]">
                           {incompleteCount > 0 ? incompleteCount : 0} Left
                         </span>
                       </div>
                       <ChevronDown
-                        className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
-                          isSelected ? 'rotate-180 text-indigo-400' : ''
+                        className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
+                          isSelected ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
                         }`}
                       />
                     </div>
@@ -2189,24 +2177,24 @@ export function PublishHistorySection({
                   {/* Desktop Right Side: Stats + Inline Action Buttons + Chevron */}
                   <div className="hidden sm:flex items-center gap-4 text-xs font-mono shrink-0">
                     <div className="text-right">
-                      <span className="text-emerald-400 block font-bold">
+                      <span className="text-emerald-600 dark:text-emerald-400 block font-bold">
                         {hist.completedCount || 0} Completed
                       </span>
-                      <span className="text-rose-400 block">
+                      <span className="text-rose-600 dark:text-rose-400 block">
                         {incompleteCount > 0 ? incompleteCount : 0} Incomplete
                       </span>
                     </div>
 
                     {/* Action Area: Edit, Pause / Resume, Delete */}
                     <div
-                      className="flex items-center gap-1.5 pl-3 border-l border-slate-800"
+                      className="flex items-center gap-1.5 pl-3 border-l border-slate-200 dark:border-slate-800"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
                         type="button"
                         title="Edit Test"
                         onClick={() => onEditAssessment && onEditAssessment(hist.publishId)}
-                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-700 cursor-pointer"
                       >
                         <Edit className="w-3.5 h-3.5" />
                         <span>Edit</span>
@@ -2222,10 +2210,10 @@ export function PublishHistorySection({
                             setPauseTarget(hist);
                           }
                         }}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors border cursor-pointer ${
                           isPaused
-                            ? 'bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border-amber-800'
-                            : 'bg-slate-800 hover:bg-amber-600 hover:text-white text-slate-300 border-slate-700'
+                            ? 'bg-amber-50 dark:bg-amber-950/80 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                            : 'bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 hover:text-amber-700 dark:hover:text-amber-400 border-slate-200 dark:border-slate-700'
                         }`}
                       >
                         {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -2236,7 +2224,7 @@ export function PublishHistorySection({
                         type="button"
                         title="Delete Test"
                         onClick={() => setDeleteTarget(hist)}
-                        className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 hover:border-rose-600 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-800 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Delete</span>
@@ -2244,22 +2232,22 @@ export function PublishHistorySection({
                     </div>
 
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
-                        isSelected ? 'rotate-180 text-indigo-400' : ''
+                      className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
+                        isSelected ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
                       }`}
                     />
                   </div>
 
                   {/* Mobile-only Bottom Action Toolbar (Full width, clean buttons, touch-friendly) */}
                   <div
-                    className="sm:hidden flex items-center gap-2 pt-2.5 border-t border-slate-800/80 w-full"
+                    className="sm:hidden flex items-center gap-2 pt-2.5 border-t border-slate-200 dark:border-slate-800/80 w-full"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
                       title="Edit Test"
                       onClick={() => onEditAssessment && onEditAssessment(hist.publishId)}
-                      className="flex-1 py-2 px-2 rounded-lg bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+                      className="flex-1 py-2 px-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-700 cursor-pointer"
                     >
                       <Edit className="w-3.5 h-3.5" />
                       <span>Edit</span>
@@ -2275,10 +2263,10 @@ export function PublishHistorySection({
                           setPauseTarget(hist);
                         }
                       }}
-                      className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                      className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border cursor-pointer ${
                         isPaused
-                          ? 'bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border-amber-800'
-                          : 'bg-slate-800 hover:bg-amber-600 hover:text-white text-slate-300 border-slate-700'
+                          ? 'bg-amber-50 dark:bg-amber-950/80 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                          : 'bg-white dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950 text-slate-700 dark:text-slate-300 hover:text-amber-700 dark:hover:text-amber-400 border-slate-200 dark:border-slate-700'
                       }`}
                     >
                       {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -2289,7 +2277,7 @@ export function PublishHistorySection({
                       type="button"
                       title="Delete Test"
                       onClick={() => setDeleteTarget(hist)}
-                      className="flex-1 py-2 px-2 rounded-lg bg-slate-800 hover:bg-rose-600 hover:text-white text-rose-400 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border border-slate-700 hover:border-rose-600 cursor-pointer"
+                      className="flex-1 py-2 px-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-800 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Delete</span>
@@ -2313,9 +2301,9 @@ export function PublishHistorySection({
             );
           })
         ) : (
-          <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-center py-12">
-            <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <h4 className="text-base font-semibold text-slate-300">No published assessments found</h4>
+          <div className="p-8 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 text-center py-12 shadow-2xs">
+            <History className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
+            <h4 className="text-base font-semibold text-slate-700 dark:text-slate-300">No published assessments found</h4>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
               {historyList.length === 0
                 ? 'Publish tests from the "Publish Assessment" section to see historical records here.'
@@ -2327,18 +2315,18 @@ export function PublishHistorySection({
 
       {/* 1. Pause Confirmation Modal */}
       {pauseTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200 dark:border-transparent">
               <Pause className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Pause Test</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pause Test</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Are you sure you want to pause{' '}
-                <strong className="text-white font-semibold">{pauseTarget.publishName}</strong>?
+                <strong className="text-slate-900 dark:text-white font-semibold">{pauseTarget.publishName}</strong>?
               </p>
-              <div className="text-xs text-amber-300/90 bg-amber-950/60 p-3 rounded-xl border border-amber-800/80 leading-relaxed text-left space-y-1">
+              <div className="text-xs text-amber-800 dark:text-amber-300/90 bg-amber-50 dark:bg-amber-950/60 p-3 rounded-xl border border-amber-200 dark:border-amber-800/80 leading-relaxed text-left space-y-1">
                 <p>&bull; Test status will become <strong>PAUSED</strong>.</p>
                 <p>&bull; Students will see <em>"Temporarily Paused"</em> and cannot start or take the test.</p>
                 <p>&bull; All student progress and completed answers are kept safe.</p>
@@ -2349,7 +2337,7 @@ export function PublishHistorySection({
                 type="button"
                 disabled={isActionLoading}
                 onClick={() => setPauseTarget(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+                className="flex-1 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -2357,7 +2345,7 @@ export function PublishHistorySection({
                 type="button"
                 disabled={isActionLoading}
                 onClick={handleConfirmPause}
-                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-600/30 cursor-pointer transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-2xs cursor-pointer transition-colors disabled:opacity-50"
               >
                 {isActionLoading ? 'Pausing...' : 'Pause Test'}
               </button>
@@ -2368,18 +2356,18 @@ export function PublishHistorySection({
 
       {/* 2. Resume Confirmation Modal */}
       {resumeTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-emerald-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto border border-emerald-200 dark:border-transparent">
               <Play className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Resume Test</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Resume Test</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Resume test{' '}
-                <strong className="text-white font-semibold">{resumeTarget.publishName}</strong>?
+                <strong className="text-slate-900 dark:text-white font-semibold">{resumeTarget.publishName}</strong>?
               </p>
-              <div className="text-xs text-emerald-300/90 bg-emerald-950/60 p-3 rounded-xl border border-emerald-800/80 leading-relaxed text-left space-y-1">
+              <div className="text-xs text-emerald-800 dark:text-emerald-300/90 bg-emerald-50 dark:bg-emerald-950/60 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/80 leading-relaxed text-left space-y-1">
                 <p>&bull; Test will become <strong>ACTIVE</strong> again.</p>
                 <p>&bull; Students can now start or continue taking the test.</p>
               </div>
@@ -2389,7 +2377,7 @@ export function PublishHistorySection({
                 type="button"
                 disabled={isActionLoading}
                 onClick={() => setResumeTarget(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+                className="flex-1 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -2397,7 +2385,7 @@ export function PublishHistorySection({
                 type="button"
                 disabled={isActionLoading}
                 onClick={handleConfirmResume}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 cursor-pointer transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs cursor-pointer transition-colors disabled:opacity-50"
               >
                 {isActionLoading ? 'Resuming...' : 'Resume Test'}
               </button>
@@ -2408,21 +2396,21 @@ export function PublishHistorySection({
 
       {/* 3. Delete Confirmation Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-rose-500/50 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-rose-500/50 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-200 dark:border-transparent">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Delete Test</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Test</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                 Are you sure you want to delete{' '}
-                <strong className="text-rose-300 font-semibold">{deleteTarget.publishName}</strong>?
+                <strong className="text-rose-600 dark:text-rose-300 font-semibold">{deleteTarget.publishName}</strong>?
               </p>
-              <div className="text-xs text-rose-300/90 bg-rose-950/60 p-3 rounded-xl border border-rose-800/80 leading-relaxed text-left space-y-1">
+              <div className="text-xs text-rose-800 dark:text-rose-300/90 bg-rose-50 dark:bg-rose-950/60 p-3 rounded-xl border border-rose-200 dark:border-rose-800/80 leading-relaxed text-left space-y-1">
                 <p>&bull; Deletes only this test and student records for it.</p>
                 <p>&bull; Schools, students, and questions in the Question Bank will not be affected.</p>
-                <p className="text-rose-400 font-semibold">&bull; This cannot be undone.</p>
+                <p className="text-rose-600 dark:text-rose-400 font-semibold">&bull; This cannot be undone.</p>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
@@ -2430,7 +2418,7 @@ export function PublishHistorySection({
                 type="button"
                 disabled={isActionLoading}
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-all"
+                className="flex-1 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Cancel
               </button>
@@ -2438,7 +2426,7 @@ export function PublishHistorySection({
                 type="button"
                 disabled={isActionLoading}
                 onClick={handleConfirmDelete}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 cursor-pointer transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-2xs cursor-pointer transition-colors disabled:opacity-50"
               >
                 {isActionLoading ? 'Deleting...' : 'Yes, Delete Test'}
               </button>

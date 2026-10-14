@@ -136,14 +136,14 @@ function TriStateCheckbox({
         e.stopPropagation();
         if (!disabled) onChange(e);
       }}
-      className={`w-4 h-4 rounded flex items-center justify-center transition-all border shrink-0 cursor-pointer ${
+      className={`w-4 h-4 rounded flex items-center justify-center transition-colors border shrink-0 cursor-pointer ${
         disabled ? 'opacity-40 cursor-not-allowed' : ''
       } ${
         checked
-          ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30'
+          ? 'bg-indigo-600 border-indigo-600 text-white shadow-2xs'
           : indeterminate
-          ? 'bg-indigo-600/90 border-indigo-500 text-white'
-          : 'bg-slate-800 border-slate-600 hover:border-slate-500'
+          ? 'bg-indigo-600 border-indigo-600 text-white'
+          : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-slate-500'
       }`}
     >
       <input
@@ -244,20 +244,20 @@ function SchoolMultiSelectDropdown({
         type="button"
         disabled={disabled || schools.length === 0}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-sm ${
+        className={`w-full px-3.5 py-2.5 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-sm ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } ${disabled || schools.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        } ${disabled || schools.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} shadow-2xs`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Building2 className="w-4 h-4 text-indigo-400 shrink-0" />
+          <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {schools.length === 0 ? (
-            <span className="text-slate-500">No schools available</span>
+            <span className="text-slate-400 dark:text-slate-500">No schools available</span>
           ) : isAllSchoolsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Schools</span>
-              <span className="text-xs text-indigo-300 font-mono">
+              <span className="text-xs text-indigo-700 dark:text-indigo-300 font-mono">
                 ({schools.length} Schools)
               </span>
             </div>
@@ -267,7 +267,7 @@ function SchoolMultiSelectDropdown({
             <span className="text-slate-900 dark:text-white font-medium truncate">
               {selectedSchools[0]?.name}
               {selectedSchools[0]?.code && (
-                <span className="ml-1.5 text-[11px] font-mono text-indigo-300 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-800">
+                <span className="ml-1.5 text-[11px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                   {selectedSchools[0].code}
                 </span>
               )}
@@ -277,7 +277,7 @@ function SchoolMultiSelectDropdown({
               <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedSchoolIds.length} Schools Selected
               </span>
-              <span className="text-xs text-slate-400 truncate">
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 ({selectedSchools.map((s) => s.code || s.name).slice(0, 2).join(', ')}
                 {selectedSchoolIds.length > 2 ? ` +${selectedSchoolIds.length - 2}` : ''})
               </span>
@@ -287,23 +287,17 @@ function SchoolMultiSelectDropdown({
 
         <div className="flex items-center gap-2 shrink-0">
           {isAllSchoolsSelected ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs targets-filter-all-badge"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               All
             </span>
           ) : selectedSchoolIds.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               {selectedSchoolIds.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
@@ -311,25 +305,25 @@ function SchoolMultiSelectDropdown({
 
       {/* Dropdown Menu Popover */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
           {/* Quick Actions & Header */}
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Choose Schools ({isAllSchoolsSelected ? `All (${schools.length})` : `${selectedSchoolIds.length}/${schools.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold underline cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium underline cursor-pointer"
               >
                 Clear
               </button>
@@ -343,7 +337,7 @@ function SchoolMultiSelectDropdown({
               placeholder="Search school name or code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
+              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-indigo-500"
             />
           )}
 
@@ -353,10 +347,10 @@ function SchoolMultiSelectDropdown({
             {(!search || 'all schools'.includes(search.toLowerCase())) && (
               <div
                 onClick={toggleAllSchools}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllSchoolsSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                    : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -364,11 +358,11 @@ function SchoolMultiSelectDropdown({
                     type="checkbox"
                     checked={isAllSchoolsSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Schools</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Schools</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {schools.length} Schools
                 </span>
               </div>
@@ -385,10 +379,10 @@ function SchoolMultiSelectDropdown({
                   <div
                     key={s.id}
                     onClick={() => toggleSchool(s.id)}
-                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                        : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                        : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
@@ -396,12 +390,12 @@ function SchoolMultiSelectDropdown({
                         type="checkbox"
                         checked={isSelected}
                         readOnly
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                       />
                       <span className="truncate">{s.name}</span>
                     </div>
                     {s.code && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700 shrink-0 ml-2">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700 shrink-0 ml-2">
                         {s.code}
                       </span>
                     )}
@@ -412,11 +406,11 @@ function SchoolMultiSelectDropdown({
           </div>
 
           {/* Done Button */}
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -506,22 +500,22 @@ function ClassMultiSelectDropdown({
         type="button"
         disabled={disabled || isLoading}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-sm ${
+        className={`w-full px-3.5 py-2.5 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-sm ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        } ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} shadow-2xs`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
+          <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {isLoading ? (
-            <span className="text-slate-400">Loading classes...</span>
+            <span className="text-slate-400 dark:text-slate-500">Loading classes...</span>
           ) : availableClasses.length === 0 ? (
-            <span className="text-slate-500">No classes with students found</span>
+            <span className="text-slate-400 dark:text-slate-500">No classes with students found</span>
           ) : isAllClassesSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Classes</span>
-              <span className="text-xs text-indigo-300 font-mono">
+              <span className="text-xs text-indigo-700 dark:text-indigo-300 font-mono">
                 ({availableClasses.length} {availableClasses.length === 1 ? 'Class' : 'Classes'})
               </span>
             </div>
@@ -536,7 +530,7 @@ function ClassMultiSelectDropdown({
               <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedClasses.length} Classes Selected
               </span>
-              <span className="text-xs text-slate-400 truncate">
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 ({selectedClasses.slice(0, 3).join(', ')}
                 {selectedClasses.length > 3 ? ` +${selectedClasses.length - 3}` : ''})
               </span>
@@ -546,25 +540,19 @@ function ClassMultiSelectDropdown({
 
         <div className="flex items-center gap-2 shrink-0">
           {isLoading ? (
-            <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
           ) : isAllClassesSelected && availableClasses.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs targets-filter-all-badge"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               All
             </span>
           ) : selectedClasses.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               {selectedClasses.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
@@ -572,25 +560,25 @@ function ClassMultiSelectDropdown({
 
       {/* Popover Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
           {/* Header & Quick Actions */}
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Choose Classes ({isAllClassesSelected ? `All (${availableClasses.length})` : `${selectedClasses.length}/${availableClasses.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold underline cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium underline cursor-pointer"
               >
                 Clear
               </button>
@@ -603,10 +591,10 @@ function ClassMultiSelectDropdown({
             {availableClasses.length > 0 && (
               <div
                 onClick={toggleAllClasses}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllClassesSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                    : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -614,11 +602,11 @@ function ClassMultiSelectDropdown({
                     type="checkbox"
                     checked={isAllClassesSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Classes</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Classes</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableClasses.length} {availableClasses.length === 1 ? 'Class' : 'Classes'}
                 </span>
               </div>
@@ -636,10 +624,10 @@ function ClassMultiSelectDropdown({
                   <div
                     key={cls}
                     onClick={() => toggleClass(cls)}
-                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                        : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                        : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
@@ -647,7 +635,7 @@ function ClassMultiSelectDropdown({
                         type="checkbox"
                         checked={isSelected}
                         readOnly
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                       />
                       <span className="truncate">{cls}</span>
                     </div>
@@ -658,11 +646,11 @@ function ClassMultiSelectDropdown({
           </div>
 
           {/* Done Button */}
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -748,22 +736,22 @@ function SectionMultiSelectDropdown({
         type="button"
         disabled={disabled || isLoading}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-sm ${
+        className={`w-full px-3.5 py-2.5 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-sm ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        } ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} shadow-2xs`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
+          <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {isLoading ? (
-            <span className="text-slate-400">Loading sections...</span>
+            <span className="text-slate-400 dark:text-slate-500">Loading sections...</span>
           ) : availableSections.length === 0 ? (
-            <span className="text-slate-500">No sections available</span>
+            <span className="text-slate-400 dark:text-slate-500">No sections available</span>
           ) : isAllSectionsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Sections</span>
-              <span className="text-xs text-indigo-300 font-mono">
+              <span className="text-xs text-indigo-700 dark:text-indigo-300 font-mono">
                 ({availableSections.length > 0 ? availableSections.map((s) => `Sec ${s}`).join(', ') : 'All'})
               </span>
             </div>
@@ -778,7 +766,7 @@ function SectionMultiSelectDropdown({
               <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedSections.length} Sections Selected
               </span>
-              <span className="text-xs text-slate-400 truncate">
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 ({selectedSections.map((s) => `Sec ${s}`).slice(0, 3).join(', ')}
                 {selectedSections.length > 3 ? ` +${selectedSections.length - 3}` : ''})
               </span>
@@ -788,25 +776,19 @@ function SectionMultiSelectDropdown({
 
         <div className="flex items-center gap-2 shrink-0">
           {isLoading ? (
-            <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
           ) : isAllSectionsSelected && availableSections.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs targets-filter-all-badge"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               All
             </span>
           ) : selectedSections.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               {selectedSections.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
@@ -814,24 +796,24 @@ function SectionMultiSelectDropdown({
 
       {/* Popover Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Choose Sections ({isAllSectionsSelected ? `All (${availableSections.length})` : `${selectedSections.length}/${availableSections.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold underline cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium underline cursor-pointer"
               >
                 Clear
               </button>
@@ -843,10 +825,10 @@ function SectionMultiSelectDropdown({
             {availableSections.length > 0 && (
               <div
                 onClick={toggleAllSections}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllSectionsSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                    : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -854,11 +836,11 @@ function SectionMultiSelectDropdown({
                     type="checkbox"
                     checked={isAllSectionsSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Sections</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Sections</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableSections.length} Sections
                 </span>
               </div>
@@ -875,10 +857,10 @@ function SectionMultiSelectDropdown({
                   <div
                     key={sec}
                     onClick={() => toggleSection(sec)}
-                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                        : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                        : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
@@ -886,7 +868,7 @@ function SectionMultiSelectDropdown({
                         type="checkbox"
                         checked={isSelected}
                         readOnly
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                       />
                       <span className="truncate">Section {sec}</span>
                     </div>
@@ -896,11 +878,11 @@ function SectionMultiSelectDropdown({
             )}
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -1008,22 +990,22 @@ function StudentMultiSelectDropdown({
         type="button"
         disabled={disabled || isLoading}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between transition-all outline-none text-sm ${
+        className={`w-full px-3.5 py-2.5 rounded-lg border text-left flex items-center justify-between transition-colors outline-none text-sm ${
           isOpen
-            ? 'bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
-            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-        } ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'bg-white dark:bg-slate-800 border-indigo-500 ring-2 ring-indigo-500/20'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        } ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} shadow-2xs`}
       >
         <div className="flex items-center gap-2 truncate pr-2">
-          <Users className="w-4 h-4 text-indigo-400 shrink-0" />
+          <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
           {isLoading ? (
-            <span className="text-slate-400">Loading students...</span>
+            <span className="text-slate-400 dark:text-slate-500">Loading students...</span>
           ) : availableStudents.length === 0 ? (
-            <span className="text-slate-500">No students found</span>
+            <span className="text-slate-400 dark:text-slate-500">No students found</span>
           ) : isAllStudentsSelected ? (
             <div className="flex items-center gap-1.5 truncate">
               <span className="text-slate-900 dark:text-white font-semibold">All Students</span>
-              <span className="text-xs text-indigo-300 font-mono">
+              <span className="text-xs text-indigo-700 dark:text-indigo-300 font-mono">
                 ({availableStudents.length} Students)
               </span>
             </div>
@@ -1033,7 +1015,7 @@ function StudentMultiSelectDropdown({
             <span className="text-slate-900 dark:text-white font-medium truncate">
               {selectedStudents[0]?.studentName || selectedStudentIds[0]}
               {selectedStudents[0]?.uniqueStudentId && (
-                <span className="ml-1.5 text-[11px] font-mono text-indigo-300 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-800">
+                <span className="ml-1.5 text-[11px] font-mono text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
                   {selectedStudents[0].uniqueStudentId}
                 </span>
               )}
@@ -1043,7 +1025,7 @@ function StudentMultiSelectDropdown({
               <span className="text-slate-900 dark:text-white font-semibold">
                 {selectedStudentIds.length} Students Selected
               </span>
-              <span className="text-xs text-slate-400 truncate">
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 ({selectedStudents.map((s) => s.studentName).slice(0, 2).join(', ')}
                 {selectedStudentIds.length > 2 ? ` +${selectedStudentIds.length - 2}` : ''})
               </span>
@@ -1053,25 +1035,19 @@ function StudentMultiSelectDropdown({
 
         <div className="flex items-center gap-2 shrink-0">
           {isLoading ? (
-            <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin" />
           ) : isAllStudentsSelected && availableStudents.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs targets-filter-all-badge"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               All
             </span>
           ) : selectedStudentIds.length > 0 ? (
-            <span
-              className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold shadow-xs"
-              style={{ color: '#ffffff' }}
-            >
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-600 text-white font-bold">
               {selectedStudentIds.length}
             </span>
           ) : null}
           <ChevronDown
             className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-indigo-400' : ''
+              isOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
             }`}
           />
         </div>
@@ -1079,24 +1055,24 @@ function StudentMultiSelectDropdown({
 
       {/* Popover Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100 min-w-[280px]">
-          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium">
+        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-40 p-2.5 space-y-2 animate-in fade-in-50 zoom-in-95 duration-100 min-w-[280px]">
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
               Choose Students ({isAllStudentsSelected ? `All (${availableStudents.length})` : `${selectedStudentIds.length}/${availableStudents.length}`})
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-semibold underline cursor-pointer"
               >
                 Select All
               </button>
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-300 dark:text-slate-600">&bull;</span>
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-400 hover:text-slate-300 font-medium underline cursor-pointer"
+                className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium underline cursor-pointer"
               >
                 Clear
               </button>
@@ -1112,13 +1088,13 @@ function StudentMultiSelectDropdown({
               placeholder="Search name, admission #, App ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-2 text-slate-400 hover:text-white p-0.5"
+                className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -1130,10 +1106,10 @@ function StudentMultiSelectDropdown({
             {(!search || 'all students'.includes(search.toLowerCase())) && availableStudents.length > 0 && (
               <div
                 onClick={toggleAllStudents}
-                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                   isAllStudentsSelected
-                    ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                    : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                    : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -1141,11 +1117,11 @@ function StudentMultiSelectDropdown({
                     type="checkbox"
                     checked={isAllStudentsSelected}
                     readOnly
-                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                    className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                   />
-                  <span className="font-semibold text-white">All Students</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">All Students</span>
                 </div>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 shrink-0 ml-2">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0 ml-2">
                   {availableStudents.length} Students
                 </span>
               </div>
@@ -1167,10 +1143,10 @@ function StudentMultiSelectDropdown({
                   <div
                     key={stuKey}
                     onClick={() => toggleStudent(stu.uniqueStudentId || stu.id)}
-                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-all ${
+                    className={`p-2 rounded-lg text-xs flex items-center justify-between cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-indigo-950/70 border border-indigo-500/80 text-white font-medium shadow-sm'
-                        : 'bg-slate-800/50 border border-transparent text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/80 text-indigo-900 dark:text-white font-medium'
+                        : 'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
@@ -1178,12 +1154,12 @@ function StudentMultiSelectDropdown({
                         type="checkbox"
                         checked={isSelected}
                         readOnly
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 pointer-events-none"
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 pointer-events-none"
                       />
                       <div className="truncate">
-                        <span className="truncate font-medium text-white">{stu.studentName}</span>
-                        <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
-                          <span className="text-indigo-400">ID: {stu.uniqueStudentId}</span>
+                        <span className="truncate font-medium text-slate-900 dark:text-white">{stu.studentName}</span>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+                          <span className="text-indigo-600 dark:text-indigo-400">ID: {stu.uniqueStudentId}</span>
                           {stu.className && (
                             <span>&bull; {stu.className}{stu.section ? ` - ${stu.section}` : ''}</span>
                           )}
@@ -1199,11 +1175,11 @@ function StudentMultiSelectDropdown({
             )}
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-end">
+          <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer"
+              className="px-3 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs"
             >
               Done
             </button>
@@ -1501,14 +1477,14 @@ function TargetCard({
     : `${selectedStudentIds.length} Students`;
 
   return (
-    <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-sm hover:border-slate-700/80 transition-all">
+    <div className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
       {/* Target Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
-          <span className="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700 text-xs font-bold font-mono">
-            Group {index + 1}
+          <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold font-mono">
+            Target Group {index + 1}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-600 dark:text-slate-400">
             {selectedSchoolIds.length === 0
               ? 'No school selected'
               : selectedSchoolIds.includes('ALL')
@@ -1520,10 +1496,10 @@ function TargetCard({
         <button
           type="button"
           onClick={onRemove}
-          className="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+          className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 hover:border-rose-200 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          Remove Group
+          Remove
         </button>
       </div>
 
@@ -1531,7 +1507,7 @@ function TargetCard({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
         {/* 1. School Selection -> Multi-Select Dropdown */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-slate-400">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             1. School(s) *
           </label>
           <SchoolMultiSelectDropdown
@@ -1539,7 +1515,7 @@ function TargetCard({
             selectedSchoolIds={selectedSchoolIds}
             onChange={(ids) => onUpdate({ selectedSchoolIds: ids })}
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {selectedSchoolIds.length === 0
               ? 'Select one or more schools from dropdown'
               : selectedSchoolIds.includes('ALL')
@@ -1550,7 +1526,7 @@ function TargetCard({
 
         {/* 2. Class Selection -> Multi-Select Dropdown */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-slate-400">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             2. Class(es)
           </label>
           <ClassMultiSelectDropdown
@@ -1560,7 +1536,7 @@ function TargetCard({
             disabled={selectedSchoolIds.length === 0}
             isLoading={isLoadingClasses}
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {isLoadingClasses
               ? 'Loading classes...'
               : availableClasses.length === 0
@@ -1573,9 +1549,9 @@ function TargetCard({
           </p>
         </div>
 
-        {/* 3. Section Selection -> Multi-Select Dropdown (Same UI pattern as Class) */}
+        {/* 3. Section Selection -> Multi-Select Dropdown */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-slate-400">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             3. Section(s)
           </label>
           <SectionMultiSelectDropdown
@@ -1585,7 +1561,7 @@ function TargetCard({
             disabled={selectedSchoolIds.length === 0}
             isLoading={isLoadingSections}
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {isLoadingSections
               ? 'Loading sections...'
               : availableSections.length === 0
@@ -1598,9 +1574,9 @@ function TargetCard({
           </p>
         </div>
 
-        {/* 4. Student Selection -> Multi-Select Dropdown (Same UI pattern as Class) */}
+        {/* 4. Student Selection -> Multi-Select Dropdown */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase text-slate-400">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             4. Student(s)
           </label>
           <StudentMultiSelectDropdown
@@ -1610,7 +1586,7 @@ function TargetCard({
             disabled={selectedSchoolIds.length === 0}
             isLoading={isLoadingStudents}
           />
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {isLoadingStudents
               ? 'Loading students...'
               : availableStudents.length === 0
@@ -2830,19 +2806,19 @@ export function PublishAssessmentSection({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">
-              {isEditMode ? 'Edit Test' : 'Create & Publish Test'}
+            <span className="text-xs font-mono uppercase text-indigo-600 dark:text-indigo-400 font-semibold tracking-wider">
+              {isEditMode ? 'Edit Assessment' : 'Create & Publish Assessment'}
             </span>
             {isEditMode && (
-              <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono bg-amber-950 text-amber-400 border border-amber-800 font-bold uppercase tracking-wide">
+              <span className="text-[11px] px-2 py-0.5 rounded font-mono bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold uppercase tracking-wide">
                 Edit Mode
               </span>
             )}
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-1">
             {isEditMode ? 'Edit Test' : 'Publish Test'}
           </h2>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {isEditMode
               ? `Editing test '${publishName}'. Update who can take the test, questions, or dates, then click "Update Test" to save changes.`
               : `Choose between Selected Questions or Random Questions, choose who can take this test, and set test dates and times.`}
@@ -2850,7 +2826,7 @@ export function PublishAssessmentSection({
         </div>
 
         {/* Top-Right Area Controls: Saved Templates & Save Template */}
-        <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
+        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
           {/* Saved Templates Button */}
           <button
             type="button"
@@ -2858,13 +2834,13 @@ export function PublishAssessmentSection({
               fetchSavedTemplates();
               setShowSavedTemplatesModal(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-2 shadow-sm hover:border-slate-600 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
             title="Saved Tests"
           >
-            <Bookmark className="w-4 h-4 text-indigo-400" />
+            <Bookmark className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Saved Tests</span>
             {savedTemplates.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 text-[10px] font-mono font-bold border border-indigo-800">
+              <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-bold border border-indigo-200 dark:border-indigo-800">
                 {savedTemplates.length}
               </span>
             )}
@@ -2874,12 +2850,12 @@ export function PublishAssessmentSection({
           <button
             type="button"
             onClick={handleOpenSaveTemplateModal}
-            className="w-9 h-9 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group relative flex items-center justify-center border border-indigo-400/40"
+            className="w-8.5 h-8.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs transition-colors cursor-pointer group relative flex items-center justify-center"
             title="Save Test"
             aria-label="Save Test"
           >
             <BookmarkPlus className="w-4 h-4" />
-            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 shadow-xl border border-slate-700 transition-opacity group-hover:opacity-100 z-30">
+            <span className="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg border border-slate-700 transition-opacity group-hover:opacity-100 z-30">
               Save Test
             </span>
           </button>
@@ -2888,21 +2864,21 @@ export function PublishAssessmentSection({
 
       {publishFeedback && (
         <div
-          className={`p-4 rounded-xl text-sm font-medium flex items-start justify-between gap-3 animate-in fade-in duration-150 ${
+          className={`p-4 rounded-xl text-sm font-medium flex items-start justify-between gap-3 ${
             publishFeedback.type === 'success'
-              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 shadow-lg shadow-emerald-950/40'
-              : 'bg-rose-950/90 border border-rose-500/70 text-rose-200 shadow-lg shadow-rose-950/40'
+              ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+              : 'bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
           }`}
         >
           <div className="flex items-start gap-2.5">
             {publishFeedback.type === 'success' ? (
-              <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             ) : (
-              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
             )}
             <span className="whitespace-pre-line leading-relaxed">{publishFeedback.message}</span>
           </div>
-          <button onClick={() => setPublishFeedback(null)} className="text-xs underline opacity-80 hover:opacity-100 shrink-0 cursor-pointer">
+          <button onClick={() => setPublishFeedback(null)} className="text-xs font-semibold underline opacity-80 hover:opacity-100 shrink-0 cursor-pointer">
             Dismiss
           </button>
         </div>
@@ -2910,9 +2886,9 @@ export function PublishAssessmentSection({
 
       <form onSubmit={handlePublish} className="space-y-6">
         {/* Publish Name */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-          <label className="block text-xs font-semibold uppercase text-slate-400">
-            Test Name
+        <div className="p-5 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-2xs">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            Test Name <span className="text-rose-500">*</span>
           </label>
           <input
             type="text"
@@ -2920,7 +2896,7 @@ export function PublishAssessmentSection({
             placeholder="e.g. Class 7 Reasoning & Thinking Test - September"
             value={publishName}
             onChange={(e) => setPublishName(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-base text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-medium transition-colors"
           />
         </div>
 
@@ -2929,16 +2905,16 @@ export function PublishAssessmentSection({
           <button
             type="button"
             onClick={() => setPublishMode('Selected Questions')}
-            className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
+            className={`p-5 rounded-xl border text-left transition-colors cursor-pointer shadow-2xs ${
               publishMode === 'Selected Questions'
-                ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-600 dark:border-indigo-500 shadow-sm ring-1 ring-indigo-600/30'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
+                ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-500/20'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
             }`}
           >
             <div className="flex items-center justify-between mb-2">
               <span className={`font-bold text-base ${
                 publishMode === 'Selected Questions'
-                  ? 'text-indigo-700 dark:text-indigo-400'
+                  ? 'text-indigo-900 dark:text-indigo-300'
                   : 'text-slate-900 dark:text-white'
               }`}>
                 Selected Questions
@@ -2946,13 +2922,13 @@ export function PublishAssessmentSection({
               <Layers className={`w-5 h-5 ${
                 publishMode === 'Selected Questions'
                   ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-slate-400 dark:text-slate-400'
+                  : 'text-slate-400'
               }`} />
             </div>
             <p className={`text-xs leading-relaxed ${
               publishMode === 'Selected Questions'
-                ? 'text-slate-700 dark:text-slate-300'
-                : 'text-slate-600 dark:text-slate-400'
+                ? 'text-indigo-950/80 dark:text-slate-300'
+                : 'text-slate-500 dark:text-slate-400'
             }`}>
               Choose specific questions from the Question Bank. You can shuffle question order and preview questions.
             </p>
@@ -2961,16 +2937,16 @@ export function PublishAssessmentSection({
           <button
             type="button"
             onClick={() => setPublishMode('Random Questions')}
-            className={`p-5 rounded-2xl border text-left transition-all cursor-pointer ${
+            className={`p-5 rounded-xl border text-left transition-colors cursor-pointer shadow-2xs ${
               publishMode === 'Random Questions'
-                ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-600 dark:border-indigo-500 shadow-sm ring-1 ring-indigo-600/30'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
+                ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-500 dark:border-indigo-500 ring-2 ring-indigo-500/20'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
             }`}
           >
             <div className="flex items-center justify-between mb-2">
               <span className={`font-bold text-base ${
                 publishMode === 'Random Questions'
-                  ? 'text-indigo-700 dark:text-indigo-400'
+                  ? 'text-indigo-900 dark:text-indigo-300'
                   : 'text-slate-900 dark:text-white'
               }`}>
                 Random Questions
@@ -2978,13 +2954,13 @@ export function PublishAssessmentSection({
               <Shuffle className={`w-5 h-5 ${
                 publishMode === 'Random Questions'
                   ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-slate-400 dark:text-slate-400'
+                  : 'text-slate-400'
               }`} />
             </div>
             <p className={`text-xs leading-relaxed ${
               publishMode === 'Random Questions'
-                ? 'text-slate-700 dark:text-slate-300'
-                : 'text-slate-600 dark:text-slate-400'
+                ? 'text-indigo-950/80 dark:text-slate-300'
+                : 'text-slate-500 dark:text-slate-400'
             }`}>
               Automatically picks questions based on each student's past performance and prevents repeat questions.
             </p>
@@ -2992,21 +2968,21 @@ export function PublishAssessmentSection({
         </div>
 
         {/* Target Configuration: Multiple Targets with Multi-Select Dropdowns */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="p-5 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-5 shadow-2xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-indigo-400" />
-                Targets
+              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                Target Students & Schools
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Choose schools, classes, sections, or individual students who can take this test.
               </p>
             </div>
             <button
               type="button"
               onClick={handleClearAllTargets}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-700/80 text-slate-300 hover:text-rose-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 hover:border-rose-200 text-slate-600 dark:text-slate-400 hover:text-rose-600 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Clear All
@@ -3015,9 +2991,9 @@ export function PublishAssessmentSection({
 
           {/* List of independent targets */}
           {targets.length === 0 ? (
-            <div className="p-8 rounded-xl border border-dashed border-slate-800 text-center bg-slate-950/40 space-y-2">
-              <p className="text-xs text-slate-400">
-                No groups added yet. Click <strong>+ Add Group</strong> below to choose who can take this test.
+            <div className="p-8 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-950/40 space-y-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                No groups added yet. Click <strong>+ Add Target Group</strong> below to choose who can take this test.
               </p>
             </div>
           ) : (
@@ -3042,32 +3018,32 @@ export function PublishAssessmentSection({
             <button
               type="button"
               onClick={handleAddTarget}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-indigo-300 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-2xs"
             >
-              <Plus className="w-4 h-4 text-indigo-400" />
-              + Add Group
+              <Plus className="w-4 h-4" />
+              + Add Target Group
             </button>
           </div>
         </div>
 
         {/* Availability Window */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-          <h3 className="font-bold text-base text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-400" />
+        <div className="p-5 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
+          <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             Test Dates & Times
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Date</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Start Date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white outline-none"
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">Start Time (12-Hour AM/PM)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Start Time (12-Hour AM/PM)</label>
               <Time12HourPicker
                 id="publish-start-time"
                 value={startTime}
@@ -3075,16 +3051,16 @@ export function PublishAssessmentSection({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">End Date</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">End Date</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white outline-none"
+                className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">End Time (12-Hour AM/PM)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">End Time (12-Hour AM/PM)</label>
               <Time12HourPicker
                 id="publish-end-time"
                 value={endTime}
@@ -3094,33 +3070,33 @@ export function PublishAssessmentSection({
           </div>
 
           {/* Formatted live availability preview */}
-          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs font-mono text-slate-300">
-            <Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-xs font-mono text-slate-700 dark:text-slate-300">
+            <Clock className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span>
-              Available Window: <strong className="text-white font-semibold">{formatAvailabilityWindow(startDate, startTime, endDate, endTime)}</strong>
+              Available Window: <strong className="text-slate-900 dark:text-white font-semibold">{formatAvailabilityWindow(startDate, startTime, endDate, endTime)}</strong>
             </span>
           </div>
         </div>
 
         {/* Selected Questions vs Random Questions Configuration */}
         {publishMode === 'Selected Questions' ? (
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-5 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
             {/* Header: Title, Selected Count, Shuffle Toggle & Preview Button */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className="font-bold text-base text-white">Choose Questions</h3>
-                <p className="text-xs text-slate-400">
-                  Selected: <strong className="text-indigo-400">{selectedQuestionsForPublish.length}</strong> questions
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Choose Questions</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Selected: <strong className="text-indigo-600 dark:text-indigo-400 font-semibold">{selectedQuestionsForPublish.length}</strong> questions
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-300 select-none">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300 select-none">
                   <input
                     type="checkbox"
                     checked={shuffleQuestions}
                     onChange={(e) => setShuffleQuestions(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 cursor-pointer"
                   />
                   <span>Shuffle Questions</span>
                 </label>
@@ -3129,7 +3105,7 @@ export function PublishAssessmentSection({
                   type="button"
                   disabled={selectedQuestionsForPublish.length === 0}
                   onClick={() => setShowPreviewModal(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-semibold transition-colors disabled:opacity-40 cursor-pointer shadow-2xs"
                 >
                   <Play className="w-3.5 h-3.5" />
                   Preview Test ({selectedQuestionsForPublish.length})
@@ -3146,13 +3122,13 @@ export function PublishAssessmentSection({
                   placeholder="Search questions..."
                   value={questionPickerSearch}
                   onChange={(e) => setQuestionPickerSearch(e.target.value)}
-                  className="w-full pl-10 pr-8 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full pl-10 pr-8 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-colors"
                 />
                 {questionPickerSearch && (
                   <button
                     type="button"
                     onClick={() => setQuestionPickerSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs cursor-pointer"
                   >
                     &times;
                   </button>
@@ -3163,14 +3139,14 @@ export function PublishAssessmentSection({
                 <button
                   type="button"
                   onClick={handleExpandAll}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:border-slate-600 transition-colors text-[11px] font-medium cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors text-[11px] font-medium cursor-pointer shadow-2xs"
                 >
                   Expand All
                 </button>
                 <button
                   type="button"
                   onClick={handleCollapseAll}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:border-slate-600 transition-colors text-[11px] font-medium cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors text-[11px] font-medium cursor-pointer shadow-2xs"
                 >
                   Collapse All
                 </button>
@@ -3178,8 +3154,8 @@ export function PublishAssessmentSection({
             </div>
 
             {/* Select All Groups Header Bar */}
-            <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/80 flex items-center justify-between">
-              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-white select-none">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-900 dark:text-white select-none">
                 <TriStateCheckbox
                   checked={isAllGroupsChecked}
                   indeterminate={isAllGroupsIndeterminate}
@@ -3188,12 +3164,12 @@ export function PublishAssessmentSection({
                 />
                 <span>Select All Groups</span>
                 {allVisibleQuestionIds.length > 0 && (
-                  <span className="text-[11px] font-mono text-slate-400 font-normal">
+                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-normal">
                     ({allVisibleQuestionIds.length} Questions Available)
                   </span>
                 )}
               </label>
-              <span className="text-xs font-mono text-indigo-400">
+              <span className="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400">
                 {selectedQuestionsForPublish.length} Selected
               </span>
             </div>
@@ -3215,20 +3191,20 @@ export function PublishAssessmentSection({
                   return (
                     <div
                       key={group.groupName}
-                      className="rounded-xl bg-slate-800/40 border border-slate-700/60 overflow-hidden"
+                      className="rounded-lg bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700/60 overflow-hidden shadow-2xs"
                     >
                       {/* Group Header */}
-                      <div className="p-3 bg-slate-800/80 hover:bg-slate-800 flex items-center justify-between gap-3 border-b border-slate-700/50">
+                      <div className="p-3 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700/50 transition-colors">
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
                           {/* Expand/Collapse Toggle */}
                           <button
                             type="button"
                             onClick={() => toggleGroupExpand(group.groupName)}
-                            className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                             title={isGroupExpanded ? 'Collapse Group' : 'Expand Group'}
                           >
                             {isGroupExpanded ? (
-                              <ChevronDown className="w-4 h-4 text-indigo-400" />
+                              <ChevronDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                             ) : (
                               <ChevronRight className="w-4 h-4 text-slate-400" />
                             )}
@@ -3245,14 +3221,14 @@ export function PublishAssessmentSection({
                           {/* Group Name & Count */}
                           <span
                             onClick={() => toggleGroupExpand(group.groupName)}
-                            className="font-bold text-sm text-white cursor-pointer truncate hover:text-indigo-300 transition-colors"
+                            className="font-bold text-sm text-slate-900 dark:text-white cursor-pointer truncate hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
                           >
                             {group.groupName}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-900 text-slate-300 border border-slate-700">
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                             {selectedInGroupCount} / {groupQIds.length} Selected
                           </span>
                         </div>
@@ -3260,7 +3236,7 @@ export function PublishAssessmentSection({
 
                       {/* Group Difficulties Container */}
                       {isGroupExpanded && (
-                        <div className="p-3 space-y-2.5 bg-slate-900/40">
+                        <div className="p-3 space-y-2.5 bg-slate-50/50 dark:bg-slate-900/40">
                           {group.difficulties.map((diff) => {
                             const diffKey = `${group.groupName}::${diff.difficulty}`;
                             const isDiffExpanded = expandedDifficulties.has(diffKey);
@@ -3275,27 +3251,27 @@ export function PublishAssessmentSection({
 
                             const diffBadgeClass =
                               diff.difficulty === 'Easy'
-                                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                 : diff.difficulty === 'Hard'
-                                ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                                : 'bg-amber-950/80 text-amber-300 border-amber-800';
+                                ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                : 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
 
                             return (
                               <div
                                 key={diffKey}
-                                className="rounded-lg bg-slate-800/30 border border-slate-700/40 overflow-hidden ml-2 sm:ml-4"
+                                className="rounded-lg bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/40 overflow-hidden ml-2 sm:ml-4 shadow-2xs"
                               >
                                 {/* Difficulty Header */}
-                                <div className="p-2.5 bg-slate-800/50 hover:bg-slate-800/70 flex items-center justify-between gap-2.5">
+                                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 flex items-center justify-between gap-2.5 transition-colors">
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <button
                                       type="button"
                                       onClick={() => toggleDifficultyExpand(diffKey)}
-                                      className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                      className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                                       title={isDiffExpanded ? 'Collapse Difficulty' : 'Expand Difficulty'}
                                     >
                                       {isDiffExpanded ? (
-                                        <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                                        <ChevronDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                                       ) : (
                                         <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                                       )}
@@ -3310,20 +3286,20 @@ export function PublishAssessmentSection({
 
                                     <span
                                       onClick={() => toggleDifficultyExpand(diffKey)}
-                                      className={`text-xs font-semibold px-2 py-0.5 rounded border cursor-pointer ${diffBadgeClass}`}
+                                      className={`text-xs font-semibold px-2 py-0.5 rounded border cursor-pointer font-mono ${diffBadgeClass}`}
                                     >
                                       {diff.difficulty}
                                     </span>
                                   </div>
 
-                                  <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
                                     {selectedInDiffCount} / {diffQIds.length} Selected
                                   </span>
                                 </div>
 
                                 {/* Individual Questions List (Selected Questions Mode Only) */}
                                 {isDiffExpanded && (
-                                  <div className="p-2.5 space-y-1.5 bg-slate-950/30 ml-3 border-t border-slate-700/30">
+                                  <div className="p-2.5 space-y-1.5 bg-slate-50/50 dark:bg-slate-950/30 ml-3 border-t border-slate-200 dark:border-slate-700/30">
                                     {diff.questions.map((q) => {
                                       const isQuestionSelected = selectedQuestionsSet.has(q.id);
 
@@ -3331,10 +3307,10 @@ export function PublishAssessmentSection({
                                         <div
                                           key={q.id}
                                           onClick={() => handleToggleQuestion(q.id)}
-                                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-3 cursor-pointer transition-colors ${
                                             isQuestionSelected
-                                              ? 'bg-indigo-950/40 border-indigo-500/80 text-white ring-1 ring-indigo-500/40'
-                                              : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:border-slate-600 hover:bg-slate-800/50'
+                                              ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-500/80 text-slate-900 dark:text-white ring-1 ring-indigo-500/30'
+                                              : 'bg-white dark:bg-slate-800/30 border-slate-200 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                           }`}
                                         >
                                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -3343,19 +3319,19 @@ export function PublishAssessmentSection({
                                               checked={isQuestionSelected}
                                               onChange={() => handleToggleQuestion(q.id)}
                                               onClick={(e) => e.stopPropagation()}
-                                              className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                                              className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 cursor-pointer"
                                             />
                                             <span className="font-medium truncate">{q.content}</span>
                                           </div>
 
                                           <div className="flex items-center gap-2 shrink-0 font-mono text-[10px]">
                                             {q.timeSeconds != null && q.timeSeconds > 0 && (
-                                              <span className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+                                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
                                                 {q.timeSeconds}s
                                               </span>
                                             )}
                                             {q.points != null && q.points > 0 && (
-                                              <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold">
                                                 {q.points} pts
                                               </span>
                                             )}
@@ -3374,9 +3350,9 @@ export function PublishAssessmentSection({
                   );
                 })
               ) : (
-                <div className="p-6 rounded-xl bg-slate-800/40 border border-slate-700/60 text-center py-8">
-                  <HelpCircle className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                  <h4 className="text-sm font-semibold text-slate-300">
+                <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 text-center py-8">
+                  <HelpCircle className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
+                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-300">
                     {questionPickerSearch ? 'No matching questions found' : 'No questions available'}
                   </h4>
                   <p className="text-xs text-slate-500 mt-1">
@@ -3390,30 +3366,30 @@ export function PublishAssessmentSection({
 
             {/* Question Selection Configuration Summary */}
             {selectedSummaryData.length > 0 && (
-              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-400">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/60 pb-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
                     Question Selection Configuration
                   </h4>
-                  <span className="text-xs font-mono text-slate-300">
-                    Total Selected Questions: <strong className="text-white">{selectedQuestionsForPublish.length}</strong>
+                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300">
+                    Total Selected Questions: <strong className="text-slate-900 dark:text-white font-semibold">{selectedQuestionsForPublish.length}</strong>
                   </span>
                 </div>
                 <div className="space-y-2.5">
                   {selectedSummaryData.map((g) => (
                     <div
                       key={g.groupName}
-                      className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
+                      className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500"
                     >
-                      <div className="font-bold text-slate-200">{g.groupName}</div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200">{g.groupName}</div>
                       <div className="flex flex-wrap gap-2 pl-1">
                         {g.difficulties.map((d) => (
                           <div
                             key={d.difficulty}
-                            className="px-2.5 py-1 rounded bg-slate-700/60 border border-slate-600/70 text-slate-300 font-mono text-[11px] flex items-center gap-1.5"
+                            className="px-2.5 py-1 rounded bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600/70 text-slate-700 dark:text-slate-300 font-mono text-[11px] flex items-center gap-1.5 shadow-2xs"
                           >
-                            <span className="font-semibold text-white">{d.difficulty}</span>
-                            <span className="text-indigo-300 font-medium">
+                            <span className="font-semibold text-slate-900 dark:text-white">{d.difficulty}</span>
+                            <span className="text-indigo-600 dark:text-indigo-300 font-medium">
                               &mdash; {d.count} {d.count === 1 ? 'Question' : 'Questions'} Selected
                             </span>
                           </div>
@@ -3426,23 +3402,23 @@ export function PublishAssessmentSection({
             )}
           </div>
         ) : (
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+          <div className="p-5 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-5 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h3 className="font-bold text-base text-white">Random Test Settings</h3>
-                <p className="text-xs text-slate-400">
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Random Test Settings</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Choose question groups and difficulty levels. The system will automatically select suitable questions for each student.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <div className="text-xs font-mono text-indigo-300 px-3 py-1.5 rounded-xl bg-indigo-950 border border-indigo-800">
-                  Available Questions: <strong className="text-white">{randomEligiblePoolCount}</strong>
+                <div className="text-xs font-mono text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 font-medium">
+                  Available Questions: <strong className="text-slate-900 dark:text-white font-bold">{randomEligiblePoolCount}</strong>
                 </div>
                 <button
                   type="button"
                   disabled={previewQuestionsList.length === 0}
                   onClick={() => setShowPreviewModal(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-950 text-indigo-300 border border-indigo-700/80 hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-medium transition-all disabled:opacity-40 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 flex items-center gap-1.5 text-xs font-semibold transition-colors disabled:opacity-40 cursor-pointer shadow-2xs"
                 >
                   <Play className="w-3.5 h-3.5" />
                   Preview Test ({previewQuestionsList.length})
@@ -3452,7 +3428,7 @@ export function PublishAssessmentSection({
 
             <div className="space-y-2">
               <div className="max-w-xs">
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                   Questions per Student *
                 </label>
                 <input
@@ -3471,23 +3447,23 @@ export function PublishAssessmentSection({
                       setRandomCount(isNaN(num) ? '' : num);
                     }
                   }}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-colors"
                 />
               </div>
 
               {/* Immediate Validation Warning Banner */}
               {randomValidationWarning && (
-                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-200 text-xs flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                   <span className="font-medium">{randomValidationWarning}</span>
                 </div>
               )}
             </div>
 
-            {/* Hierarchical Group -> Difficulty Selection (No Individual Question Checkboxes in Random Mode) */}
+            {/* Hierarchical Group -> Difficulty Selection */}
             <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700/80">
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-white select-none">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-900 dark:text-white select-none">
                   <TriStateCheckbox
                     checked={isRandomAllGroupsChecked}
                     indeterminate={isRandomAllGroupsIndeterminate}
@@ -3496,7 +3472,7 @@ export function PublishAssessmentSection({
                   />
                   <span>Select All Groups</span>
                   {allQuestions.length > 0 && (
-                    <span className="text-[11px] font-mono text-slate-400 font-normal">
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-normal">
                       ({allQuestions.length} Total questions in bank)
                     </span>
                   )}
@@ -3505,14 +3481,14 @@ export function PublishAssessmentSection({
                   <button
                     type="button"
                     onClick={handleExpandAll}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-medium cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[11px] font-medium cursor-pointer shadow-2xs"
                   >
                     Expand All
                   </button>
                   <button
                     type="button"
                     onClick={handleCollapseAll}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-medium cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[11px] font-medium cursor-pointer shadow-2xs"
                   >
                     Collapse All
                   </button>
@@ -3543,19 +3519,19 @@ export function PublishAssessmentSection({
                     return (
                       <div
                         key={group.groupName}
-                        className="rounded-xl bg-slate-800/40 border border-slate-700/60 overflow-hidden"
+                        className="rounded-lg bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700/60 overflow-hidden shadow-2xs"
                       >
                         {/* Group Header */}
-                        <div className="p-2.5 bg-slate-800/80 flex items-center justify-between gap-3">
+                        <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between gap-3 transition-colors">
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
                             <button
                               type="button"
                               onClick={() => toggleGroupExpand(group.groupName)}
-                              className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                               title={isGroupExpanded ? 'Collapse Group' : 'Expand Group'}
                             >
                               {isGroupExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-indigo-400" />
+                                <ChevronDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                               ) : (
                                 <ChevronRight className="w-4 h-4 text-slate-400" />
                               )}
@@ -3568,14 +3544,14 @@ export function PublishAssessmentSection({
                             />
                             <span
                               onClick={() => toggleGroupExpand(group.groupName)}
-                              className="font-bold text-sm text-white cursor-pointer truncate hover:text-indigo-300 transition-colors"
+                              className="font-bold text-sm text-slate-900 dark:text-white cursor-pointer truncate hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
                             >
                               {group.groupName}
                             </span>
                           </div>
-                          <span className="text-[11px] font-mono text-slate-400">
+                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                             {eligibleInGroupCount > 0 ? (
-                              <span className="text-indigo-300 font-semibold">
+                              <span className="text-indigo-600 dark:text-indigo-300 font-semibold">
                                 {eligibleInGroupCount} / {totalInGroupCount} questions selected
                               </span>
                             ) : (
@@ -3586,25 +3562,25 @@ export function PublishAssessmentSection({
 
                         {/* Difficulties in Random mode */}
                         {isGroupExpanded && (
-                          <div className="p-2.5 space-y-2 bg-slate-900/40 pl-6">
+                          <div className="p-2.5 space-y-2 bg-slate-50/50 dark:bg-slate-900/40 pl-6 border-t border-slate-200 dark:border-slate-800">
                             {group.difficulties.map((diff) => {
                               const diffKey = `${group.groupName}::${diff.difficulty}`;
                               const isDiffChecked = randomSelectedDifficulties.has(diffKey);
 
                               const diffBadgeClass =
                                 diff.difficulty === 'Easy'
-                                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                   : diff.difficulty === 'Hard'
-                                  ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                                  : 'bg-amber-950/80 text-amber-300 border-amber-800';
+                                  ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                  : 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800';
 
                               return (
                                 <div
                                   key={diffKey}
                                   className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${
                                     isDiffChecked
-                                      ? 'bg-indigo-950/30 border-indigo-500/50'
-                                      : 'bg-slate-800/30 border-slate-700/40'
+                                      ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-300 dark:border-indigo-500/50 ring-1 ring-indigo-500/20'
+                                      : 'bg-white dark:bg-slate-800/30 border-slate-200 dark:border-slate-700/40'
                                   }`}
                                 >
                                   <div className="flex items-center gap-2">
@@ -3616,12 +3592,12 @@ export function PublishAssessmentSection({
                                     />
                                     <span
                                       onClick={() => handleToggleRandomDifficulty(diffKey)}
-                                      className={`text-xs font-semibold px-2 py-0.5 rounded border cursor-pointer ${diffBadgeClass}`}
+                                      className={`text-xs font-semibold px-2 py-0.5 rounded border cursor-pointer font-mono ${diffBadgeClass}`}
                                     >
                                       {diff.difficulty}
                                     </span>
                                   </div>
-                                  <span className="text-[11px] font-mono text-slate-400">
+                                  <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                                     {diff.questions.length} questions available
                                   </span>
                                 </div>
@@ -3640,47 +3616,47 @@ export function PublishAssessmentSection({
 
             {/* Random Question Configuration Summary */}
             {randomSummaryData.length > 0 && (
-              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-400">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/60 pb-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
                     Random Test Summary
                   </h4>
-                  <span className="text-xs font-mono text-slate-300">
-                    Total Questions Available: <strong className="text-white">{randomEligiblePoolCount}</strong>
+                  <span className="text-xs font-mono text-slate-600 dark:text-slate-300">
+                    Total Questions Available: <strong className="text-slate-900 dark:text-white font-semibold">{randomEligiblePoolCount}</strong>
                   </span>
                 </div>
                 <div className="space-y-2.5">
                   {randomSummaryData.map((g) => (
                     <div
                       key={g.groupName}
-                      className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500/60"
+                      className="text-xs space-y-1.5 pl-3 border-l-2 border-indigo-500"
                     >
-                      <div className="font-bold text-slate-200">{g.groupName}</div>
+                      <div className="font-bold text-slate-800 dark:text-slate-200">{g.groupName}</div>
                       <div className="flex flex-wrap gap-2 pl-1">
                         {g.difficulties.map((d) => (
                           <div
                             key={d.difficulty}
-                            className="px-2.5 py-1 rounded bg-slate-700/60 border border-slate-600/70 text-slate-300 font-mono text-[11px] flex items-center gap-1.5"
+                            className="px-2.5 py-1 rounded bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600/70 text-slate-700 dark:text-slate-300 font-mono text-[11px] flex items-center gap-1.5 shadow-2xs"
                           >
-                            <span className="font-semibold text-white">{d.difficulty}</span>
-                            <span className="text-indigo-300 font-medium">({d.count} questions available)</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">{d.difficulty}</span>
+                            <span className="text-indigo-600 dark:text-indigo-300 font-medium">({d.count} questions available)</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-700/60 text-xs">
-                  <span className="text-slate-400 font-medium">Questions Per Student:</span>
-                  <span className="font-bold text-indigo-300 font-mono text-sm">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700/60 text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Questions Per Student:</span>
+                  <span className="font-bold text-indigo-600 dark:text-indigo-300 font-mono text-sm">
                     {randomCount !== '' ? randomCount : '—'}
                   </span>
                 </div>
               </div>
             )}
 
-            <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300 space-y-1">
-              <p className="font-semibold text-indigo-300">How Random Questions Work:</p>
+            <div className="p-3.5 rounded-lg bg-indigo-50/70 dark:bg-slate-850 border border-indigo-100 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+              <p className="font-semibold text-indigo-700 dark:text-indigo-300">How Random Questions Work:</p>
               <p>&bull; New student &rarr; Starts with Easy questions</p>
               <p>&bull; Score of 70% or more on Easy &rarr; Moves to Medium questions</p>
               <p>&bull; Score of 70% or more on Medium &rarr; Moves to Hard questions</p>
@@ -3695,7 +3671,7 @@ export function PublishAssessmentSection({
             <button
               type="button"
               onClick={onCancelEdit}
-              className="py-3.5 px-6 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-sm cursor-pointer border border-slate-700"
+              className="py-3 px-6 rounded-lg font-semibold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors text-sm cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs"
             >
               Cancel Edit
             </button>
@@ -3704,9 +3680,9 @@ export function PublishAssessmentSection({
           <button
             type="submit"
             disabled={isSubmitting || schools.length === 0}
-            className="flex-1 py-3.5 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 transition-all text-base disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+            className="flex-1 py-3 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 h-4" />
             {isSubmitting
               ? isEditMode
                 ? 'Updating Test...'
@@ -3733,16 +3709,16 @@ export function PublishAssessmentSection({
       )}
       {/* Save Template Modal */}
       {showSaveTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                   <BookmarkPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Save Test</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Save Test</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Save your current questions and student settings for later use
                   </p>
                 </div>
@@ -3750,7 +3726,7 @@ export function PublishAssessmentSection({
               <button
                 type="button"
                 onClick={() => setShowSaveTemplateModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3758,8 +3734,8 @@ export function PublishAssessmentSection({
 
             <form onSubmit={handleSaveTemplate} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase text-slate-300">
-                  Saved Test Name <span className="text-rose-400">*</span>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Saved Test Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -3771,56 +3747,56 @@ export function PublishAssessmentSection({
                     setTemplateNameInput(e.target.value);
                     if (saveTemplateError) setSaveTemplateError(null);
                   }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-colors"
                 />
               </div>
 
               {/* Template Configuration Preview */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
-                <div className="flex items-center justify-between text-slate-400">
+              <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                   <span>Test Type:</span>
-                  <span className="font-semibold text-white">{publishMode}</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{publishMode}</span>
                 </div>
-                <div className="flex items-center justify-between text-slate-400">
+                <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                   <span>{publishMode === 'Selected Questions' ? 'Selected Questions:' : 'Random Count:'}</span>
-                  <span className="font-mono font-semibold text-indigo-400">
+                  <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400">
                     {publishMode === 'Selected Questions'
                       ? `${selectedQuestionsForPublish.length} questions`
                       : `${randomCount !== '' ? randomCount : 'Not set'} questions / student`}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-slate-400">
+                <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                   <span>Groups:</span>
-                  <span className="font-semibold text-white">{targets.length} group(s)</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{targets.length} group(s)</span>
                 </div>
-                <div className="flex items-center justify-between text-slate-400">
+                <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                   <span>Shuffle Questions:</span>
-                  <span className="font-semibold text-white">{shuffleQuestions ? 'Enabled' : 'Disabled'}</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{shuffleQuestions ? 'Enabled' : 'Disabled'}</span>
                 </div>
-                <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-500 italic">
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 text-[11px] text-slate-500 italic">
                   Note: Test name, dates, and times are not saved in this template.
                 </div>
               </div>
 
               {saveTemplateError && (
-                <div className="p-3 rounded-xl bg-rose-950/90 border border-rose-500/70 text-rose-200 text-xs flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                   <span>{saveTemplateError}</span>
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowSaveTemplateModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingTemplate || !templateNameInput.trim()}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/30"
+                  className="px-4.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
                 >
                   {isSavingTemplate ? (
                     <>
@@ -3842,16 +3818,16 @@ export function PublishAssessmentSection({
 
       {/* Saved Templates List / Management Modal */}
       {showSavedTemplatesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-2xl max-h-[85vh] flex flex-col space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                   <Bookmark className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Saved Tests</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Saved Tests</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Choose a saved test to load questions and groups into the form
                   </p>
                 </div>
@@ -3859,7 +3835,7 @@ export function PublishAssessmentSection({
               <button
                 type="button"
                 onClick={() => setShowSavedTemplatesModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3874,7 +3850,7 @@ export function PublishAssessmentSection({
                   placeholder="Search saved tests..."
                   value={templateSearch}
                   onChange={(e) => setTemplateSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-colors"
                 />
               </div>
             )}
@@ -3882,15 +3858,15 @@ export function PublishAssessmentSection({
             {/* Templates List */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {isLoadingTemplates ? (
-                <div className="py-12 text-center text-slate-400 space-y-2">
-                  <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <div className="py-12 text-center text-slate-500 space-y-2">
+                  <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
                   <p className="text-xs">Loading saved tests...</p>
                 </div>
               ) : savedTemplates.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 space-y-3">
-                  <Bookmark className="w-10 h-10 text-slate-600 mx-auto" />
+                  <Bookmark className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
                   <div>
-                    <p className="text-sm font-semibold text-slate-300">No Saved Tests</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-300">No Saved Tests</p>
                     <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
                       Choose questions and students, then click Save Test to save them for later.
                     </p>
@@ -3909,24 +3885,23 @@ export function PublishAssessmentSection({
                 }
                 return filtered.map((tpl) => {
                   const tplId = tpl.id || tpl._id;
-                  const isDeleting = isDeletingTemplate && templateToDelete?.id === tplId;
                   const targetCount = Array.isArray(tpl.targets) ? tpl.targets.length : 0;
                   const qCount = Array.isArray(tpl.selectedQuestionIds) ? tpl.selectedQuestionIds.length : 0;
 
                   return (
                     <div
                       key={tplId}
-                      className="p-4 rounded-xl bg-slate-800/60 border border-slate-700/80 hover:border-slate-600 transition-all space-y-3"
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 transition-colors space-y-3 shadow-2xs"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                             <span>{tpl.name}</span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                               {tpl.publishMode}
                             </span>
                           </h4>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mt-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1">
                             <span>
                               {tpl.publishMode === 'Selected Questions'
                                 ? `${qCount} Question(s)`
@@ -3937,7 +3912,7 @@ export function PublishAssessmentSection({
                             {tpl.shuffleQuestions && (
                               <>
                                 <span>&bull;</span>
-                                <span className="text-indigo-400">Shuffle Enabled</span>
+                                <span className="text-indigo-600 dark:text-indigo-400 font-medium">Shuffle Enabled</span>
                               </>
                             )}
                           </div>
@@ -3947,7 +3922,7 @@ export function PublishAssessmentSection({
                           <button
                             type="button"
                             onClick={() => setTemplateToDelete({ id: tplId, name: tpl.name })}
-                            className="p-2 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-300 text-slate-400 border border-slate-700 hover:border-rose-800 transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-rose-200 transition-colors cursor-pointer shadow-2xs"
                             title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -3955,7 +3930,7 @@ export function PublishAssessmentSection({
                           <button
                             type="button"
                             onClick={() => handleSelectTemplate(tpl)}
-                            className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
                           >
                             <FolderDown className="w-3.5 h-3.5" />
                             <span>Load Test</span>
@@ -3965,7 +3940,7 @@ export function PublishAssessmentSection({
 
                       {/* Target configurations summary inside card */}
                       {Array.isArray(tpl.targets) && tpl.targets.length > 0 && (
-                        <div className="pt-2 border-t border-slate-800 space-y-1 text-[11px] text-slate-400">
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
                           {tpl.targets.map((tgt: any, idx: number) => {
                             const sch = tgt.selectedSchoolIds?.includes('ALL')
                               ? 'All Schools'
@@ -3982,7 +3957,7 @@ export function PublishAssessmentSection({
 
                             return (
                               <div key={idx} className="flex items-center gap-2 truncate">
-                                <span className="text-indigo-400 font-mono font-bold shrink-0">T{idx + 1}:</span>
+                                <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold shrink-0">T{idx + 1}:</span>
                                 <span className="truncate">{sch} &bull; {cls} &bull; {sec} &bull; {stu}</span>
                               </div>
                             );
@@ -3995,11 +3970,11 @@ export function PublishAssessmentSection({
               })()}
             </div>
 
-            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setShowSavedTemplatesModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
+                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors"
               >
                 Close
               </button>
@@ -4010,26 +3985,26 @@ export function PublishAssessmentSection({
 
       {/* Delete Template Confirmation Modal */}
       {templateToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-rose-500/50 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
-                <Trash2 className="w-6 h-6" />
+              <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 shrink-0">
+                <Trash2 className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">Delete Saved Test?</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Are you sure you want to delete the saved test <strong className="text-white">'{templateToDelete.name}'</strong>? This cannot be undone.
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Saved Test?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Are you sure you want to delete the saved test <strong className="text-slate-900 dark:text-white font-semibold">'{templateToDelete.name}'</strong>? This action cannot be undone.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setTemplateToDelete(null)}
                 disabled={isDeletingTemplate}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer border border-slate-200 dark:border-slate-700 disabled:opacity-50 shadow-2xs transition-colors"
               >
                 Cancel
               </button>
@@ -4037,7 +4012,7 @@ export function PublishAssessmentSection({
                 type="button"
                 onClick={handleConfirmDeleteTemplate}
                 disabled={isDeletingTemplate}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold cursor-pointer shadow-lg shadow-rose-600/30 flex items-center gap-1.5 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-50 transition-colors"
               >
                 {isDeletingTemplate ? (
                   <>
@@ -4058,40 +4033,40 @@ export function PublishAssessmentSection({
 
       {/* Confirmation Overwrite Alert Modal */}
       {showOverwriteAlert && pendingTemplateToLoad && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-amber-500/50 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
-                <AlertTriangle className="w-6 h-6" />
+              <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">Replace Current Choices?</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Replace Current Choices?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   You already have choices selected. Loading this test will replace your current questions and student groups. Do you want to continue?
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-              <div className="text-slate-400">Test to load:</div>
-              <div className="font-semibold text-white">{pendingTemplateToLoad.name}</div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <div className="text-slate-500 dark:text-slate-400">Test to load:</div>
+              <div className="font-semibold text-slate-900 dark:text-white">{pendingTemplateToLoad.name}</div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => {
                   setShowOverwriteAlert(false);
                   setPendingTemplateToLoad(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer border border-slate-700"
+                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => applyTemplate(pendingTemplateToLoad)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer shadow-lg shadow-indigo-600/30"
+                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
               >
                 Load Test
               </button>

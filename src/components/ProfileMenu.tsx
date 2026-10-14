@@ -132,23 +132,23 @@ export function ProfileMenu({
   const getRoleBadge = () => {
     if (role === 'super_admin') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20">
-          <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-400 font-mono">
+          <ShieldCheck className="w-3 h-3 text-indigo-600 dark:text-indigo-400 shrink-0" />
           Super Admin
         </span>
       );
     }
     if (role === 'school_admin') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-          <School className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 font-mono">
+          <School className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
           School Admin
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20">
-        <GraduationCap className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 dark:text-violet-400 font-mono">
+        <GraduationCap className="w-3 h-3 text-violet-600 dark:text-violet-400 shrink-0" />
         Student
       </span>
     );
@@ -167,12 +167,10 @@ export function ProfileMenu({
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label="User Profile and Settings Menu"
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700/80 transition-all text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-colors text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs"
       >
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-sm">
-          <span className="font-bold text-xs" style={{ color: '#ffffff' }}>
-            {displayName.charAt(0).toUpperCase()}
-          </span>
+        <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          {displayName.charAt(0).toUpperCase()}
         </div>
         <div className="hidden sm:flex flex-col text-left">
           <span className="text-xs font-semibold text-slate-900 dark:text-white leading-tight max-w-[120px] truncate">
@@ -183,7 +181,7 @@ export function ProfileMenu({
           </span>
         </div>
         <ChevronDown 
-          className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
 
@@ -208,10 +206,8 @@ export function ProfileMenu({
           <div className="p-4 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-md">
-                  <span className="font-bold text-sm" style={{ color: '#ffffff' }}>
-                    {displayName.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0">
+                  {displayName.charAt(0).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{displayName}</h4>

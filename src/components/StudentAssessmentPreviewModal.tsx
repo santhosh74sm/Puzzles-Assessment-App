@@ -180,19 +180,27 @@ export function StudentAssessmentPreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col my-4 max-h-[94vh] overflow-hidden text-slate-900 dark:text-slate-100"
+        className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-4xl shadow-xl flex flex-col my-4 max-h-[94vh] overflow-hidden text-slate-900 dark:text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header with Close Button */}
-        <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-violet-900 text-white px-4 py-2 text-xs flex items-center justify-end font-mono shrink-0 border-b border-indigo-700/50">
+        {/* Top Header */}
+        <div className="bg-white dark:bg-slate-900 px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+              Preview Mode
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-xs sm:max-w-md">
+              Student experience simulation
+            </span>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-indigo-200 hover:text-white p-1 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Close Preview"
           >
             <X className="w-4 h-4" />
@@ -202,9 +210,9 @@ export function StudentAssessmentPreviewModal({
         {/* Modal Scrollable Container */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {activeQuestions.length === 0 ? (
-            <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 my-6 shadow-sm">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800/60">
-                <AlertTriangle className="w-7 h-7" />
+            <div className="p-8 sm:p-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 my-6 shadow-2xs">
+              <div className="w-12 h-12 mx-auto rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800/60">
+                <AlertTriangle className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 No questions available to preview
@@ -216,7 +224,7 @@ export function StudentAssessmentPreviewModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-medium text-sm text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                  className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-semibold text-xs text-white shadow-2xs transition-colors cursor-pointer"
                 >
                   Close Preview
                 </button>
@@ -224,14 +232,14 @@ export function StudentAssessmentPreviewModal({
             </div>
           ) : isCompleted ? (
             /* Completed Preview Screen */
-            <div className="p-8 rounded-3xl bg-gradient-to-b from-indigo-50/80 to-white dark:from-indigo-950/80 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/40 text-center shadow-2xl space-y-4 my-6">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-100 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-500/40 shadow-xl">
-                <Trophy className="w-8 h-8" />
+            <div className="p-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center shadow-2xs space-y-4 my-6">
+              <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800/40">
+                <Trophy className="w-6 h-6" />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Preview Completed!
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Preview Completed
               </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto">
                 You have reached the end of the student preview for <strong>{title}</strong>. In the real student portal, the student's attempt would now be submitted.
               </p>
 
@@ -239,14 +247,14 @@ export function StudentAssessmentPreviewModal({
                 <button
                   type="button"
                   onClick={handleResetPreview}
-                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-all cursor-pointer border border-slate-700"
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
                 >
                   Restart Preview
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-medium text-sm text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                  className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 font-semibold text-xs text-white shadow-2xs transition-colors cursor-pointer"
                 >
                   Close Preview
                 </button>
@@ -256,7 +264,7 @@ export function StudentAssessmentPreviewModal({
             /* Active Question Screen (Student Experience) */
             <div className="space-y-6">
               {/* Top Game Bar */}
-              <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-sm">
+              <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-xl shadow-2xs">
                 <div className="min-w-0 flex-1">
                   <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block truncate">
                     {title} {subtitle ? `· ${subtitle}` : ''}
@@ -323,7 +331,7 @@ export function StudentAssessmentPreviewModal({
                       currentWrittenExplanationRef.current = val;
                     }}
                     placeholder="Write your reason here..."
-                    className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all resize-y min-h-[80px]"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors resize-y min-h-[80px] shadow-2xs"
                   />
                 </div>
               )}
@@ -335,13 +343,13 @@ export function StudentAssessmentPreviewModal({
                     <button
                       type="button"
                       onClick={handlePrevious}
-                      className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 shadow-2xs"
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span>Previous Question</span>
                     </button>
                   )}
-                  <span className="text-xs text-slate-500 font-mono">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                     Question {currentIndex + 1} of {activeQuestions.length}
                   </span>
                 </div>
@@ -349,19 +357,12 @@ export function StudentAssessmentPreviewModal({
                 <button
                   type="button"
                   onClick={() => handleAdvance(false)}
-                  className="next-question-btn w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer shrink-0"
-                  style={{
-                    backgroundColor: '#4f46e5',
-                    color: '#ffffff',
-                  }}
+                  className="next-question-btn w-full sm:w-auto px-5 py-2.5 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-colors cursor-pointer shrink-0"
                 >
-                  <span
-                    className="next-question-btn-text text-white"
-                    style={{ backgroundColor: 'transparent', color: '#ffffff' }}
-                  >
+                  <span className="next-question-btn-text text-white">
                     {currentIndex < activeQuestions.length - 1 ? 'Next Question' : 'Finish Preview'}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
+                  <ArrowRight className="w-4 h-4 text-white" />
                 </button>
               </div>
             </div>

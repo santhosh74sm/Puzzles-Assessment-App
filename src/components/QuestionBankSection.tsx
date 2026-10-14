@@ -73,64 +73,63 @@ function ReadOnlyQuestionDetailCard({
     : null;
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm hover:border-slate-700/80 transition-colors">
+    <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3.5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
       {/* Top Meta Header: Question #, Group, Difficulty, Type, Points, Time Limit */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-800">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
           {index != null && (
-            <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-bold">
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold font-mono text-[11px]">
               Q{index + 1}
             </span>
           )}
-          <span className="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-semibold font-sans">
-            Group: {effectiveGroup}
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
+            {effectiveGroup}
           </span>
+          <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
           <span
-            className={`px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider text-[10px] border ${
+            className={`font-semibold ${
               effectiveDifficulty === 'Easy'
-                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                ? 'text-emerald-700 dark:text-emerald-400'
                 : effectiveDifficulty === 'Hard'
-                ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                ? 'text-rose-700 dark:text-rose-400'
+                : 'text-amber-700 dark:text-amber-400'
             }`}
           >
             {effectiveDifficulty}
           </span>
           {hasOptions && (
-            <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium font-sans">
-              Choice: {typeDisplay}
-              {hasSpecificType ? ` (${q.questionType})` : ''}
-            </span>
+            <>
+              <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
+              <span className="text-slate-600 dark:text-slate-400">
+                {typeDisplay}
+                {hasSpecificType ? ` (${q.questionType})` : ''}
+              </span>
+            </>
           )}
           {Boolean(q.enableWrittenExplanation) && (
-            <span className="px-2.5 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-700/80 font-medium font-sans">
-              Written Explanation: Enabled
-            </span>
+            <>
+              <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
+              <span className="text-indigo-700 dark:text-indigo-400 font-medium">
+                Written Explanation Enabled
+              </span>
+            </>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-mono tabular-nums">
           {q.points != null && q.points > 0 ? (
-            <span className="px-2.5 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center gap-1 font-bold">
-              <Award className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
+              <Award className="w-3.5 h-3.5" />
               {q.points} pts
             </span>
-          ) : (
-            <span className="px-2.5 py-0.5 rounded-md bg-slate-800/80 text-slate-400 border border-slate-700/80 text-[11px]">
-              Points: Not Applicable
-            </span>
-          )}
+          ) : null}
 
           {q.timeSeconds != null && q.timeSeconds > 0 ? (
-            <span className="px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
               {q.timeSeconds}s
             </span>
-          ) : (
-            <span className="px-2.5 py-0.5 rounded-md bg-slate-800/80 text-slate-400 border border-slate-700/80 text-[11px]">
-              Time Limit: Not Applicable
-            </span>
-          )}
+          ) : null}
 
           {(onEdit || onDelete) && (
             <div className="flex items-center gap-1.5 ml-auto sm:ml-2">
@@ -138,10 +137,10 @@ function ReadOnlyQuestionDetailCard({
                 <button
                   type="button"
                   onClick={() => onEdit(q)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white flex items-center gap-1 text-xs font-sans font-medium transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-xs font-sans font-medium transition-colors shadow-2xs cursor-pointer"
                   title="Edit question"
                 >
-                  <Edit className="w-3.5 h-3.5 text-indigo-400" />
+                  <Edit className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Edit</span>
                 </button>
               )}
@@ -149,7 +148,7 @@ function ReadOnlyQuestionDetailCard({
                 <button
                   type="button"
                   onClick={() => onDelete(q)}
-                  className="px-2.5 py-1 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 flex items-center gap-1 text-xs font-sans font-medium transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-200 dark:hover:border-rose-900 flex items-center gap-1 text-xs font-sans font-medium transition-colors shadow-2xs cursor-pointer"
                   title="Delete question"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -163,10 +162,10 @@ function ReadOnlyQuestionDetailCard({
 
       {/* Question Text */}
       <div>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
           Question Text
         </span>
-        <p className="text-white font-medium text-sm sm:text-base leading-relaxed">
+        <p className="text-slate-900 dark:text-slate-100 font-medium text-sm sm:text-base leading-relaxed">
           {q.content}
         </p>
       </div>
@@ -174,16 +173,16 @@ function ReadOnlyQuestionDetailCard({
       {/* Answer Choices / Options */}
       {hasOptions && (
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
             Answer Choices / Options
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {q.options.map((opt: string, optIdx: number) => (
               <div
                 key={optIdx}
-                className="px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/70 text-slate-200 text-xs flex items-center gap-2.5"
+                className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/70 text-slate-800 dark:text-slate-200 text-xs flex items-center gap-2.5"
               >
-                <span className="w-5 h-5 rounded-full bg-slate-700 text-slate-300 font-bold flex items-center justify-center text-[10px] shrink-0 font-mono">
+                <span className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-[10px] shrink-0 font-mono">
                   {String.fromCharCode(65 + optIdx)}
                 </span>
                 <span className="truncate">{opt}</span>
@@ -195,16 +194,16 @@ function ReadOnlyQuestionDetailCard({
 
       {/* Correct Answer */}
       <div>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
           Correct Answer
         </span>
         {hasCorrectAnswer ? (
-          <div className="px-3 py-2 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs flex items-center gap-2 font-semibold">
-            <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <div className="px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 font-semibold">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{correctAnswerDisplay}</span>
           </div>
         ) : (
-          <span className="text-xs text-slate-500 italic px-2.5 py-1 rounded-lg bg-slate-800/40 border border-slate-800 inline-block font-mono">
+          <span className="text-xs text-slate-500 dark:text-slate-400 italic px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 inline-block font-mono">
             Not Applicable
           </span>
         )}
@@ -690,23 +689,30 @@ export function QuestionBankSection({
     <div className="space-y-8 max-w-7xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Questions</span>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Question Bank & Groups</h2>
-        <p className="text-sm text-slate-400">
-          Create question groups (such as Creativity, Thinking, Reasoning, Aptitude), set difficulty levels (Easy, Medium, Hard), and add questions.
+        <span className="text-xs font-mono uppercase text-indigo-600 dark:text-indigo-400 font-semibold tracking-wider">
+          Curriculum & Questions
+        </span>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-0.5">
+          Question Bank & Groups
+        </h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-3xl">
+          Organize questions into subject groups (such as Creativity, Thinking, Reasoning, Aptitude), calibrate difficulty tiers (Easy, Medium, Hard), and maintain answer keys.
         </p>
       </div>
 
       {feedbackMessage && (
         <div
-          className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between ${
+          className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between shadow-2xs ${
             feedbackMessage.type === 'success'
-              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
-              : 'bg-rose-950/80 border border-rose-500/50 text-rose-300'
+              ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-800 dark:text-rose-300'
           }`}
         >
           <span>{feedbackMessage.text}</span>
-          <button onClick={() => setFeedbackMessage(null)} className="text-xs underline opacity-80 hover:opacity-100">
+          <button
+            onClick={() => setFeedbackMessage(null)}
+            className="text-xs underline opacity-80 hover:opacity-100 cursor-pointer"
+          >
             Dismiss
           </button>
         </div>
@@ -715,14 +721,14 @@ export function QuestionBankSection({
       {/* Top Row: Create Group & Create Question */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Create Group */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-          <h3 className="font-bold text-lg text-white flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-indigo-400" />
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+          <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+            <PlusCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             Add Question Group
           </h3>
           <form onSubmit={handleCreateGroup} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Group Name
               </label>
               <input
@@ -731,25 +737,25 @@ export function QuestionBankSection({
                 placeholder="e.g. Aptitude, Creativity, Thinking"
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Description
               </label>
               <textarea
                 rows={3}
-                placeholder="Short description of this group"
+                placeholder="Short description of this question group"
                 value={newGroupDesc}
                 onChange={(e) => setNewGroupDesc(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none transition-colors"
               />
             </div>
             <button
               type="submit"
               disabled={isSubmittingGroup}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+              className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
             >
               {isSubmittingGroup ? 'Creating Group...' : '+ Create Group'}
             </button>
@@ -757,30 +763,30 @@ export function QuestionBankSection({
         </div>
 
         {/* Create / Edit Question */}
-        <div id="question-form-container" className="lg:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+        <div id="question-form-container" className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg text-white flex items-center gap-2">
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
               {editingQuestionItem ? (
                 <>
-                  <Edit className="w-5 h-5 text-indigo-400" />
+                  <Edit className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   Edit Question
                 </>
               ) : (
                 <>
-                  <PlusCircle className="w-5 h-5 text-indigo-400" />
+                  <PlusCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   Add Question
                 </>
               )}
             </h3>
             {editingQuestionItem && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-mono">
+              <span className="text-xs px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-mono font-medium">
                 Editing Question
               </span>
             )}
           </div>
           <form onSubmit={handleCreateQuestion} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Group
               </label>
               <select
@@ -790,7 +796,7 @@ export function QuestionBankSection({
                     : (sortedQuestionGroups[0]?.id || '')
                 }
                 onChange={(e) => setQuestionForm({ ...questionForm, groupId: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               >
                 {sortedQuestionGroups.length === 0 ? (
                   <option value="">No question groups</option>
@@ -805,13 +811,13 @@ export function QuestionBankSection({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Difficulty
               </label>
               <select
                 value={questionForm.difficulty}
                 onChange={(e) => setQuestionForm({ ...questionForm, difficulty: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               >
                 <option value="Easy">Easy</option>
                 <option value="Medium">Medium</option>
@@ -820,8 +826,8 @@ export function QuestionBankSection({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Time Limit in Seconds <span className="text-slate-500 normal-case">(Optional)</span>
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
+                Time Limit <span className="text-slate-400 normal-case">(Seconds, Optional)</span>
               </label>
               <input
                 type="number"
@@ -829,12 +835,12 @@ export function QuestionBankSection({
                 placeholder="e.g. 30"
                 value={questionForm.timeSeconds}
                 onChange={(e) => setQuestionForm({ ...questionForm, timeSeconds: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors font-mono"
               />
             </div>
 
             <div className="sm:col-span-2 md:col-span-3">
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Question Text
               </label>
               <input
@@ -843,13 +849,13 @@ export function QuestionBankSection({
                 placeholder="e.g. Decode the hidden word puzzle from emojis: ☀️ + 👓 = ?"
                 value={questionForm.content}
                 onChange={(e) => setQuestionForm({ ...questionForm, content: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Points <span className="text-slate-500 normal-case">(Optional)</span>
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
+                Points <span className="text-slate-400 normal-case">(Optional)</span>
               </label>
               <input
                 type="number"
@@ -857,65 +863,67 @@ export function QuestionBankSection({
                 placeholder="e.g. 10"
                 value={questionForm.points}
                 onChange={(e) => setQuestionForm({ ...questionForm, points: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Correct Answer <span className="text-slate-500 normal-case">(Optional)</span>
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
+                Correct Answer <span className="text-slate-400 normal-case">(Optional)</span>
               </label>
               <input
                 type="text"
                 placeholder="e.g. Sunglasses"
                 value={questionForm.correctAnswer}
                 onChange={(e) => setQuestionForm({ ...questionForm, correctAnswer: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
-                Answer Choices <span className="text-slate-500 normal-case">(Optional, comma-separated)</span>
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
+                Answer Choices <span className="text-slate-400 normal-case">(Comma-separated)</span>
               </label>
               <input
                 type="text"
                 placeholder="Sunglasses, Sunlight, Hot Day, Beach"
                 value={questionForm.options}
                 onChange={(e) => setQuestionForm({ ...questionForm, options: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               />
-              <label className="mt-2.5 flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={questionForm.multipleSelection}
-                  onChange={(e) => setQuestionForm({ ...questionForm, multipleSelection: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                />
-                <span className="text-xs font-medium text-slate-300">
-                  Multiple Selection
-                </span>
-              </label>
-              <label className="mt-2.5 flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={questionForm.enableWrittenExplanation}
-                  onChange={(e) => setQuestionForm({ ...questionForm, enableWrittenExplanation: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                />
-                <span className="text-xs font-medium text-slate-300">
-                  Enable Written Explanation
-                </span>
-              </label>
+              <div className="flex flex-col sm:flex-row gap-3 mt-2.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={questionForm.multipleSelection}
+                    onChange={(e) => setQuestionForm({ ...questionForm, multipleSelection: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Multiple Selection
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={questionForm.enableWrittenExplanation}
+                    onChange={(e) => setQuestionForm({ ...questionForm, enableWrittenExplanation: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Enable Written Explanation
+                  </span>
+                </label>
+              </div>
             </div>
 
-            <div className="sm:col-span-2 md:col-span-3 flex items-center justify-end gap-3">
+            <div className="sm:col-span-2 md:col-span-3 flex items-center justify-end gap-3 pt-2">
               {editingQuestionItem && (
                 <button
                   type="button"
                   onClick={handleCancelEditQuestion}
                   disabled={isSubmittingQuestion}
-                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-sm transition-all border border-slate-700 disabled:opacity-50 cursor-pointer"
+                  className="px-5 py-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-sm transition-colors border border-slate-200 dark:border-slate-700 shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -923,7 +931,7 @@ export function QuestionBankSection({
               <button
                 type="submit"
                 disabled={isSubmittingQuestion || questionGroups.length === 0}
-                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
               >
                 {isSubmittingQuestion
                   ? 'Saving...'
@@ -939,8 +947,11 @@ export function QuestionBankSection({
       {/* Question Groups Breakdown (View Mode) */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
-          <h3 className="font-bold text-lg text-white">Question Groups Summary</h3>
-          <span className="font-bold text-lg text-black">
+          <div>
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Question Groups Summary</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Total collection breakdown across active groups</p>
+          </div>
+          <span className="text-sm font-semibold font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-md border border-slate-200 dark:border-slate-700 tabular-nums">
             Total Questions: {allQuestions.length}
           </span>
         </div>
@@ -951,38 +962,38 @@ export function QuestionBankSection({
               return (
                 <div
                   key={grp.id || grp._id}
-                  className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between"
+                  className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-white truncate">{grp.name}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{grp.name}</span>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-1">{grp.description || 'No description'}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{grp.description || 'No description'}</p>
 
                     <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-                      <div className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60">
-                        <span className="text-xs text-emerald-400 block font-semibold">Easy</span>
-                        <span className="text-base font-bold text-white">{breakdown.Easy.count}</span>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block font-semibold">Easy</span>
+                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">{breakdown.Easy.count}</span>
                       </div>
-                      <div className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60">
-                        <span className="text-xs text-amber-400 block font-semibold">Medium</span>
-                        <span className="text-base font-bold text-white">{breakdown.Medium.count}</span>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <span className="text-[11px] text-amber-700 dark:text-amber-400 block font-semibold">Medium</span>
+                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">{breakdown.Medium.count}</span>
                       </div>
-                      <div className="p-2 rounded-xl bg-slate-800/70 border border-slate-700/60">
-                        <span className="text-xs text-rose-400 block font-semibold">Hard</span>
-                        <span className="text-base font-bold text-white">{breakdown.Hard.count}</span>
+                      <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                        <span className="text-[11px] text-rose-700 dark:text-rose-400 block font-semibold">Hard</span>
+                        <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">{breakdown.Hard.count}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={() => {
                         setViewGroupModal(grp);
                         setModalSearch('');
                       }}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 hover:bg-indigo-900 flex items-center justify-center gap-1 transition-all flex-1 cursor-pointer"
+                      className="text-xs px-2.5 py-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 flex items-center justify-center gap-1 transition-colors flex-1 font-medium cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       View
@@ -994,7 +1005,7 @@ export function QuestionBankSection({
                         setEditGroupName(grp.name);
                         setEditGroupError(null);
                       }}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700/80 hover:bg-slate-700 hover:text-white flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      className="text-xs px-2.5 py-1.5 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1 transition-colors font-medium cursor-pointer"
                       title={`Edit group ${grp.name}`}
                     >
                       <Edit className="w-3.5 h-3.5" />
@@ -1003,7 +1014,7 @@ export function QuestionBankSection({
                     <button
                       type="button"
                       onClick={() => setDeletingGroup({ ...grp, breakdown })}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-rose-950/40 text-rose-400 border border-rose-800/40 hover:bg-rose-900 hover:text-white hover:border-rose-600 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      className="text-xs px-2.5 py-1.5 rounded-md bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-200 dark:hover:border-rose-900 flex items-center justify-center gap-1 transition-colors font-medium cursor-pointer"
                       title={`Delete group ${grp.name}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1015,9 +1026,9 @@ export function QuestionBankSection({
             })}
           </div>
         ) : (
-          <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-center py-12">
-            <Layers className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <h4 className="text-base font-semibold text-slate-300">No question groups yet</h4>
+          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center py-12">
+            <Layers className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
+            <h4 className="text-base font-semibold text-slate-800 dark:text-slate-300">No question groups yet</h4>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
               Use the form above to create your first question group.
             </p>
@@ -1028,31 +1039,32 @@ export function QuestionBankSection({
       {/* Read-Only Question Group View Modal */}
       {viewGroupModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto"
           onClick={() => {
             setViewGroupModal(null);
             setModalSearch('');
           }}
         >
           <div
-            className="w-full max-w-3xl bg-slate-900 border border-indigo-500/50 rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col my-8 space-y-5"
+            className="w-full max-w-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[90vh] flex flex-col my-8 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase tracking-wider">
+                  <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
                     Question Group Review
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">
+                  <span className="text-slate-300 dark:text-slate-700">·</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400 font-mono tabular-nums">
                     Total: {activeViewGroup?.breakdown?.total ?? 0} Questions
                   </span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span>{activeViewGroup?.name} Group</span>
                   {activeViewGroup?.description && (
-                    <span className="text-xs font-normal text-slate-400 font-sans line-clamp-1">
+                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-sans line-clamp-1">
                       &mdash; {activeViewGroup.description}
                     </span>
                   )}
@@ -1062,19 +1074,19 @@ export function QuestionBankSection({
               {/* Compact Search Field & Close Button */}
               <div className="flex items-center gap-2 self-stretch sm:self-auto">
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Search questions..."
                     value={modalSearch}
                     onChange={(e) => setModalSearch(e.target.value)}
-                    className="w-full pl-8 pr-8 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className="w-full pl-8 pr-8 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
                   />
                   {modalSearch && (
                     <button
                       type="button"
                       onClick={() => setModalSearch('')}
-                      className="absolute right-2.5 top-2 text-slate-400 hover:text-white text-xs cursor-pointer"
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs cursor-pointer"
                       title="Clear search"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -1087,7 +1099,7 @@ export function QuestionBankSection({
                     setViewGroupModal(null);
                     setModalSearch('');
                   }}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer shrink-0"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60 transition-colors cursor-pointer shrink-0"
                   title="Close Review"
                 >
                   <X className="w-4 h-4" />
@@ -1114,16 +1126,16 @@ export function QuestionBankSection({
 
                 if (searchLower && totalFiltered === 0) {
                   return (
-                    <div className="p-8 rounded-2xl bg-slate-800/40 border border-slate-800 text-center py-12 space-y-2">
-                      <HelpCircle className="w-10 h-10 text-slate-500 mx-auto mb-1" />
-                      <h4 className="text-base font-semibold text-slate-200">No questions found</h4>
-                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                    <div className="p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-center py-12 space-y-2">
+                      <HelpCircle className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-1" />
+                      <h4 className="text-base font-semibold text-slate-800 dark:text-slate-200">No questions found</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                         No questions in "{activeViewGroup?.name}" match your search query "{modalSearch}".
                       </p>
                       <button
                         type="button"
                         onClick={() => setModalSearch('')}
-                        className="mt-2 text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-indigo-400 hover:text-indigo-300 border border-slate-700 transition-colors cursor-pointer"
+                        className="mt-2 text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shadow-2xs font-medium"
                       >
                         Clear search
                       </button>
@@ -1138,23 +1150,23 @@ export function QuestionBankSection({
                     <div key={diff} className="space-y-3">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border font-mono ${
+                          className={`text-xs font-semibold px-2.5 py-0.5 rounded font-mono ${
                             diff === 'Easy'
-                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                               : diff === 'Hard'
-                              ? 'bg-rose-950/80 text-rose-300 border-rose-800'
-                              : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                              ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                              : 'bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                           }`}
                         >
-                          {diff}
+                          {diff} Tier
                         </span>
-                        <span className="text-xs font-mono text-slate-400">
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
                           ({questions.length}{searchLower ? ` of ${totalInTier}` : ''} {questions.length === 1 ? 'Question' : 'Questions'})
                         </span>
                       </div>
 
                       {questions.length > 0 ? (
-                        <div className="space-y-3 pl-2 border-l-2 border-slate-800">
+                        <div className="space-y-3 pl-2 border-l-2 border-slate-200 dark:border-slate-800">
                           {questions.map((q: any, qIdx: number) => (
                             <ReadOnlyQuestionDetailCard
                               key={q.id || q._id || qIdx}
@@ -1167,7 +1179,7 @@ export function QuestionBankSection({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-500 italic pl-3 border-l-2 border-slate-800 py-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 italic pl-3 border-l-2 border-slate-200 dark:border-slate-800 py-1">
                           {searchLower
                             ? `No ${diff.toLowerCase()} questions match your search.`
                             : `No questions in this difficulty level yet.`}
@@ -1180,8 +1192,8 @@ export function QuestionBankSection({
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
-              <span className="text-[11px] text-slate-400 font-mono">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 Click Edit or Delete on any question to manage it.
               </span>
               <button
@@ -1190,7 +1202,7 @@ export function QuestionBankSection({
                   setViewGroupModal(null);
                   setModalSearch('');
                 }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
               >
                 Close Review
               </button>
@@ -1202,27 +1214,27 @@ export function QuestionBankSection({
       {/* Read-Only Single Question View Modal */}
       {viewSingleQuestion && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto"
           onClick={() => setViewSingleQuestion(null)}
         >
           <div
-            className="w-full max-w-2xl bg-slate-900 border border-indigo-500/50 rounded-3xl p-6 shadow-2xl max-h-[90vh] flex flex-col my-8 space-y-5"
+            className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl max-h-[90vh] flex flex-col my-8 space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div className="space-y-0.5">
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold uppercase tracking-wider">
-                  Read-Only &bull; Question Review
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                  Question Review
                 </span>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   Question Details
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setViewSingleQuestion(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60 transition-colors cursor-pointer"
                 title="Close Review"
               >
                 <X className="w-4 h-4" />
@@ -1238,14 +1250,14 @@ export function QuestionBankSection({
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
-              <span className="text-[11px] text-slate-500 font-mono">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 Review is read-only. Questions cannot be edited from this view.
               </span>
               <button
                 type="button"
                 onClick={() => setViewSingleQuestion(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold cursor-pointer transition-colors"
+                className="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
               >
                 Close Review
               </button>
@@ -1256,70 +1268,70 @@ export function QuestionBankSection({
 
       {/* Delete Question Confirmation Dialog */}
       {deletingQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
             {/* Header */}
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-500/50 flex items-center justify-center shrink-0 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <span className="text-xs font-mono uppercase text-rose-400 tracking-wider font-semibold">
+                <span className="text-xs font-mono uppercase text-rose-600 dark:text-rose-400 tracking-wider font-semibold">
                   Delete Question
                 </span>
-                <h3 className="text-lg font-bold text-white mt-0.5">Delete this Question?</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">Delete this Question?</h3>
               </div>
               <button
                 onClick={() => !isDeletingQuestion && setDeletingQuestion(null)}
                 disabled={isDeletingQuestion}
-                className="text-slate-400 hover:text-white text-lg font-bold disabled:opacity-40"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg font-bold disabled:opacity-40 cursor-pointer"
               >
                 &times;
               </button>
             </div>
 
             {/* Question Item Summary */}
-            <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2.5">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-2.5">
               <div className="flex items-center gap-2 text-xs">
-                <span className="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-semibold">
+                <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-semibold">
                   {deletingQuestion.groupName || 'Unassigned Group'}
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded font-mono font-bold ${
                     deletingQuestion.difficulty === 'Easy'
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                      ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
                       : deletingQuestion.difficulty === 'Medium'
-                      ? 'bg-amber-950 text-amber-300 border border-amber-800/60'
-                      : 'bg-rose-950 text-rose-300 border border-rose-800/60'
+                      ? 'bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60'
+                      : 'bg-rose-50 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60'
                   }`}
                 >
                   {deletingQuestion.difficulty}
                 </span>
                 {deletingQuestion.points != null && (
-                  <span className="text-slate-400 font-mono text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 font-mono text-xs tabular-nums">
                     {deletingQuestion.points} pts
                   </span>
                 )}
                 {deletingQuestion.timeSeconds != null && (
-                  <span className="text-slate-400 font-mono text-xs">
+                  <span className="text-slate-600 dark:text-slate-400 font-mono text-xs tabular-nums">
                     {deletingQuestion.timeSeconds}s
                   </span>
                 )}
               </div>
 
-              <p className="text-sm font-medium text-white border-l-2 border-indigo-500 pl-2.5 py-0.5">
+              <p className="text-sm font-medium text-slate-900 dark:text-white border-l-2 border-indigo-500 pl-2.5 py-0.5">
                 "{deletingQuestion.content}"
               </p>
 
               {deletingQuestion.options && deletingQuestion.options.length > 0 && (
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-600 dark:text-slate-400">
                   <span className="text-slate-500 font-semibold">Options:</span>{' '}
                   {deletingQuestion.options.join(', ')}
                 </div>
               )}
 
               {deletingQuestion.correctAnswer != null && String(deletingQuestion.correctAnswer).trim() !== '' && (
-                <div className="text-xs text-emerald-400">
+                <div className="text-xs text-emerald-700 dark:text-emerald-400">
                   <span className="text-slate-500 font-semibold">Correct Answer:</span>{' '}
                   {typeof deletingQuestion.correctAnswer === 'object'
                     ? JSON.stringify(deletingQuestion.correctAnswer)
@@ -1330,17 +1342,17 @@ export function QuestionBankSection({
 
             {/* Safety & Warning Information */}
             <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <strong className="font-semibold text-amber-200">Delete Question:</strong> This question will be permanently removed and cannot be used in future tests.
+                  <strong className="font-semibold text-amber-950 dark:text-amber-200">Delete Question:</strong> This question will be permanently removed and cannot be used in future tests.
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-300 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" />
                 <div>
-                  <strong className="font-semibold text-indigo-200">Past Tests Safe:</strong> Any tests already created, student attempts, and past reports that used this question will stay saved.
+                  <strong className="font-semibold text-indigo-950 dark:text-indigo-200">Past Tests Safe:</strong> Any tests already created, student attempts, and past reports that used this question will stay saved.
                 </div>
               </div>
             </div>
@@ -1351,7 +1363,7 @@ export function QuestionBankSection({
                 type="button"
                 onClick={() => setDeletingQuestion(null)}
                 disabled={isDeletingQuestion}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs transition-colors border border-slate-200 dark:border-slate-700 shadow-2xs disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
@@ -1359,7 +1371,7 @@ export function QuestionBankSection({
                 type="button"
                 onClick={handleDeleteQuestion}
                 disabled={isDeletingQuestion}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 flex items-center gap-1.5"
+                className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {isDeletingQuestion ? (
                   <>Deleting Question...</>
@@ -1377,66 +1389,66 @@ export function QuestionBankSection({
 
       {/* Delete Question Group Confirmation Dialog */}
       {deletingGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
             {/* Header */}
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-500/50 flex items-center justify-center shrink-0 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <span className="text-xs font-mono uppercase text-rose-400 tracking-wider font-semibold">
+                <span className="text-xs font-mono uppercase text-rose-600 dark:text-rose-400 tracking-wider font-semibold">
                   Delete Question Group
                 </span>
-                <h3 className="text-lg font-bold text-white mt-0.5">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
                   Delete "{deletingGroup.name}"?
                 </h3>
               </div>
               <button
                 onClick={() => !isDeletingGroup && setDeletingGroup(null)}
                 disabled={isDeletingGroup}
-                className="text-slate-400 hover:text-white text-lg font-bold disabled:opacity-40"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg font-bold disabled:opacity-40 cursor-pointer"
               >
                 &times;
               </button>
             </div>
 
             {/* Clear Warning */}
-            <p className="text-sm text-slate-300">
-              This will permanently delete this group and <strong className="text-rose-400 font-semibold">ALL questions</strong> inside this group.
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              This will permanently delete this group and <strong className="text-rose-600 dark:text-rose-400 font-semibold">ALL questions</strong> inside this group.
             </p>
 
             {/* Group Summary Card */}
-            <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2.5">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-white truncate max-w-[280px]">
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-[280px]">
                   {deletingGroup.name}
                 </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-700/90 text-slate-300 font-medium">
+                <span className="text-xs px-2.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700/90 text-slate-700 dark:text-slate-300 font-medium font-mono tabular-nums">
                   {deletingGroup.breakdown?.total ?? deletingGroup.questionCount ?? 0} question(s) inside
                 </span>
               </div>
               {deletingGroup.description && (
-                <p className="text-xs text-slate-400 line-clamp-2">{deletingGroup.description}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{deletingGroup.description}</p>
               )}
 
               {/* Difficulty Breakdown Preview */}
               <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
-                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60">
-                  <span className="text-emerald-400 block font-semibold">Easy</span>
-                  <span className="text-sm font-bold text-white">
+                <div className="p-2 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700/60">
+                  <span className="text-emerald-700 dark:text-emerald-400 block font-semibold">Easy</span>
+                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
                     {deletingGroup.breakdown?.Easy?.count ?? deletingGroup.easyCount ?? 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60">
-                  <span className="text-amber-400 block font-semibold">Medium</span>
-                  <span className="text-sm font-bold text-white">
+                <div className="p-2 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700/60">
+                  <span className="text-amber-700 dark:text-amber-400 block font-semibold">Medium</span>
+                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
                     {deletingGroup.breakdown?.Medium?.count ?? deletingGroup.mediumCount ?? 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60">
-                  <span className="text-rose-400 block font-semibold">Hard</span>
-                  <span className="text-sm font-bold text-white">
+                <div className="p-2 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700/60">
+                  <span className="text-rose-700 dark:text-rose-400 block font-semibold">Hard</span>
+                  <span className="text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
                     {deletingGroup.breakdown?.Hard?.count ?? deletingGroup.hardCount ?? 0}
                   </span>
                 </div>
@@ -1445,17 +1457,17 @@ export function QuestionBankSection({
 
             {/* Safety & Warning Information */}
             <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/40 text-amber-300 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-300 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <strong className="font-semibold text-amber-200">Cascade Delete:</strong> All questions belonging to "{deletingGroup.name}" will be permanently deleted from the Question Bank.
+                  <strong className="font-semibold text-amber-950 dark:text-amber-200">Cascade Delete:</strong> All questions belonging to "{deletingGroup.name}" will be permanently deleted from the Question Bank.
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-indigo-300 flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-400" />
+              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 text-indigo-900 dark:text-indigo-300 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" />
                 <div>
-                  <strong className="font-semibold text-indigo-200">Past Tests Safe:</strong> Existing published tests, completed student attempts, and historical reports remain intact.
+                  <strong className="font-semibold text-indigo-950 dark:text-indigo-200">Past Tests Safe:</strong> Existing published tests, completed student attempts, and historical reports remain intact.
                 </div>
               </div>
             </div>
@@ -1466,7 +1478,7 @@ export function QuestionBankSection({
                 type="button"
                 onClick={() => setDeletingGroup(null)}
                 disabled={isDeletingGroup}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-all disabled:opacity-50 cursor-pointer"
+                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs transition-colors border border-slate-200 dark:border-slate-700 shadow-2xs disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
@@ -1474,7 +1486,7 @@ export function QuestionBankSection({
                 type="button"
                 onClick={handleDeleteGroup}
                 disabled={isDeletingGroup}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {isDeletingGroup ? (
                   <>Deleting Group...</>
@@ -1492,17 +1504,17 @@ export function QuestionBankSection({
 
       {/* Edit Question Group Modal (Group Name Only) */}
       {editingGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-950 text-indigo-400 border border-indigo-800/80 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80 flex items-center justify-center">
                   <Edit className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Edit Question Group</h3>
-                  <p className="text-xs text-slate-400">Update Question Group Name</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Edit Question Group</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Update Question Group Name</p>
                 </div>
               </div>
               <button
@@ -1514,23 +1526,23 @@ export function QuestionBankSection({
                   }
                 }}
                 disabled={isUpdatingGroup}
-                className="text-slate-400 hover:text-white text-lg font-bold disabled:opacity-40 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg font-bold disabled:opacity-40 cursor-pointer"
               >
                 &times;
               </button>
             </div>
 
             {editGroupError && (
-              <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/50 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                 <span>{editGroupError}</span>
               </div>
             )}
 
             <form onSubmit={handleUpdateGroupName} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Question Group Name <span className="text-rose-400">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Question Group Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1538,20 +1550,20 @@ export function QuestionBankSection({
                   onChange={(e) => setEditGroupName(e.target.value)}
                   placeholder="Enter new question group name"
                   disabled={isUpdatingGroup}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none disabled:opacity-50 transition-colors"
                   autoFocus
                 />
               </div>
 
               {/* Read-only info / Notice */}
-              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1.5 text-xs text-slate-400">
+              <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                 {editingGroup.description && (
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-slate-500 shrink-0">Description:</span>
-                    <span className="text-slate-400 text-right line-clamp-1">{editingGroup.description}</span>
+                    <span className="text-slate-700 dark:text-slate-300 text-right line-clamp-1">{editingGroup.description}</span>
                   </div>
                 )}
-                <p className="text-[11px] text-indigo-300/80 pt-1">
+                <p className="text-[11px] text-indigo-700 dark:text-indigo-300/80 pt-1">
                   Note: Only the group name will be updated. Questions, difficulty counts, and descriptions remain unchanged.
                 </p>
               </div>
@@ -1565,14 +1577,14 @@ export function QuestionBankSection({
                     setEditGroupError(null);
                   }}
                   disabled={isUpdatingGroup}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-all disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs transition-colors border border-slate-200 dark:border-slate-700 shadow-2xs disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdatingGroup || !editGroupName.trim()}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isUpdatingGroup ? (
                     'Saving...'

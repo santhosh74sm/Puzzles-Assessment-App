@@ -302,18 +302,20 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
       <aside className="w-full md:w-64 bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 p-4 shrink-0 flex flex-col justify-between">
         <div>
           {/* Brand Header */}
-          <div className="flex items-center justify-between px-3 py-2 md:py-4 md:border-b border-slate-200 dark:border-slate-800 md:mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0">
-                <Sparkles className="w-5 h-5" />
+          <div className="flex items-center justify-between px-3 py-2 md:py-3 md:border-b border-slate-200 dark:border-slate-800 md:mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs shrink-0">
+                <Layers className="w-4 h-4" />
               </div>
-              <div>
-                <h1 className="font-bold text-base leading-tight text-slate-900 dark:text-white">Super Admin</h1>
-                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono">Main Administrator</p>
+              <div className="min-w-0">
+                <h1 className="font-bold text-sm tracking-tight leading-tight text-slate-900 dark:text-white truncate">
+                  Puzzles Admin
+                </h1>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">Platform Console</p>
               </div>
             </div>
 
-            {/* Mobile-only Top Profile Button: clearly visible at the top, not inside or beside the Test History section */}
+            {/* Mobile-only Top Profile Button */}
             <div className="md:hidden shrink-0">
               <ProfileMenu 
                 user={currentUser || { username: 'Super Admin', role: 'super_admin' }} 
@@ -322,19 +324,19 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
             </div>
           </div>
 
-          {/* Strictly 5 Navigation Items - Desktop only, hidden on mobile */}
-          <nav className="hidden md:block space-y-1.5">
+          {/* Strictly 4 Navigation Items - Desktop only */}
+          <nav className="hidden md:block space-y-1">
             {/* 1. Schools & Students */}
             <button
               type="button"
               onClick={() => setActiveTab('schools')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'schools'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Building2 className="w-4 h-4 shrink-0" />
+              <Building2 className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
               <span className="truncate">Schools & Students</span>
             </button>
 
@@ -342,13 +344,13 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
             <button
               type="button"
               onClick={() => setActiveTab('question_bank')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'question_bank'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Layers className="w-4 h-4 shrink-0" />
+              <Layers className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
               <span className="truncate">Question Bank & Groups</span>
             </button>
 
@@ -356,13 +358,13 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
             <button
               type="button"
               onClick={() => setActiveTab('publish')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'publish'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Send className="w-4 h-4 shrink-0" />
+              <Send className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
               <span className="truncate">Publish Assessment</span>
             </button>
 
@@ -373,40 +375,40 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
                 setSelectedHistoryDetail(null);
                 setActiveTab('history');
               }}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'history'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <History className="w-4 h-4 shrink-0" />
+              <History className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
               <span className="truncate">Test History</span>
             </button>
           </nav>
         </div>
 
         {/* Sidebar Footer */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 text-xs text-slate-500 space-y-1 hidden md:block">
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1 hidden md:block">
           <div className="flex items-center justify-between">
-            <span>Role: Super Admin</span>
-            <span className="text-emerald-600 dark:text-emerald-500 text-[11px] font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
-            </span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Super Admin</span>
+            <span className="font-mono text-[10px] text-slate-400">v1.0</span>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-600">Puzzles Learning & Assessment</p>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">Academic Assessment Engine</p>
         </div>
       </aside>
 
       {/* Main Workspace Column */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Main Authenticated Header with Profile Menu - Desktop only; on mobile, duplicate heading is removed and only in-page heading is shown */}
-        <header className="hidden md:flex h-16 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 sm:px-6 items-center justify-between shrink-0 z-30">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-              {activeTab === 'schools' && 'Schools & Students'}
-              {activeTab === 'question_bank' && 'Question Bank & Groups'}
+        {/* Main Authenticated Header with Breadcrumbs & Profile Menu */}
+        <header className="hidden md:flex h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 items-center justify-between shrink-0 z-30">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-400 font-medium">Platform</span>
+            <span className="text-slate-300 dark:text-slate-600">/</span>
+            <h2 className="font-semibold text-slate-900 dark:text-white tracking-tight">
+              {activeTab === 'schools' && 'Schools & Students Management'}
+              {activeTab === 'question_bank' && 'Question Bank & Adaptive Groups'}
               {activeTab === 'publish' && 'Publish Assessment'}
-              {activeTab === 'history' && 'Test History'}
+              {activeTab === 'history' && 'Assessment History & Analytics'}
             </h2>
           </div>
           <div className="hidden md:block">

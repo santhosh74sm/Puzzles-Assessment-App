@@ -57,18 +57,16 @@ export function FlameMiniGameCanvas({
     if (!ctx) return;
 
     let animationFrameId: number;
-    let particles: { x: number; y: number; size: number; speedX: number; speedY: number; color: string }[] = [];
+    let particles: { x: number; y: number; size: number; speedX: number; speedY: number; opacity: number }[] = [];
 
-    const colors = ['#6366f1', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
-
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 24; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: Math.random() * 3 + 1,
-        speedX: (Math.random() - 0.5) * 0.8,
-        speedY: (Math.random() - 0.5) * 0.8,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        size: Math.random() * 2 + 1,
+        speedX: (Math.random() - 0.5) * 0.4,
+        speedY: (Math.random() - 0.5) * 0.4,
+        opacity: Math.random() * 0.25 + 0.1,
       });
     }
 
@@ -77,10 +75,10 @@ export function FlameMiniGameCanvas({
 
       // Subtle game grid backdrop
       ctx.strokeStyle = document.documentElement.classList.contains('light')
-        ? 'rgba(0, 0, 0, 0.08)'
-        : 'rgba(255, 255, 255, 0.05)';
+        ? 'rgba(99, 102, 241, 0.04)'
+        : 'rgba(255, 255, 255, 0.03)';
       ctx.lineWidth = 1;
-      const step = 30;
+      const step = 40;
       for (let x = 0; x < canvas.width; x += step) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -94,7 +92,7 @@ export function FlameMiniGameCanvas({
         ctx.stroke();
       }
 
-      // Draw floating particles
+      // Draw subtle focus particles
       particles.forEach((p) => {
         p.x += p.speedX;
         p.y += p.speedY;
@@ -104,7 +102,7 @@ export function FlameMiniGameCanvas({
         if (p.y < 0) p.y = canvas.height;
         if (p.y > canvas.height) p.y = 0;
 
-        ctx.fillStyle = p.color;
+        ctx.fillStyle = `rgba(99, 102, 241, ${p.opacity})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
@@ -168,8 +166,8 @@ export function FlameMiniGameCanvas({
   };
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl p-4 sm:p-6 text-slate-900 dark:text-white">
-      {/* Background Animated Canvas (Flame visual effect engine) */}
+    <div className="relative w-full rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-7 text-slate-900 dark:text-white">
+      {/* Background Animated Canvas (Subtle focus field) */}
       <canvas
         ref={canvasRef}
         width={800}
@@ -178,15 +176,17 @@ export function FlameMiniGameCanvas({
       />
 
       {/* Header bar inside puzzle arena */}
-      <div className="relative z-10 flex items-center justify-between border-b border-slate-800/80 pb-4 mb-6">
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            Puzzle
+      <div className="relative z-10 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3 mb-5">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <span className="font-semibold text-indigo-600 dark:text-indigo-400">Assessment Challenge</span>
+          <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
+          <span>{answerType === 'multiple' ? 'Multiple Selection' : pairs && pairs.length > 0 ? 'Match Pairs' : 'Single Choice'}</span>
+        </div>
+        {points != null && points > 0 ? (
+          <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {points} Points
           </span>
-        </div>
-        <div className="flex items-center gap-2 font-mono text-sm">
-          <span className="text-slate-400">Puzzle Area</span>
-        </div>
+        ) : null}
       </div>
 
       {/* Main Interactive Gameplay Area */}
@@ -195,40 +195,42 @@ export function FlameMiniGameCanvas({
         {pairs && pairs.length > 0 ? (
           <div className="space-y-4">
             <div className="text-center py-1">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">{content}</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
-                Choose an item on the left, then pick its match on the right:
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2 text-balance leading-relaxed">
+                {content}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                Select an item on the left, then pick its corresponding match on the right:
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-6 max-w-xl mx-auto">
-              <div className="space-y-3">
-                <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-2">Item</span>
+              <div className="space-y-2.5">
+                <span className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold block mb-1">Items</span>
                 {pairs.map((p, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setSelectedLeft(p.left)}
                     disabled={disabled}
-                    className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                       selectedLeft === p.left
-                        ? 'bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-500/30 ring-2 ring-indigo-400'
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs ring-2 ring-indigo-500/30'
                         : matchState[p.left]
-                        ? 'bg-slate-800/90 border-emerald-500/50 text-emerald-300'
-                        : 'bg-slate-800/60 border-slate-700 hover:border-slate-500 text-slate-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-semibold'
+                        : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-400 text-slate-800 dark:text-slate-200 shadow-xs'
                     }`}
                   >
                     <div className="flex justify-between items-center">
                       <span>{p.left}</span>
                       {matchState[p.left] && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-400">Matched</span>
+                        <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-mono">Matched</span>
                       )}
                     </div>
                   </button>
                 ))}
               </div>
 
-              <div className="space-y-3">
-                <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-2">Match</span>
+              <div className="space-y-2.5">
+                <span className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold block mb-1">Matches</span>
                 {pairs.map((p, idx) => (
                   <button
                     key={idx}
@@ -240,10 +242,10 @@ export function FlameMiniGameCanvas({
                       }
                     }}
                     disabled={disabled || !selectedLeft}
-                    className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    className={`w-full text-left px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium transition-colors ${
                       selectedLeft
-                        ? 'bg-slate-800 border-indigo-500/60 hover:bg-indigo-950/40 cursor-pointer animate-pulse'
-                        : 'bg-slate-800/40 border-slate-800 text-slate-400 cursor-not-allowed'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 cursor-pointer'
+                        : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed'
                     }`}
                   >
                     <span>{p.right}</span>
@@ -255,8 +257,8 @@ export function FlameMiniGameCanvas({
             {/* Currently mapped status */}
             <div className="flex flex-wrap gap-2 justify-center mt-3">
               {Object.entries(matchState).map(([k, v]) => (
-                <span key={k} className="text-xs px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                  {k} &rarr; <strong className="text-indigo-400">{v}</strong>
+                <span key={k} className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-mono">
+                  {k} &rarr; <strong className="text-indigo-600 dark:text-indigo-400 font-semibold">{v}</strong>
                 </span>
               ))}
             </div>
@@ -264,20 +266,22 @@ export function FlameMiniGameCanvas({
         ) : (
           /* Multiple Choice or Text Answer */
           <div className="space-y-6">
-            <div className="text-center py-2">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-2">{content}</h3>
+            <div className="text-center py-1">
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2 leading-relaxed text-balance">
+                {content}
+              </h3>
             </div>
 
             {options && options.length > 0 ? (
               <div className="space-y-4 max-w-2xl mx-auto">
                 {isMultiple && (
                   <div className="flex items-center justify-center">
-                    <span className="text-xs font-medium px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-700/60 text-indigo-300">
-                      Multiple Selection &bull; Select any number of choices
+                    <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                      Select all choices that apply
                     </span>
                   </div>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {options.map((opt, idx) => {
                     const isSelected = isMultiple ? selectedList.includes(opt) : selectedAnswer === opt;
                     return (
@@ -286,55 +290,38 @@ export function FlameMiniGameCanvas({
                         type="button"
                         onClick={() => (isMultiple ? handleMultipleOptionToggle(opt) : handleOptionClick(opt))}
                         disabled={disabled}
-                        className={`relative flex items-center gap-3 p-4 rounded-xl border text-left font-medium transition-all cursor-pointer ${
+                        className={`relative flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border text-left font-medium transition-colors cursor-pointer shadow-xs ${
                           isSelected
-                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 border-indigo-400 text-white shadow-xl shadow-indigo-500/20 ring-2 ring-indigo-400 selected-answer-option'
-                            : 'bg-white hover:bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-200 unselected-answer-option'
+                            ? 'bg-indigo-600 dark:bg-indigo-700 border-indigo-600 text-white selected-answer-option ring-2 ring-indigo-500/20'
+                            : 'bg-white hover:bg-slate-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 hover:border-indigo-400 text-slate-900 dark:text-slate-100 unselected-answer-option'
                         }`}
-                        style={
-                          isSelected
-                            ? {
-                                backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
-                                backgroundColor: '#4f46e5',
-                                borderColor: '#818cf8',
-                                color: '#ffffff',
-                              }
-                            : isDark
-                            ? {
-                                backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                                borderColor: 'rgba(51, 65, 85, 0.8)',
-                                color: '#ffffff',
-                              }
-                            : {
-                                backgroundColor: '#ffffff',
-                                color: '#0f172a',
-                              }
-                        }
                       >
                         {isMultiple && (
                           <div
-                            className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 transition-all border ${
+                            className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold shrink-0 transition-all border ${
                               isSelected
                                 ? 'bg-white text-indigo-600 border-white shadow-xs'
                                 : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400'
                             }`}
                           >
-                            {isSelected ? <Check className="w-4 h-4 text-indigo-600 stroke-[3]" style={{ backgroundColor: '#4d2ec9' }} /> : null}
+                            {isSelected ? <Check className="w-3.5 h-3.5 text-indigo-600 stroke-[3]" /> : null}
                           </div>
                         )}
                         <span
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-all bg-white border border-slate-200 dark:border-white/10 shadow-xs option-letter-badge"
-                          style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+                          className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 font-mono transition-colors ${
+                            isSelected
+                              ? 'bg-white text-indigo-600 font-bold'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                          }`}
                         >
                           {String.fromCharCode(65 + idx)}
                         </span>
                         <span
-                          className={`text-base flex-1 ${
+                          className={`text-sm sm:text-base flex-1 ${
                             isSelected
-                              ? 'font-bold text-white selected-answer-text'
-                              : 'font-medium text-slate-900 dark:text-slate-200 unselected-answer-text'
+                              ? 'font-bold text-white'
+                              : 'font-medium text-slate-900 dark:text-slate-200'
                           }`}
-                          style={isSelected || isDark ? { color: '#ffffff' } : { color: '#0f172a' }}
                         >
                           {opt}
                         </span>
@@ -351,7 +338,7 @@ export function FlameMiniGameCanvas({
                   value={selectedAnswer || ''}
                   onChange={(e) => onAnswerSubmit(e.target.value)}
                   disabled={disabled}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                 />
               </div>
             )}

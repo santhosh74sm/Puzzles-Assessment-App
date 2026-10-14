@@ -400,24 +400,26 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 h-16 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 font-bold">
+      <header className="sticky top-0 z-40 h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs font-bold text-xs shrink-0">
             P
           </div>
           <div className="min-w-0">
-            <h1 className="font-bold text-sm text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">{studentProfile?.studentName || studentProfile?.username || user?.studentName || user?.username}</h1>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-mono truncate max-w-[140px] sm:max-w-xs">
-              {studentProfile?.className || user?.className} ({studentProfile?.section || user?.section}) &bull; {studentProfile?.schoolName || user?.schoolName}
+            <h1 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs">
+              {studentProfile?.studentName || studentProfile?.username || user?.studentName || user?.username}
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[140px] sm:max-w-xs">
+              Class {studentProfile?.className || user?.className}{studentProfile?.section || user?.section ? ` (${studentProfile?.section || user?.section})` : ''} &bull; {studentProfile?.schoolName || user?.schoolName}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden sm:block text-right text-xs font-mono">
-            <span className="text-slate-500 dark:text-slate-400 block">Student ID: {studentProfile?.uniqueStudentId || user?.uniqueStudentId}</span>
+          <div className="hidden sm:block text-right text-[11px] font-mono tabular-nums">
+            <span className="text-slate-500 dark:text-slate-400 block">ID: {studentProfile?.uniqueStudentId || user?.uniqueStudentId}</span>
             {(studentProfile?.schoolAdmissionNumber || user?.schoolAdmissionNumber) && (
-              <span className="text-slate-500 dark:text-slate-400 block">Adm No: {studentProfile?.schoolAdmissionNumber || user?.schoolAdmissionNumber}</span>
+              <span className="text-slate-400 dark:text-slate-500 block">Adm: {studentProfile?.schoolAdmissionNumber || user?.schoolAdmissionNumber}</span>
             )}
           </div>
           <ProfileMenu 
@@ -448,29 +450,33 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
         {/* 1. TEST RESULT SUMMARY BANNER */}
         {testResult && (
-          <div className="mb-8 p-8 rounded-3xl bg-gradient-to-b from-indigo-50/80 to-white dark:from-indigo-950/80 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/40 text-center shadow-2xl space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-100 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-500/40 shadow-xl">
-              <Trophy className="w-8 h-8" />
+          <div className="mb-8 p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center shadow-xs space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center shadow-xs">
+              <Trophy className="w-6 h-6" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Test Completed!</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Your answers have been submitted to your school.
-            </p>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Assessment Completed
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Your responses have been successfully recorded and submitted to your institution.
+              </p>
+            </div>
 
-            <div className="max-w-xs mx-auto pt-2">
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-sm">
-                <span className="text-xs text-slate-500 dark:text-slate-400 block font-semibold">Status</span>
-                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-300 font-mono">
-                  Submitted
+            <div className="max-w-xs mx-auto pt-1">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold uppercase tracking-wider">Submission Status</span>
+                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  Submitted & Scored
                 </span>
               </div>
             </div>
 
             <button
               onClick={() => setTestResult(null)}
-              className="mt-6 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-medium text-sm text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+              className="mt-4 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-semibold text-xs text-white shadow-xs transition-colors cursor-pointer"
             >
-              Back to Dashboard
+              Back to Assessments
             </button>
           </div>
         )}
@@ -479,27 +485,27 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
         {activeTest && currentQ && (
           <div className="space-y-6">
             {/* Top Game Bar */}
-            <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 sm:p-4 rounded-xl shadow-xs">
               <div className="min-w-0 flex-1">
-                <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block truncate">
+                <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-medium block truncate">
                   {activeTest.publishName}
                 </span>
-                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white truncate">
+                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
                   Question {currentQuestionIndex + 1} of {activeTest.questions.length}
                 </h3>
               </div>
 
               {/* Per-Question Countdown Timer - Only shown when configured */}
-              <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 {currentQ.timeAllowedSeconds != null && currentQ.timeAllowedSeconds > 0 && (
                   <div
-                    className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl font-mono text-sm sm:text-base font-bold transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs sm:text-sm font-semibold tabular-nums transition-colors ${
                       timeRemaining <= 5
-                        ? 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/40 animate-pulse'
-                        : 'bg-slate-100 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border border-slate-200 dark:border-slate-700'
+                        ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
                     <span>{timeRemaining}s</span>
                   </div>
                 )}
@@ -508,7 +514,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 <button
                   type="button"
                   onClick={handleAbandonTest}
-                  className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold transition-all cursor-pointer shrink-0"
+                  className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 text-xs font-semibold transition-colors cursor-pointer shrink-0"
                   title="Abandon attempt"
                 >
                   Exit Test
@@ -562,24 +568,16 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 type="button"
                 onClick={() => recordAndAdvance(currentSelectedAnswerRef.current)}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer next-question-btn shrink-0"
-                style={{
-                  backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
-                  backgroundColor: '#4f46e5',
-                  color: '#ffffff',
-                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white shadow-xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-colors cursor-pointer next-question-btn shrink-0"
               >
-                <span
-                  className="next-question-btn-text text-white"
-                  style={{ backgroundColor: 'transparent', color: '#ffffff' }}
-                >
+                <span className="next-question-btn-text text-white">
                   {isSubmitting
                     ? 'Submitting Test...'
                     : currentQuestionIndex < activeTest.questions.length - 1
                     ? 'Next Question'
                     : 'Submit Test'}
                 </span>
-                <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
+                <ArrowRight className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>
@@ -587,16 +585,18 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
         {/* 3. ASSIGNED TEST CARDS */}
         {!activeTest && !testResult && (
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Your Tests</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Tests assigned to you by your school. You can take each test once.
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Assigned Assessments
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Evaluations provisioned for your grade. Each assessment must be completed in a single continuous session.
               </p>
             </div>
 
             {assignedTests.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {assignedTests.map((card) => {
                   const assignmentId = card.assignmentId || card._id || card.id;
                   const isCompleted = card.status === 'COMPLETED';
@@ -621,104 +621,109 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                   return (
                     <div
                       key={assignmentId}
-                      className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                      className="p-5 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80">
-                            {card.totalQuestions} Questions
-                          </span>
-                          <span
-                            className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${
-                              isCompleted
-                                ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-xs font-medium">
+                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                            <span className="font-mono tabular-nums text-slate-700 dark:text-slate-300 font-semibold">
+                              {card.totalQuestions} Questions
+                            </span>
+                            <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
+                            <span
+                              className={`font-semibold ${
+                                isCompleted
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : isIncomplete
+                                  ? 'text-rose-600 dark:text-rose-400'
+                                  : card.isPaused
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : isExpired
+                                  ? 'text-slate-400 dark:text-slate-500'
+                                  : isUpcoming
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-indigo-600 dark:text-indigo-400'
+                              }`}
+                            >
+                              {isCompleted
+                                ? 'Completed'
                                 : isIncomplete
-                                ? 'bg-rose-50 dark:bg-rose-950 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                                ? 'Incomplete'
                                 : card.isPaused
-                                ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                                ? 'Paused'
                                 : isExpired
-                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                                ? 'Expired'
                                 : isUpcoming
-                                ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                                : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
-                            }`}
-                          >
-                            {isCompleted
-                              ? 'Completed'
-                              : isIncomplete
-                              ? 'Incomplete'
-                              : card.isPaused
-                              ? 'Paused'
-                              : isExpired
-                              ? 'Expired'
-                              : isUpcoming
-                              ? 'Upcoming'
-                              : 'Ready'}
-                          </span>
+                                ? 'Upcoming'
+                                : 'Ready to Start'}
+                            </span>
+                          </div>
                         </div>
 
-                        <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-snug">{card.publishName}</h3>
+                        <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug">
+                          {card.publishName}
+                        </h3>
 
-                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                          <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                          <span>Available: {formatAvailabilityWindow(card.startDate, card.startTime, card.endDate, card.endTime)}</span>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>Window: {formatAvailabilityWindow(card.startDate, card.startTime, card.endDate, card.endTime)}</span>
                         </div>
                       </div>
 
                       {/* Action status */}
-                      <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+                      <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         {isCompleted && (
-                          <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                             <CheckCircle2 className="w-4 h-4 shrink-0" />
-                            <span>Completed. Answers submitted.</span>
+                            <span>Completed. Answers recorded.</span>
                           </div>
                         )}
 
                         {isIncomplete && (
-                          <div className="flex flex-col gap-1 text-xs text-rose-700 dark:text-rose-400 font-semibold">
-                            <div className="flex items-center gap-2">
-                              <Lock className="w-4 h-4 shrink-0" />
-                              <span>Test ended early (Incomplete). Cannot be reopened.</span>
+                          <div className="flex flex-col gap-0.5 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                            <div className="flex items-center gap-1.5">
+                              <Lock className="w-3.5 h-3.5 shrink-0" />
+                              <span>Ended early. Attempt closed.</span>
                             </div>
                             {card.exitType && (card.exitType === 'EXIT' || card.exitType === 'LOGOUT') && (
-                              <span className="font-mono text-[11px] text-rose-600 dark:text-rose-300/80 ml-6">
-                                Exit Type: <strong>{card.exitType}</strong>
+                              <span className="font-mono text-[10px] text-slate-400 ml-5">
+                                Reason: {card.exitType}
                               </span>
                             )}
                           </div>
                         )}
 
                         {!isCompleted && !isIncomplete && card.isPaused && (
-                          <div className="w-full py-3 rounded-xl font-bold bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm text-center">
-                            Temporarily Paused
+                          <div className="w-full py-2 px-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs text-center font-medium">
+                            Temporarily Paused by Administrator
                           </div>
                         )}
 
                         {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'NOT_STARTED' && (
                           <div className="space-y-2 w-full">
                             {isUpcoming && (
-                              <div className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-1.5 font-medium">
+                              <div className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-1.5">
                                 <Clock className="w-3.5 h-3.5 shrink-0" />
-                                <span>This assessment is scheduled for a future date and time and cannot be started yet.</span>
+                                <span>Assessment opens at the scheduled start time.</span>
                               </div>
                             )}
                             {isExpired && (
-                              <div className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-1.5 font-medium">
+                              <div className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-1.5">
                                 <AlertOctagon className="w-3.5 h-3.5 shrink-0" />
-                                <span>This assessment has expired and can no longer be started.</span>
+                                <span>Assessment window has closed.</span>
                               </div>
                             )}
                             <button
                               type="button"
                               onClick={() => handleStartTest(assignmentId)}
                               disabled={!canStart}
-                              className="w-full py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-sm transition-all shadow-lg shadow-indigo-600/30 cursor-pointer disabled:cursor-not-allowed"
+                              className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-xs sm:text-sm transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
                             >
                               {isUpcoming
-                                ? 'Upcoming Test'
+                                ? 'Upcoming Assessment'
                                 : isExpired
-                                ? 'Test Has Expired'
-                                : 'Start Test'}
+                                ? 'Assessment Closed'
+                                : 'Start Assessment'}
                             </button>
                           </div>
                         )}
@@ -728,15 +733,15 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                             <button
                               type="button"
                               onClick={() => handleStartTest(assignmentId)}
-                              className="w-full py-3 rounded-xl font-bold bg-amber-600 hover:bg-amber-500 text-white text-sm transition-all shadow-lg shadow-amber-600/30 cursor-pointer flex items-center justify-center gap-2"
+                              className="w-full py-2.5 px-4 rounded-lg font-semibold bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-2"
                             >
-                              <Clock className="w-4 h-4 shrink-0" />
-                              <span>Resume Test</span>
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              <span>Resume Assessment</span>
                             </button>
                           ) : (
-                            <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 font-semibold">
-                              <Clock className="w-4 h-4 shrink-0" />
-                              <span>Test in progress. You cannot restart once started.</span>
+                            <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
+                              <span>Assessment currently in progress.</span>
                             </div>
                           )
                         )}
@@ -746,11 +751,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 })}
               </div>
             ) : (
-              <div className="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-xs student-no-tests-empty-card">
-                <Sparkles className="w-10 h-10 text-indigo-600 dark:text-indigo-400 mx-auto mb-3" />
-                <h4 className="font-bold text-lg text-slate-900 dark:text-white">No Tests Assigned</h4>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                  You do not have any tests assigned right now. Please check back later.
+              <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-xs student-no-tests-empty-card">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <h4 className="font-bold text-base text-slate-900 dark:text-white">No Assessments Scheduled</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                  There are no active tests assigned to your roster at this time. Please check back when a new testing window opens.
                 </p>
               </div>
             )}
