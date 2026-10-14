@@ -300,17 +300,17 @@ export function FlameMiniGameCanvas({
                           <div
                             className={`w-5 h-5 rounded flex items-center justify-center text-xs font-bold shrink-0 transition-all border ${
                               isSelected
-                                ? 'bg-white text-indigo-600 border-white shadow-xs'
+                                ? 'bg-white text-indigo-700 border-white shadow-xs'
                                 : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400'
                             }`}
                           >
-                            {isSelected ? <Check className="w-3.5 h-3.5 text-indigo-600 stroke-[3]" /> : null}
+                            {isSelected ? <Check className="w-3.5 h-3.5 text-indigo-700 stroke-[3]" /> : null}
                           </div>
                         )}
                         <span
                           className={`w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0 font-mono transition-colors ${
                             isSelected
-                              ? 'bg-white text-indigo-600 font-bold'
+                              ? 'bg-white text-indigo-700 font-bold shadow-xs'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                           }`}
                         >

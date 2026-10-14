@@ -479,9 +479,9 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
     <div className="space-y-8 max-w-7xl">
       {/* Header */}
       <div>
-        <span className="text-xs font-mono uppercase text-indigo-400 tracking-wider">Schools & Students</span>
-        <h2 className="text-2xl font-bold tracking-tight text-white mt-0.5">Schools & Students</h2>
-        <p className="text-sm text-slate-400">
+        <span className="text-xs font-mono uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">Schools & Students</span>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mt-0.5">Schools & Students</h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Add schools, create school admin logins, add students, and view student lists.
         </p>
       </div>
@@ -490,12 +490,12 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
         <div
           className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between ${
             feedbackMessage.type === 'success'
-              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-300'
-              : 'bg-rose-950/80 border border-rose-500/50 text-rose-300'
+              ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300'
+              : 'bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-800 dark:text-rose-300'
           }`}
         >
           <span>{feedbackMessage.text}</span>
-          <button onClick={() => setFeedbackMessage(null)} className="text-xs underline opacity-80 hover:opacity-100">
+          <button onClick={() => setFeedbackMessage(null)} className="text-xs underline opacity-80 hover:opacity-100 cursor-pointer">
             Dismiss
           </button>
         </div>
@@ -503,37 +503,37 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Admin Credential Banner */}
       {createdAdminResult && (
-        <div className="p-5 rounded-2xl bg-indigo-950/80 border border-indigo-500/60 shadow-xl space-y-2">
+        <div className="p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-500/60 shadow-xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono uppercase text-indigo-400 font-bold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-mono uppercase text-indigo-700 dark:text-indigo-400 font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               School Admin Login Created
             </span>
             <button
               onClick={() => setCreatedAdminResult(null)}
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
             >
               &times; Close
             </button>
           </div>
-          <p className="text-sm text-slate-300">
-            School: <strong className="text-white">{createdAdminResult.schoolName}</strong>
+          <p className="text-sm text-slate-700 dark:text-slate-300">
+            School: <strong className="text-slate-900 dark:text-white">{createdAdminResult.schoolName}</strong>
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Username</span>
-              <span className="text-sm font-bold text-emerald-400 font-mono select-all">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-indigo-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block font-mono">Username</span>
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 font-mono select-all">
                 {createdAdminResult.username}
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Temporary Password</span>
-              <span className="text-sm font-bold text-amber-400 font-mono select-all">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-indigo-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block font-mono">Temporary Password</span>
+              <span className="text-sm font-bold text-amber-700 dark:text-amber-400 font-mono select-all">
                 {createdAdminResult.initialPassword}
               </span>
             </div>
           </div>
-          <p className="text-xs text-slate-400 italic">
+          <p className="text-xs text-slate-600 dark:text-slate-400 italic">
             * The school admin must choose a new password when they first sign in.
           </p>
         </div>
@@ -541,38 +541,38 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Student Credential Banner */}
       {createdStudentResult && (
-        <div className="p-5 rounded-2xl bg-emerald-950/60 border border-emerald-500/60 shadow-xl space-y-2">
+        <div className="p-5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/60 shadow-xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono uppercase text-emerald-400 font-bold flex items-center gap-1.5">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-mono uppercase text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Student Added Successfully
             </span>
             <button
               onClick={() => setCreatedStudentResult(null)}
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
             >
               &times; Close
             </button>
           </div>
-          <div className="text-sm text-slate-200">
-            Student: <strong className="text-white">{createdStudentResult.student?.studentName}</strong> (
+          <div className="text-sm text-slate-700 dark:text-slate-200">
+            Student: <strong className="text-slate-900 dark:text-white">{createdStudentResult.student?.studentName}</strong> (
             {createdStudentResult.student?.className} - {createdStudentResult.student?.section})
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Student ID</span>
-              <span className="text-sm font-bold text-emerald-400 font-mono select-all">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-emerald-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block font-mono">Student ID</span>
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 font-mono select-all">
                 {createdStudentResult.credentials?.username}
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="text-xs text-slate-400 block font-mono">Temporary Password</span>
-              <span className="text-sm font-bold text-amber-400 font-mono select-all">
+            <div className="p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-emerald-100 dark:border-slate-800">
+              <span className="text-xs text-slate-500 dark:text-slate-400 block font-mono">Temporary Password</span>
+              <span className="text-sm font-bold text-amber-700 dark:text-amber-400 font-mono select-all">
                 {createdStudentResult.credentials?.initialPassword}
               </span>
             </div>
           </div>
-          <p className="text-xs text-slate-400 italic">
+          <p className="text-xs text-slate-600 dark:text-slate-400 italic">
             * The student will use this password to sign in and will be asked to choose a new one.
           </p>
         </div>
@@ -581,14 +581,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       {/* Top Grid: Create School & Active Schools list */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Create School Form */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-          <h3 className="font-bold text-lg text-white flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-indigo-400" />
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+          <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             Add School
           </h3>
           <form onSubmit={handleCreateSchool} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
                 School Name
               </label>
               <input
@@ -597,11 +597,11 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 placeholder="e.g. Green Valley Public School"
                 value={newSchoolName}
                 onChange={(e) => setNewSchoolName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
                 School Short Code
               </label>
               <input
@@ -610,14 +610,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 placeholder="e.g. GVPS"
                 value={newSchoolCode}
                 onChange={(e) => setNewSchoolCode(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
               />
-              <p className="text-[11px] text-slate-500 mt-1">Short code used at the start of admin and student IDs (e.g. GVPS).</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Short code used at the start of admin and student IDs (e.g. GVPS).</p>
             </div>
             <button
               type="submit"
               disabled={isSubmittingSchool}
-              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+              className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-sm cursor-pointer disabled:opacity-50"
             >
               {isSubmittingSchool ? 'Adding School...' : '+ Add School'}
             </button>
@@ -627,8 +627,8 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
         {/* Active School Workspaces List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg text-white">Schools ({schools.length})</h3>
-            <span className="text-xs text-slate-400">Select a school to view its students below</span>
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white">Schools ({schools.length})</h3>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Select a school to view its students below</span>
           </div>
 
           {sortedSchools.length > 0 ? (
@@ -703,21 +703,21 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       </div>
 
       {/* Student Registration Form */}
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
-        <h3 className="font-bold text-lg text-white flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-indigo-400" />
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+          <UserPlus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           Add Student
         </h3>
         <form onSubmit={handleCreateStudent} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
               Select School
             </label>
             <select
               value={studentForm.schoolId}
               onChange={(e) => setStudentForm({ ...studentForm, schoolId: e.target.value })}
               required
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none transition-colors"
             >
               <option value="">-- Select School --</option>
               {sortedSchools.map((s) => (
@@ -729,7 +729,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
               Student Name
             </label>
             <input
@@ -738,12 +738,12 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               placeholder="e.g. Sophia Martinez"
               value={studentForm.studentName}
               onChange={(e) => setStudentForm({ ...studentForm, studentName: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none transition-colors"
             />
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
               Admission Number
             </label>
             <input
@@ -754,19 +754,19 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               onChange={(e) =>
                 setStudentForm({ ...studentForm, schoolAdmissionNumber: e.target.value })
               }
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
               Class
             </label>
             <select
               value={studentForm.className}
               onChange={(e) => setStudentForm({ ...studentForm, className: e.target.value })}
               required
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none transition-colors"
             >
               <option value="">-- Select Class --</option>
               <option value="Class 1">Class 1</option>
@@ -785,7 +785,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+            <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
               Section
             </label>
             <input
@@ -796,7 +796,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               onChange={(e) =>
                 setStudentForm({ ...studentForm, section: e.target.value.toUpperCase() })
               }
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none uppercase font-mono transition-colors"
             />
           </div>
 
@@ -804,7 +804,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             <button
               type="submit"
               disabled={isSubmittingStudent || schools.length === 0}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-xs disabled:opacity-50 cursor-pointer"
             >
               {isSubmittingStudent ? 'Adding Student...' : '+ Add Student'}
             </button>
@@ -815,45 +815,45 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
       {/* School Detail View: School Admins & Registered Students */}
       {activeSchool ? (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold text-white">{activeSchool.name}</h3>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono bg-indigo-950 text-indigo-400 border border-indigo-800">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{activeSchool.name}</h3>
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                   {activeSchool.code}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {adminsList.length} Admins &bull; {studentsList.length} Students
               </p>
             </div>
             <button
               onClick={() => handleCreateSchoolAdmin(activeSchool.id)}
-              className="text-xs px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-all flex items-center gap-1.5 w-fit"
+              className="text-xs px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-all flex items-center gap-1.5 w-fit shadow-xs cursor-pointer"
             >
-              <Key className="w-3.5 h-3.5" />
+              <Key className="w-3.5 h-3.5 text-white" />
               + Add School Admin
             </button>
           </div>
 
           {/* School Admins section */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 shadow-xs">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-white flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 School Admins ({adminsList.length})
               </h4>
-              <span className="text-xs text-slate-500">Admin logins for this school</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Admin logins for this school</span>
             </div>
 
             {adminsList.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {adminsList.map((adm) => (
-                  <div key={adm.id} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/60 text-xs space-y-1.5 flex flex-col justify-between">
+                  <div key={adm.id} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 text-xs space-y-2 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-indigo-300">{adm.username}</span>
-                        <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-mono text-[10px]">
+                        <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{adm.username}</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono text-[10px]">
                           {adm.passwordResetRequested
                             ? 'Reset Requested'
                             : adm.mustChangePassword
@@ -861,7 +861,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                             : 'Active'}
                         </span>
                       </div>
-                      <p className="text-slate-400 text-[11px] mt-0.5">
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
                         Created: {adm.createdAt ? new Date(adm.createdAt).toLocaleDateString() : 'Recently'}
                       </p>
                       {adm.passwordResetRequested && (
@@ -872,7 +872,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                       )}
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-1.5">
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between gap-1.5">
                       {adm.passwordResetRequested ? (
                         <button
                           type="button"
@@ -905,14 +905,14 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
           </div>
 
           {/* Students Roster Section with Search & Filter */}
-          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h4 className="font-bold text-base text-white flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-indigo-400" />
+                <h4 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   Students ({filteredStudents.length} of {studentsList.length})
                 </h4>
-                <p className="text-xs text-slate-400">All students in {activeSchool.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">All students in {activeSchool.name}</p>
               </div>
 
               {/* Filters */}
@@ -924,7 +924,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                     placeholder="Search by name, ID, or admission..."
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
-                    className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 outline-none w-52"
+                    className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none w-52"
                   />
                 </div>
 
@@ -934,7 +934,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                     setClassFilter(e.target.value);
                     setSectionFilter('');
                   }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
                 >
                   <option value="">All Classes</option>
                   {availableRosterClasses.map((cls) => (
@@ -947,7 +947,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 <select
                   value={sectionFilter}
                   onChange={(e) => setSectionFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white outline-none cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white outline-none cursor-pointer"
                 >
                   <option value="">All Sections</option>
                   {availableRosterSections.map((sec) => (
@@ -960,11 +960,11 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
             </div>
 
             {loadingData ? (
-              <div className="py-8 text-center text-xs text-slate-400">Loading students...</div>
+              <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400 font-mono">Loading students...</div>
             ) : filteredStudents.length > 0 ? (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full text-left text-xs border-collapse min-w-[700px]">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
                         <th className="py-2.5 px-3">Student Name</th>
@@ -1079,10 +1079,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 )}
               </>
             ) : (
-              <div className="p-8 rounded-xl bg-slate-800/30 border border-slate-800 text-center py-8">
-                <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <h5 className="text-sm font-semibold text-slate-300">No students found</h5>
-                <p className="text-xs text-slate-500 mt-1">
+              <div className="p-8 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-800 text-center py-8">
+                <Users className="w-8 h-8 text-slate-400 dark:text-slate-600 mx-auto mb-2" />
+                <h5 className="text-sm font-semibold text-slate-700 dark:text-slate-300">No students found</h5>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {studentsList.length === 0
                     ? 'No students added to this school yet. Use the form above to add students.'
                     : 'No students match your search or filter.'}
@@ -1095,23 +1095,23 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Edit Student Modal */}
       {editingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-500/20">
                   <Edit className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white text-base">Edit Student</h3>
-                  <p className="text-xs text-slate-400 font-mono">
-                    Student ID: <span className="text-indigo-400 font-bold">{editingStudent.uniqueStudentId}</span>
+                  <h3 className="font-semibold text-slate-900 dark:text-white text-base">Edit Student</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    Student ID: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{editingStudent.uniqueStudentId}</span>
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setEditingStudent(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1119,7 +1119,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
             <form onSubmit={handleSaveEdit} className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
                   Student Name
                 </label>
                 <input
@@ -1127,13 +1127,13 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                   required
                   value={editForm.studentName}
                   onChange={(e) => setEditForm({ ...editForm, studentName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   placeholder="e.g. John Doe"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
                   Admission Number
                 </label>
                 <input
@@ -1141,20 +1141,20 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                   required
                   value={editForm.schoolAdmissionNumber}
                   onChange={(e) => setEditForm({ ...editForm, schoolAdmissionNumber: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
                   placeholder="e.g. ADM-2026-001"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
                     Class
                   </label>
                   <select
                     value={editForm.className}
                     onChange={(e) => setEditForm({ ...editForm, className: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
                   >
                     <option value="Class 1">Class 1</option>
                     <option value="Class 2">Class 2</option>
@@ -1172,7 +1172,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
                     Section
                   </label>
                   <input
@@ -1183,23 +1183,23 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                     onChange={(e) =>
                       setEditForm({ ...editForm, section: e.target.value.toUpperCase() })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
                   />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2.5">
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingEdit}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-indigo-600/20"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-xs cursor-pointer"
                 >
                   {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
                 </button>
@@ -1211,27 +1211,27 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Delete Confirmation Modal */}
       {deletingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-rose-900/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-white">Delete Student</h3>
-                <p className="text-xs text-slate-400">Please confirm</p>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Delete Student</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Please confirm</p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Are you sure you want to delete this student?
             </p>
 
-            <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-1">
-              <div><span className="text-slate-400">Name:</span> <span className="font-semibold text-white">{deletingStudent.studentName}</span></div>
-              <div><span className="text-slate-400">Student ID:</span> <span className="font-mono text-indigo-400 font-bold">{deletingStudent.uniqueStudentId}</span></div>
-              <div><span className="text-slate-400">Class & Section:</span> <span className="text-slate-200">{deletingStudent.className} - {deletingStudent.section}</span></div>
-              <div><span className="text-slate-400">Admission Number:</span> <span className="font-mono text-slate-300">{deletingStudent.schoolAdmissionNumber}</span></div>
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+              <div><span className="text-slate-500 dark:text-slate-400">Name:</span> <span className="font-semibold text-slate-900 dark:text-white">{deletingStudent.studentName}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">Student ID:</span> <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{deletingStudent.uniqueStudentId}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">Class & Section:</span> <span className="text-slate-800 dark:text-slate-200">{deletingStudent.className} - {deletingStudent.section}</span></div>
+              <div><span className="text-slate-500 dark:text-slate-400">Admission Number:</span> <span className="font-mono text-slate-700 dark:text-slate-300">{deletingStudent.schoolAdmissionNumber}</span></div>
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2.5">
@@ -1239,7 +1239,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 type="button"
                 onClick={() => setDeletingStudent(null)}
                 disabled={isSubmittingDelete}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1247,7 +1247,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={isSubmittingDelete}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-rose-600/20"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-xs cursor-pointer"
               >
                 {isSubmittingDelete ? 'Deleting...' : 'Yes, Delete Student'}
               </button>
@@ -1258,38 +1258,38 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Delete School Admin Confirmation Modal */}
       {deletingAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-rose-900/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-white">Delete School Admin</h3>
-                <p className="text-xs text-slate-400">Please confirm</p>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Delete School Admin</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Please confirm</p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-300 font-medium">
+            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
               Are you sure you want to delete this school admin?
             </p>
 
-            <div className="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-1">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1">
               <div>
-                <span className="text-slate-400">Admin Username:</span>{' '}
-                <span className="font-mono text-indigo-400 font-bold">{deletingAdmin.username}</span>
+                <span className="text-slate-500 dark:text-slate-400">Admin Username:</span>{' '}
+                <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{deletingAdmin.username}</span>
               </div>
               <div>
-                <span className="text-slate-400">School:</span>{' '}
-                <span className="text-slate-200">{activeSchool?.name || deletingAdmin.schoolName}</span>
+                <span className="text-slate-500 dark:text-slate-400">School:</span>{' '}
+                <span className="text-slate-800 dark:text-slate-200">{activeSchool?.name || deletingAdmin.schoolName}</span>
               </div>
               <div>
-                <span className="text-slate-400">Role:</span>{' '}
-                <span className="font-mono text-slate-300">school_admin</span>
+                <span className="text-slate-500 dark:text-slate-400">Role:</span>{' '}
+                <span className="font-mono text-slate-700 dark:text-slate-300">school_admin</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               This admin will no longer be able to log in. Students, tests, and records will not be affected.
             </p>
 
@@ -1298,7 +1298,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 type="button"
                 onClick={() => setDeletingAdmin(null)}
                 disabled={isSubmittingDeleteAdmin}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1306,7 +1306,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 type="button"
                 onClick={handleConfirmDeleteAdmin}
                 disabled={isSubmittingDeleteAdmin}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-rose-600/20"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-xs cursor-pointer"
               >
                 {isSubmittingDeleteAdmin ? 'Deleting...' : 'Yes, Delete School Admin'}
               </button>
@@ -1317,29 +1317,29 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Delete School Workspace Confirmation Modal */}
       {deletingSchool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-rose-900/50 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Delete School</h3>
-                <p className="text-xs text-rose-400/90 font-medium">This action cannot be undone</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete School</h3>
+                <p className="text-xs text-rose-600 dark:text-rose-400/90 font-medium">This action cannot be undone</p>
               </div>
             </div>
 
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Are you sure you want to delete{' '}
-              <strong className="text-white font-semibold">{deletingSchool.name}</strong> ({deletingSchool.code})?
+              <strong className="text-slate-900 dark:text-white font-semibold">{deletingSchool.name}</strong> ({deletingSchool.code})?
             </p>
 
-            <div className="p-4 rounded-xl bg-slate-800/60 border border-slate-700 text-xs space-y-2">
-              <div className="font-semibold text-rose-300 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-2">
+              <div className="font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                 The following will be deleted:
               </div>
-              <ul className="list-disc list-inside text-slate-300 space-y-1 pl-1 text-[11px] font-mono">
+              <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-1 pl-1 text-[11px] font-mono">
                 <li>School ({deletingSchool.name})</li>
                 <li>All admin accounts for this school</li>
                 <li>All student accounts and logins for this school</li>
@@ -1347,12 +1347,12 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               </ul>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-300 space-y-1">
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
               <div className="font-semibold flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 Completed Test Records:
               </div>
-              <p className="text-[11px] text-emerald-200/90 leading-relaxed">
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-200/90 leading-relaxed">
                 All <strong>completed tests, answers, scores, and past reports</strong> are kept safely for your records.
               </p>
             </div>
@@ -1362,7 +1362,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 type="button"
                 onClick={() => setDeletingSchool(null)}
                 disabled={isSubmittingDeleteSchool}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1370,7 +1370,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                 type="button"
                 onClick={handleConfirmDeleteSchool}
                 disabled={isSubmittingDeleteSchool}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-lg shadow-rose-600/20 cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-xs font-semibold text-white transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
               >
                 {isSubmittingDeleteSchool ? 'Deleting School...' : 'Yes, Delete School'}
               </button>
