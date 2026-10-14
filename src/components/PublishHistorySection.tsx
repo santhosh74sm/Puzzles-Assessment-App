@@ -1048,7 +1048,11 @@ function HistoricalAuditDrillDown({
         timeAllowedSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
         options: q.options || [],
         answerType: q.answerType || 'single',
-        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
+        enableWrittenExplanation: Boolean(
+          q.enableWrittenExplanation !== undefined
+            ? q.enableWrittenExplanation
+            : q.metadata?.enableWrittenExplanation
+        ),
         metadata: q.metadata || {},
         pairs: q.pairs || q.metadata?.pairs || [],
         isQuestionDeleted: false,

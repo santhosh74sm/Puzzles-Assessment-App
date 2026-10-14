@@ -1934,15 +1934,19 @@ export function PublishAssessmentSection({
   // Questions prepared for student-style preview based on current publish mode and shuffle
   const previewQuestionsList: AssessmentPreviewQuestion[] = React.useMemo(() => {
     if (publishMode === 'Selected Questions') {
-      const qMap = new Map(allQuestions.map((q) => [q.id, q]));
+      const qMap = new Map<string, any>();
+      for (const q of allQuestions) {
+        if (q.id) qMap.set(String(q.id), q);
+        if (q._id) qMap.set(String(q._id), q);
+      }
 
       let ordered: AssessmentPreviewQuestion[] = selectedQuestionsForPublish
         .map((id) => {
-          const liveQ = qMap.get(id);
+          const liveQ = qMap.get(String(id));
           if (liveQ) {
             return {
-              id: liveQ.id,
-              questionId: liveQ.id,
+              id: String(liveQ.id || liveQ._id),
+              questionId: String(liveQ.id || liveQ._id),
               groupName: liveQ.groupName,
               difficulty: liveQ.difficulty,
               content: liveQ.content,
@@ -1951,7 +1955,11 @@ export function PublishAssessmentSection({
               timeAllowedSeconds: liveQ.timeSeconds,
               options: liveQ.options || [],
               answerType: liveQ.answerType || 'single',
-              enableWrittenExplanation: Boolean(liveQ.enableWrittenExplanation),
+              enableWrittenExplanation: Boolean(
+                liveQ.enableWrittenExplanation !== undefined
+                  ? liveQ.enableWrittenExplanation
+                  : liveQ.metadata?.enableWrittenExplanation
+              ),
               metadata: liveQ.metadata || {},
               pairs: liveQ.pairs || liveQ.metadata?.pairs || [],
               isQuestionDeleted: false,
@@ -1986,8 +1994,8 @@ export function PublishAssessmentSection({
       const sampled = pool.slice(0, targetCount);
 
       return sampled.map((q) => ({
-        id: q.id,
-        questionId: q.id,
+        id: String(q.id || q._id),
+        questionId: String(q.id || q._id),
         groupName: q.groupName,
         difficulty: q.difficulty,
         content: q.content,
@@ -1996,7 +2004,11 @@ export function PublishAssessmentSection({
         timeAllowedSeconds: q.timeSeconds,
         options: q.options || [],
         answerType: q.answerType || 'single',
-        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
+        enableWrittenExplanation: Boolean(
+          q.enableWrittenExplanation !== undefined
+            ? q.enableWrittenExplanation
+            : q.metadata?.enableWrittenExplanation
+        ),
         metadata: q.metadata || {},
         pairs: q.pairs || q.metadata?.pairs || [],
         isQuestionDeleted: false,

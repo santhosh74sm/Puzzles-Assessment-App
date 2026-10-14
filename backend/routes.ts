@@ -4703,6 +4703,9 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
         questionType: qType,
         correctAnswer: correctAns,
         correctAnswers: correctAnsList,
+        enableWrittenExplanation: liveQ
+          ? Boolean(liveQ.enableWrittenExplanation !== undefined ? liveQ.enableWrittenExplanation : (liveQ.metadata?.enableWrittenExplanation ?? snap.enableWrittenExplanation))
+          : Boolean(snap.enableWrittenExplanation !== undefined ? snap.enableWrittenExplanation : snap.metadata?.enableWrittenExplanation),
         metadata: (liveQ ? liveQ.metadata : snap.metadata) || {},
         pairs: (liveQ ? liveQ.metadata?.pairs : (snap.pairs || snap.metadata?.pairs)) || [],
       });
