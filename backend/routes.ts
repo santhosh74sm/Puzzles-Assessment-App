@@ -94,7 +94,25 @@ const answerRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   max: 60,
   message: 'Too many answer submissions. Please slow down.',
+  keyGenerator: (req: Request) => {
+    // Authenticated user identity is cryptographically validated by the authenticate middleware.
+    // Keying by authenticated user ID ensures students sharing school Wi-Fi or public NAT IP
+    // have independent rate-limit allowances and cannot block each other during assessments.
+    const validUserId = req.user?.userId;
+    if (typeof validUserId === 'string' && validUserId.trim()) {
+      return `usr:${validUserId.trim()}`;
+    }
+    const validStudentId = req.user?.studentId;
+    if (typeof validStudentId === 'string' && validStudentId.trim()) {
+      return `stu:${validStudentId.trim()}`;
+    }
+    // Fallback to validated client IP for unauthenticated traffic
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '') || req.ip || req.socket.remoteAddress || 'unknown';
+    return `ip:${ip}`;
+  },
 });
+
 
 // Helper to convert Mongoose documents to clean JSON with 'id'
 function formatDoc(doc: any): any {
@@ -2861,74 +2879,23 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
       new Set(validation.normalizedTargets!.flatMap((t) => t.studentIds || []))
     );
 
-    // Create Published Test Record with targets array
-    let newPublish: any;
-    try {
-      newPublish = await PublishedTestModel.create({
-      idempotencyKey,
-      requestFingerprint,
-      publishState: 'PUBLISHING',
-      publishName: publishName.trim(),
-      publishMode,
-      target: {
-        schoolId: allTargetSchoolIds[0] || '',
-        schoolIds: allTargetSchoolIds,
-        schoolName: combinedSchoolNames,
-        schoolNames: allTargetSchoolNames,
-        classes: allTargetClasses,
-        sections: allTargetSections,
-        studentIds: allTargetStudentIds,
-      },
-      targets: targetsRecord,
-      startDate,
-      startTime: to12Hour(startTime || '12:00 AM'),
-      endDate,
-      endTime: to12Hour(endTime || '11:59 PM'),
-      questionIds: selectedQuestionIds || [],
-      questionsSnapshot: eligibleQuestionsSnapshot,
-      randomCount: randomCount ? Number(randomCount) : undefined,
-      shuffle: Boolean(shuffle),
-      createdBy: req.user!.username,
-      status: 'ACTIVE',
-      isPaused: false,
-      publishedAt: new Date(),
-      });
-    } catch (createError: any) {
-      if (createError?.code === 11000) {
-        const racedRequest = await PublishedTestModel.findOne({ idempotencyKey });
-        if (racedRequest?.requestFingerprint === requestFingerprint && racedRequest?.publishState === 'COMPLETE') {
-          const history = await PublishHistoryModel.findOne({ publishId: String(racedRequest._id) });
-          const assignmentCount = await StudentTestAssignmentModel.countDocuments({ publishedTestId: String(racedRequest._id) });
-          return res.status(200).json({
-            message: `Assessment '${racedRequest.publishName}' was already published for this request.`,
-            publishedTest: formatDoc(racedRequest),
-            assignedStudentCount: assignmentCount,
-            totalAssignedStudents: assignmentCount,
-            historyRecordId: history?._id?.toString(),
-            idempotentReplay: true,
-          });
-        }
-        if (racedRequest) return res.status(409).json({ error: 'This publication request is already being processed.' });
-      }
-      throw createError;
-    }
-
-    const publishedTestId = newPublish._id.toString();
+    // Pre-allocate target Published Test ID so in-memory assignment preparation can reference it before any database writes
+    const newPublishId = new mongoose.Types.ObjectId();
+    const publishedTestId = newPublishId.toString();
     const newAssignments: any[] = [];
 
-    try {
-      // Pre-fetch past assignments only for candidate students if in Random mode
-      const candidateStudentIds = candidateStudents.map((s) => s.uniqueStudentId).filter(Boolean);
-      const pastAssignmentsDocs = publishMode === 'Random Questions' && candidateStudentIds.length > 0
-        ? await StudentTestAssignmentModel.find(
-            { studentId: { $in: candidateStudentIds } },
-            { studentId: 1, questions: 1, status: 1, scoreOutOf100: 1, startedAt: 1, completedAt: 1 }
-          )
-        : [];
-      const pastAssignments = formatDocs(pastAssignmentsDocs);
+    // Pre-fetch past assignments only for candidate students if in Random mode
+    const candidateStudentIds = candidateStudents.map((s) => s.uniqueStudentId).filter(Boolean);
+    const pastAssignmentsDocs = publishMode === 'Random Questions' && candidateStudentIds.length > 0
+      ? await StudentTestAssignmentModel.find(
+          { studentId: { $in: candidateStudentIds } },
+          { studentId: 1, questions: 1, status: 1, scoreOutOf100: 1, startedAt: 1, completedAt: 1 }
+        )
+      : [];
+    const pastAssignments = formatDocs(pastAssignmentsDocs);
 
-      // Create assignments for every unique target student (guarantees exactly 1 assignment per student)
-      for (const student of candidateStudents) {
+    // Create assignments for every unique target student (guarantees exactly 1 assignment per student)
+    for (const student of candidateStudents) {
       let studentQuestionList: Question[] = [];
 
       if (publishMode === 'Selected Questions') {
@@ -2982,7 +2949,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
 
       const stSchool = schoolMap.get(student.schoolId);
 
-        newAssignments.push({
+      newAssignments.push({
         publishedTestId,
         publishName: publishName.trim(),
         studentId: student.uniqueStudentId!,
@@ -3000,91 +2967,184 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         scoreOutOf100: 0,
         totalTimeTakenSeconds: 0,
         questions: questionLogs,
-        });
-      }
-    } catch (buildError) {
-      await PublishedTestModel.deleteOne({ _id: newPublish._id, publishState: 'PUBLISHING' }).catch(() => undefined);
-      throw buildError;
+      });
     }
 
-    let historyRecord: any;
-    try {
-      // Insert student assignments into MongoDB Atlas
-      await StudentTestAssignmentModel.insertMany(newAssignments);
+    // Multi-Document Transaction Execution:
+    // Guarantees PublishedTest, StudentTestAssignment, and PublishHistory writes succeed or fail together atomically.
+    let session: mongoose.ClientSession | null = null;
+    let useTransaction = false;
 
-      // Create permanent history record in MongoDB Atlas
-      historyRecord = await PublishHistoryModel.create({
-      publishId: publishedTestId,
-      publishName: publishName.trim(),
-      date: startDate,
-      time: to12Hour(startTime || new Date().toLocaleTimeString()),
-      startDate,
-      startTime: to12Hour(startTime || '12:00 AM'),
-      endDate,
-      endTime: to12Hour(endTime || '11:59 PM'),
-      schoolId: allTargetSchoolIds[0] || '',
-      schoolName: combinedSchoolNames,
-      schoolIds: allTargetSchoolIds,
-      schoolNames: allTargetSchoolNames,
-      classes: allTargetClasses.length > 0 ? allTargetClasses : ['All Classes'],
-      sections: allTargetSections.length > 0 ? allTargetSections : ['All Sections'],
-      totalRecipients: candidateStudents.length,
-      targets: targetsRecord,
-      publishMode,
-      assignedQuestionsCount: publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount ? Number(randomCount) : 0),
-      questionIds: selectedQuestionIds || [],
-      questionsSnapshot: eligibleQuestionsSnapshot,
-      randomCount: randomCount ? Number(randomCount) : undefined,
-      completedCount: 0,
-      incompleteCount: 0,
-      status: 'ACTIVE',
-      isPaused: false,
-      publishedAt: new Date(),
-      studentsStatus: candidateStudents.map((s) => ({
-        studentId: s.uniqueStudentId!,
-        uniqueStudentId: s.uniqueStudentId!,
-        studentName: s.studentName!,
-        schoolAdmissionNumber: s.schoolAdmissionNumber || '',
-        schoolId: s.schoolId || '',
-        schoolName: (schoolMap.get(s.schoolId)?.name) || s.schoolName || '',
-        className: s.className!,
-        section: s.section!,
-        status: 'NOT_STARTED',
-      })),
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      useTransaction = true;
+    } catch (_sessionErr: any) {
+      session = null;
+      useTransaction = false;
+    }
+
+    let newPublish: any;
+    let historyRecord: any;
+
+    const executePublishWrites = async (activeSession: mongoose.ClientSession | null) => {
+      const sessionOptions = activeSession ? { session: activeSession } : undefined;
+
+      // 1. Create Published Test Record with targets array
+      newPublish = new PublishedTestModel({
+        _id: newPublishId,
+        idempotencyKey,
+        requestFingerprint,
+        publishState: 'PUBLISHING',
+        publishName: publishName.trim(),
+        publishMode,
+        target: {
+          schoolId: allTargetSchoolIds[0] || '',
+          schoolIds: allTargetSchoolIds,
+          schoolName: combinedSchoolNames,
+          schoolNames: allTargetSchoolNames,
+          classes: allTargetClasses,
+          sections: allTargetSections,
+          studentIds: allTargetStudentIds,
+        },
+        targets: targetsRecord,
+        startDate,
+        startTime: to12Hour(startTime || '12:00 AM'),
+        endDate,
+        endTime: to12Hour(endTime || '11:59 PM'),
+        questionIds: selectedQuestionIds || [],
+        questionsSnapshot: eligibleQuestionsSnapshot,
+        randomCount: randomCount ? Number(randomCount) : undefined,
+        shuffle: Boolean(shuffle),
+        createdBy: req.user!.username,
+        status: 'ACTIVE',
+        isPaused: false,
+        publishedAt: new Date(),
       });
-      const finalized = await PublishedTestModel.updateOne(
-        { _id: newPublish._id, publishState: 'PUBLISHING' },
-        { $set: { publishState: 'COMPLETE' } }
-      );
-      if (finalized.matchedCount !== 1) throw new Error('Publication completion state was not persisted.');
-      newPublish.publishState = 'COMPLETE';
-    } catch (publishError: any) {
-      // Compensating cleanup keeps a failed publish from leaving visible partial records.
-      // If completion was acknowledged despite a transport error, retain the completed publication.
-      const persisted = await PublishedTestModel.findById(newPublish._id).catch(() => null);
-      if (!persisted) {
-        console.error('[Publish] Could not confirm publication state after a write failure; records were retained for safe recovery.');
-        throw publishError;
-      }
-      if (persisted.publishState !== 'COMPLETE') {
-        const cleanup = await Promise.allSettled([
-          StudentTestAssignmentModel.deleteMany({ publishedTestId }),
-          PublishHistoryModel.deleteOne({ publishId: publishedTestId }),
-        ]);
-        if (cleanup.some((result) => result.status === 'rejected')) {
-          await PublishedTestModel.updateOne(
-            { _id: newPublish._id, publishState: 'PUBLISHING' },
-            { $set: { publishState: 'FAILED' } }
-          ).catch(() => undefined);
-          console.error('[Publish] Partial publish cleanup was incomplete; operator recovery is required.');
+      await newPublish.save(sessionOptions);
+
+      // 2. Insert student assignments into MongoDB
+      if (newAssignments.length > 0) {
+        if (activeSession) {
+          await StudentTestAssignmentModel.insertMany(newAssignments, { session: activeSession });
         } else {
-          await PublishedTestModel.deleteOne({ _id: newPublish._id, publishState: 'PUBLISHING' });
+          await StudentTestAssignmentModel.insertMany(newAssignments);
+        }
+      }
+
+      // 3. Create permanent history record in MongoDB
+      historyRecord = new PublishHistoryModel({
+        publishId: publishedTestId,
+        publishName: publishName.trim(),
+        date: startDate,
+        time: to12Hour(startTime || new Date().toLocaleTimeString()),
+        startDate,
+        startTime: to12Hour(startTime || '12:00 AM'),
+        endDate,
+        endTime: to12Hour(endTime || '11:59 PM'),
+        schoolId: allTargetSchoolIds[0] || '',
+        schoolName: combinedSchoolNames,
+        schoolIds: allTargetSchoolIds,
+        schoolNames: allTargetSchoolNames,
+        classes: allTargetClasses.length > 0 ? allTargetClasses : ['All Classes'],
+        sections: allTargetSections.length > 0 ? allTargetSections : ['All Sections'],
+        totalRecipients: candidateStudents.length,
+        targets: targetsRecord,
+        publishMode,
+        assignedQuestionsCount: publishMode === 'Selected Questions' ? (selectedQuestionIds?.length || 0) : (randomCount ? Number(randomCount) : 0),
+        questionIds: selectedQuestionIds || [],
+        questionsSnapshot: eligibleQuestionsSnapshot,
+        randomCount: randomCount ? Number(randomCount) : undefined,
+        completedCount: 0,
+        incompleteCount: 0,
+        status: 'ACTIVE',
+        isPaused: false,
+        publishedAt: new Date(),
+        studentsStatus: candidateStudents.map((s) => ({
+          studentId: s.uniqueStudentId!,
+          uniqueStudentId: s.uniqueStudentId!,
+          studentName: s.studentName!,
+          schoolAdmissionNumber: s.schoolAdmissionNumber || '',
+          schoolId: s.schoolId || '',
+          schoolName: (schoolMap.get(s.schoolId)?.name) || s.schoolName || '',
+          className: s.className!,
+          section: s.section!,
+          status: 'NOT_STARTED',
+        })),
+      });
+      await historyRecord.save(sessionOptions);
+
+      // 4. Mark publication completion state
+      newPublish.publishState = 'COMPLETE';
+      await newPublish.save(sessionOptions);
+    };
+
+    try {
+      if (useTransaction && session) {
+        try {
+          await executePublishWrites(session);
+          await session.commitTransaction();
+        } catch (txErr: any) {
+          await session.abortTransaction().catch(() => undefined);
+
+          // Check if error is due to MongoDB topology not supporting transactions (standalone mongod without replica set)
+          const isTxUnsupported =
+            txErr?.code === 20 ||
+            txErr?.codeName === 'IllegalOperation' ||
+            (typeof txErr?.message === 'string' &&
+              txErr.message.includes('Transaction numbers are only allowed on a replica set member or mongos'));
+
+          if (isTxUnsupported) {
+            console.warn('[Publish] Multi-document transactions unsupported by current MongoDB topology (standalone mode). Falling back to resilient non-transactional writes with compensatory cleanup.');
+            useTransaction = false;
+            try {
+              await executePublishWrites(null);
+            } catch (fallbackErr: any) {
+              await StudentTestAssignmentModel.deleteMany({ publishedTestId }).catch(() => undefined);
+              await PublishHistoryModel.deleteOne({ publishId: publishedTestId }).catch(() => undefined);
+              await PublishedTestModel.deleteOne({ _id: newPublishId }).catch(() => undefined);
+              throw fallbackErr;
+            }
+          } else {
+            throw txErr;
+          }
         }
       } else {
-        newPublish = persisted;
-        historyRecord = await PublishHistoryModel.findOne({ publishId: publishedTestId });
+        // Non-transactional fallback with compensatory rollback
+        try {
+          await executePublishWrites(null);
+        } catch (directErr: any) {
+          await StudentTestAssignmentModel.deleteMany({ publishedTestId }).catch(() => undefined);
+          await PublishHistoryModel.deleteOne({ publishId: publishedTestId }).catch(() => undefined);
+          await PublishedTestModel.deleteOne({ _id: newPublishId }).catch(() => undefined);
+          throw directErr;
+        }
       }
-      if (!historyRecord || persisted?.publishState !== 'COMPLETE') throw publishError;
+    } catch (writeError: any) {
+      if (writeError?.code === 11000) {
+        const racedRequest = await PublishedTestModel.findOne({ idempotencyKey });
+        if (racedRequest?.requestFingerprint === requestFingerprint && racedRequest?.publishState === 'COMPLETE') {
+          const history = await PublishHistoryModel.findOne({ publishId: String(racedRequest._id) });
+          const assignmentCount = await StudentTestAssignmentModel.countDocuments({ publishedTestId: String(racedRequest._id) });
+          return res.status(200).json({
+            message: `Assessment '${racedRequest.publishName}' was already published for this request.`,
+            publishedTest: formatDoc(racedRequest),
+            assignedStudentCount: assignmentCount,
+            totalAssignedStudents: assignmentCount,
+            historyRecordId: history?._id?.toString(),
+            idempotentReplay: true,
+          });
+        }
+        if (racedRequest) {
+          return res.status(409).json({ error: 'This publication request is already being processed.' });
+        }
+      }
+      console.error('[Publish Write Error]:', writeError?.message || writeError);
+      return res.status(500).json({ error: 'Failed to publish assessment' });
+    } finally {
+      if (session) {
+        await session.endSession().catch(() => undefined);
+      }
     }
 
     return res.status(201).json({

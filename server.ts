@@ -6,6 +6,7 @@ import routes from './backend/routes.ts';
 import path from 'path';
 import fs from 'fs';
 import { connectMongoDB, getMongoConnectionInfo } from './backend/database.ts';
+import { getJwtSecret } from './backend/middleware/auth.ts';
 
 async function startServer() {
   const app = express();
@@ -20,10 +21,12 @@ async function startServer() {
   const fallbackPort = 3000;
   const HOST = '0.0.0.0';
 
-  // JWT_SECRET validation with safe fallback
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim().length < 16) {
-    process.env.JWT_SECRET = 'puzzles-assessment-engine-jwt-secret-key-2025-secure';
-    console.warn('[Security Notice] JWT_SECRET environment variable is missing or short. Using secure deployment fallback.');
+  // JWT_SECRET security enforcement: Fail safely in production if missing or invalid (<32 chars)
+  try {
+    getJwtSecret();
+  } catch (err: any) {
+    console.error(err.message);
+    process.exit(1);
   }
 
   // SEC-MED-05: HTTP Security Headers Middleware

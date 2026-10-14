@@ -3,20 +3,30 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import type { UserRole } from '../types.ts';
 
-const FALLBACK_JWT_SECRET = 'puzzles-assessment-engine-jwt-secret-key-2025-secure';
+let devEphemeralSecret: string | null = null;
 
-function getJwtSecret(): string {
+export function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET?.trim();
-  if (secret && secret.length >= 16) {
+  if (secret && secret.length >= 32) {
     return secret;
   }
-  console.warn(
-    '[Auth] Notice: JWT_SECRET environment variable is missing or shorter than 16 characters. Operating with deployment fallback secret.'
-  );
-  return FALLBACK_JWT_SECRET;
-}
 
-const JWT_SECRET = getJwtSecret();
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    throw new Error(
+      '[Fatal Security Error] JWT_SECRET environment variable is required and must be at least 32 characters long in production. Server startup aborted.'
+    );
+  }
+
+  // Development-only fallback: Ephemeral random secret (NEVER hardcoded, cannot be predicted by external attackers)
+  if (!devEphemeralSecret) {
+    devEphemeralSecret = crypto.randomBytes(32).toString('hex');
+    console.warn(
+      '[Security Notice] JWT_SECRET is not configured or shorter than 32 characters in development. An ephemeral random secret has been generated for this session. Add a strong JWT_SECRET (>= 32 chars) to your .env file for persistent sessions across restarts.'
+    );
+  }
+  return devEphemeralSecret;
+}
 
 import { sharedStore } from '../services/sharedStore.ts';
 
@@ -56,7 +66,7 @@ export function generateToken(payload: AuthUserPayload): string {
     jti: crypto.randomUUID(),
   };
   const expiresIn = process.env.JWT_EXPIRES_IN || '2h';
-  return jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: expiresIn as any });
+  return jwt.sign(tokenPayload, getJwtSecret(), { expiresIn: expiresIn as any });
 }
 
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -76,7 +86,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUserPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as AuthUserPayload;
     if (decoded.jti) {
       const jtiRevoked = await sharedStore.isTokenRevoked(decoded.jti);
       if (jtiRevoked) {
