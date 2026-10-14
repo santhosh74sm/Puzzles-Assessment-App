@@ -986,6 +986,7 @@ function HistoricalAuditDrillDown({
     if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
       const map = new Map<string, { diffMap: Map<string, number>; isGroupDeleted: boolean }>();
       for (const q of detail.questions) {
+        if (q.isQuestionDeleted) continue;
         const g = (q.groupName || 'General').trim();
         const d = (q.difficulty || 'Medium').trim();
         if (!map.has(g)) map.set(g, { diffMap: new Map(), isGroupDeleted: false });
@@ -1014,11 +1015,12 @@ function HistoricalAuditDrillDown({
   }, [detail]);
 
   const totalHistoricalQuestionsCount = useMemo(() => {
+    if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
+      const activeCount = detail.questions.filter((q: any) => !q.isQuestionDeleted).length;
+      return activeCount;
+    }
     if (detail?.totalQuestionsCount != null && detail.totalQuestionsCount > 0) {
       return detail.totalQuestionsCount;
-    }
-    if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
-      return detail.questions.length;
     }
     if (questionSummaryData.length > 0) {
       return questionSummaryData.reduce(
@@ -1033,21 +1035,24 @@ function HistoricalAuditDrillDown({
   // Normalized student-style preview questions for StudentAssessmentPreviewModal
   const previewStudentQuestions = useMemo(() => {
     const rawQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
-    return rawQuestions.map((q: any) => ({
-      id: q.id || q._id || q.questionId,
-      questionId: q.questionId || q.id || q._id,
-      groupName: q.groupName,
-      difficulty: q.difficulty,
-      content: q.content,
-      points: q.points != null ? Number(q.points) : null,
-      timeSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
-      timeAllowedSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
-      options: q.options || [],
-      answerType: q.answerType || 'single',
-      enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
-      metadata: q.metadata || {},
-      pairs: q.pairs || q.metadata?.pairs || [],
-    }));
+    return rawQuestions
+      .filter((q: any) => !q.isQuestionDeleted)
+      .map((q: any) => ({
+        id: q.id || q._id || q.questionId,
+        questionId: q.questionId || q.id || q._id,
+        groupName: q.groupName,
+        difficulty: q.difficulty,
+        content: q.content,
+        points: q.points != null ? Number(q.points) : null,
+        timeSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
+        timeAllowedSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
+        options: q.options || [],
+        answerType: q.answerType || 'single',
+        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
+        metadata: q.metadata || {},
+        pairs: q.pairs || q.metadata?.pairs || [],
+        isQuestionDeleted: false,
+      }));
   }, [detail?.questions]);
 
   // Hierarchical question grouping for View-Only Preview Modal (Group -> Difficulty -> Questions)
@@ -1057,6 +1062,7 @@ function HistoricalAuditDrillDown({
 
     const groupMap = new Map<string, { diffMap: Map<string, any[]>; isGroupDeleted: boolean }>();
     for (const q of rawQuestions) {
+      if (q.isQuestionDeleted) continue;
       const g = (q.groupName || 'General').trim();
       const d = (q.difficulty || 'Medium').trim();
       if (!groupMap.has(g)) groupMap.set(g, { diffMap: new Map(), isGroupDeleted: false });

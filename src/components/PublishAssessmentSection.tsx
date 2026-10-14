@@ -85,6 +85,7 @@ export interface PublishAssessmentFormState {
   expandedGroups?: string[];
   expandedDifficulties?: string[];
   questionPickerSearch?: string;
+  questionsSnapshot?: any[];
 }
 
 export interface PublishAssessmentSectionProps {
@@ -1670,6 +1671,9 @@ export function PublishAssessmentSection({
   const [selectedQuestionsForPublish, setSelectedQuestionsForPublish] = useState<string[]>(
     formState?.selectedQuestionsForPublish ?? []
   );
+  const [questionsSnapshot, setQuestionsSnapshot] = useState<any[]>(
+    formState?.questionsSnapshot ?? []
+  );
   const [shuffleQuestions, setShuffleQuestions] = useState(formState?.shuffleQuestions ?? false);
   const [randomCount, setRandomCount] = useState<number | ''>(
     formState?.randomCount != null && formState.randomCount !== '' ? formState.randomCount : ''
@@ -1726,6 +1730,9 @@ export function PublishAssessmentSection({
           setTargets(formState.targets);
         }
         setSelectedQuestionsForPublish(formState.selectedQuestionsForPublish ?? []);
+        if (formState.questionsSnapshot) {
+          setQuestionsSnapshot(formState.questionsSnapshot);
+        }
         setShuffleQuestions(formState.shuffleQuestions ?? false);
         setRandomCount(formState.randomCount != null && formState.randomCount !== '' ? formState.randomCount : '');
         setStartDate(formState.startDate ?? getLocalTodayDate());
@@ -1913,13 +1920,47 @@ export function PublishAssessmentSection({
 
   const randomEligiblePoolCount = randomEligibleQuestions.length;
 
+  // Prune any deleted question IDs from selectedQuestionsForPublish when Question Bank updates
+  useEffect(() => {
+    if (Array.isArray(allQuestions)) {
+      const liveIds = new Set(allQuestions.map((q) => String(q.id || q._id)));
+      setSelectedQuestionsForPublish((prev) => {
+        const filtered = prev.filter((id) => liveIds.has(String(id)));
+        return filtered.length !== prev.length ? filtered : prev;
+      });
+    }
+  }, [allQuestions]);
+
   // Questions prepared for student-style preview based on current publish mode and shuffle
   const previewQuestionsList: AssessmentPreviewQuestion[] = React.useMemo(() => {
     if (publishMode === 'Selected Questions') {
       const qMap = new Map(allQuestions.map((q) => [q.id, q]));
-      let ordered = selectedQuestionsForPublish
-        .map((id) => qMap.get(id))
-        .filter(Boolean) as any[];
+
+      let ordered: AssessmentPreviewQuestion[] = selectedQuestionsForPublish
+        .map((id) => {
+          const liveQ = qMap.get(id);
+          if (liveQ) {
+            return {
+              id: liveQ.id,
+              questionId: liveQ.id,
+              groupName: liveQ.groupName,
+              difficulty: liveQ.difficulty,
+              content: liveQ.content,
+              points: liveQ.points != null ? Number(liveQ.points) : null,
+              timeSeconds: liveQ.timeSeconds,
+              timeAllowedSeconds: liveQ.timeSeconds,
+              options: liveQ.options || [],
+              answerType: liveQ.answerType || 'single',
+              enableWrittenExplanation: Boolean(liveQ.enableWrittenExplanation),
+              metadata: liveQ.metadata || {},
+              pairs: liveQ.pairs || liveQ.metadata?.pairs || [],
+              isQuestionDeleted: false,
+            };
+          }
+          // Permanently deleted questions MUST NOT appear in Publish Test Preview
+          return null;
+        })
+        .filter(Boolean) as AssessmentPreviewQuestion[];
 
       if (shuffleQuestions) {
         ordered = [...ordered];
@@ -1929,21 +1970,7 @@ export function PublishAssessmentSection({
         }
       }
 
-      return ordered.map((q) => ({
-        id: q.id,
-        questionId: q.id,
-        groupName: q.groupName,
-        difficulty: q.difficulty,
-        content: q.content,
-        points: q.points != null ? Number(q.points) : null,
-        timeSeconds: q.timeSeconds,
-        timeAllowedSeconds: q.timeSeconds,
-        options: q.options || [],
-        answerType: q.answerType || 'single',
-        enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
-        metadata: q.metadata || {},
-        pairs: q.pairs || q.metadata?.pairs || [],
-      }));
+      return ordered;
     } else {
       // Random Questions mode: preview a representative sample from eligible pool
       let pool = [...randomEligibleQuestions];
@@ -1972,12 +1999,15 @@ export function PublishAssessmentSection({
         enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
         metadata: q.metadata || {},
         pairs: q.pairs || q.metadata?.pairs || [],
+        isQuestionDeleted: false,
       }));
     }
   }, [
     publishMode,
     allQuestions,
     selectedQuestionsForPublish,
+    questionsSnapshot,
+    isEditMode,
     shuffleQuestions,
     randomEligibleQuestions,
     randomCount,

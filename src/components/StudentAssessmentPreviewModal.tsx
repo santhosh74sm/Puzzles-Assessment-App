@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Clock,
   ArrowRight,
@@ -6,6 +6,7 @@ import {
   X,
   Eye,
   Trophy,
+  AlertTriangle,
 } from 'lucide-react';
 import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
 
@@ -24,6 +25,7 @@ export interface AssessmentPreviewQuestion {
   enableWrittenExplanation?: boolean;
   metadata?: any;
   pairs?: { left: string; right: string }[];
+  isQuestionDeleted?: boolean;
 }
 
 export interface StudentAssessmentPreviewModalProps {
@@ -39,6 +41,12 @@ export function StudentAssessmentPreviewModal({
   questions,
   onClose,
 }: StudentAssessmentPreviewModalProps) {
+  // Exclude deleted questions so previews only ever display remaining valid questions
+  const activeQuestions = useMemo(
+    () => (Array.isArray(questions) ? questions.filter((q) => !q.isQuestionDeleted) : []),
+    [questions]
+  );
+
   const [currentIndex, setCurrentIndex] = useState(0);
   // Store temporary preview answers in purely local component state
   const [previewAnswers, setPreviewAnswers] = useState<Record<number, any>>({});
@@ -51,7 +59,7 @@ export function StudentAssessmentPreviewModal({
   const currentWrittenExplanationRef = useRef<string>('');
 
   // Per-question timer state (simulated locally)
-  const currentQ = questions[currentIndex];
+  const currentQ = activeQuestions[currentIndex];
   const initialTime =
     currentQ?.timeAllowedSeconds != null && currentQ.timeAllowedSeconds > 0
       ? currentQ.timeAllowedSeconds
@@ -117,9 +125,9 @@ export function StudentAssessmentPreviewModal({
         clearInterval(timerIntervalRef.current);
       }
     };
-  }, [currentIndex, questions]);
+  }, [currentIndex, activeQuestions]);
 
-  const handleAdvance = (autoAdvanced = false) => {
+  const handleAdvance = (_autoAdvanced = false) => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
@@ -137,7 +145,7 @@ export function StudentAssessmentPreviewModal({
       [currentIndex]: currentExplanation,
     }));
 
-    if (currentIndex < questions.length - 1) {
+    if (currentIndex < activeQuestions.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
       setIsCompleted(true);
@@ -179,16 +187,8 @@ export function StudentAssessmentPreviewModal({
         className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col my-4 max-h-[94vh] overflow-hidden text-slate-900 dark:text-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Preview Mode Disclaimer Banner */}
-        <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-violet-900 text-white px-4 py-2 text-xs flex items-center justify-between font-mono shrink-0 border-b border-indigo-700/50">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-indigo-500/30 border border-indigo-400/40 font-bold uppercase tracking-wider text-[10px]">
-              Student Portal Preview
-            </span>
-            <span className="text-indigo-200 truncate hidden sm:inline">
-              Interactive demonstration &bull; No answers or scores are saved
-            </span>
-          </div>
+        {/* Top Header with Close Button */}
+        <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-violet-900 text-white px-4 py-2 text-xs flex items-center justify-end font-mono shrink-0 border-b border-indigo-700/50">
           <button
             type="button"
             onClick={onClose}
@@ -201,9 +201,26 @@ export function StudentAssessmentPreviewModal({
 
         {/* Modal Scrollable Container */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-          {questions.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-sm">
-              No questions available to preview.
+          {activeQuestions.length === 0 ? (
+            <div className="p-8 sm:p-12 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center space-y-4 my-6 shadow-sm">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-800/60">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                No questions available to preview
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                No active questions remain for this assessment. Any previously attached questions may have been removed or deleted from the Question Bank.
+              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-medium text-sm text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                >
+                  Close Preview
+                </button>
+              </div>
             </div>
           ) : isCompleted ? (
             /* Completed Preview Screen */
@@ -245,7 +262,7 @@ export function StudentAssessmentPreviewModal({
                     {title} {subtitle ? `· ${subtitle}` : ''}
                   </span>
                   <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white truncate">
-                    Question {currentIndex + 1} of {questions.length}
+                    Question {currentIndex + 1} of {activeQuestions.length}
                   </h3>
                 </div>
 
@@ -325,24 +342,26 @@ export function StudentAssessmentPreviewModal({
                     </button>
                   )}
                   <span className="text-xs text-slate-500 font-mono">
-                    Question {currentIndex + 1} of {questions.length}
+                    Question {currentIndex + 1} of {activeQuestions.length}
                   </span>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleAdvance(false)}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer shrink-0"
+                  className="next-question-btn w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 text-sm transition-all cursor-pointer shrink-0"
                   style={{
-                    backgroundImage: 'linear-gradient(to right, #4f46e5, #7c3aed)',
                     backgroundColor: '#4f46e5',
                     color: '#ffffff',
                   }}
                 >
-                  <span className="text-white">
-                    {currentIndex < questions.length - 1 ? 'Next Question' : 'Finish Preview'}
+                  <span
+                    className="next-question-btn-text text-white"
+                    style={{ backgroundColor: 'transparent', color: '#ffffff' }}
+                  >
+                    {currentIndex < activeQuestions.length - 1 ? 'Next Question' : 'Finish Preview'}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-white" />
+                  <ArrowRight className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
                 </button>
               </div>
             </div>

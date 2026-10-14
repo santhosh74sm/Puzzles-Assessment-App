@@ -1423,6 +1423,66 @@ router.delete('/question-groups/:id', authenticate, requireRole('super_admin'), 
           }
         }
       }
+
+      // Safely remove deleted question snapshots & IDs from PublishedTestModel
+      const matchingPubTests = await PublishedTestModel.find({
+        $or: [
+          { questionIds: { $in: questionIdsToDelete } },
+          { 'questionsSnapshot.id': { $in: questionIdsToDelete } },
+          { 'questionsSnapshot._id': { $in: questionIdsToDelete } },
+          { 'questionsSnapshot.questionId': { $in: questionIdsToDelete } },
+        ],
+      });
+      for (const pt of matchingPubTests) {
+        let modified = false;
+        if (Array.isArray(pt.questionIds)) {
+          const origLen = pt.questionIds.length;
+          pt.questionIds = pt.questionIds.filter((qId: any) => !deletedIdSet.has(String(qId)));
+          if (pt.questionIds.length !== origLen) modified = true;
+        }
+        if (Array.isArray(pt.questionsSnapshot)) {
+          const origLen = pt.questionsSnapshot.length;
+          pt.questionsSnapshot = pt.questionsSnapshot.filter((q: any) => {
+            const qId = String(q.id || q._id || q.questionId || '');
+            return !deletedIdSet.has(qId);
+          });
+          if (pt.questionsSnapshot.length !== origLen) modified = true;
+        }
+        if (modified) {
+          pt.markModified('questionsSnapshot');
+          await pt.save();
+        }
+      }
+
+      // Safely remove deleted question snapshots & IDs from PublishHistoryModel
+      const matchingHistories = await PublishHistoryModel.find({
+        $or: [
+          { questionIds: { $in: questionIdsToDelete } },
+          { 'questionsSnapshot.id': { $in: questionIdsToDelete } },
+          { 'questionsSnapshot._id': { $in: questionIdsToDelete } },
+          { 'questionsSnapshot.questionId': { $in: questionIdsToDelete } },
+        ],
+      });
+      for (const ph of matchingHistories) {
+        let modified = false;
+        if (Array.isArray(ph.questionIds)) {
+          const origLen = ph.questionIds.length;
+          ph.questionIds = ph.questionIds.filter((qId: any) => !deletedIdSet.has(String(qId)));
+          if (ph.questionIds.length !== origLen) modified = true;
+        }
+        if (Array.isArray(ph.questionsSnapshot)) {
+          const origLen = ph.questionsSnapshot.length;
+          ph.questionsSnapshot = ph.questionsSnapshot.filter((q: any) => {
+            const qId = String(q.id || q._id || q.questionId || '');
+            return !deletedIdSet.has(qId);
+          });
+          if (ph.questionsSnapshot.length !== origLen) modified = true;
+        }
+        if (modified) {
+          ph.markModified('questionsSnapshot');
+          await ph.save();
+        }
+      }
     }
 
     return res.json({
@@ -1969,6 +2029,68 @@ router.delete('/questions/:id', authenticate, requireRole('super_admin'), async 
           assign.totalQuestions = assign.questions.length;
           await assign.save();
         }
+      }
+    }
+
+    // 3. Safely remove the deleted question from PublishedTestModel snapshots & IDs so previews do not surface old snapshots
+    const matchingPubTests = await PublishedTestModel.find({
+      $or: [
+        { questionIds: deletedIdStr },
+        { 'questionsSnapshot.id': deletedIdStr },
+        { 'questionsSnapshot._id': deletedIdStr },
+        { 'questionsSnapshot.questionId': deletedIdStr },
+      ],
+    });
+    for (const pt of matchingPubTests) {
+      let modified = false;
+      if (Array.isArray(pt.questionIds) && pt.questionIds.includes(deletedIdStr)) {
+        pt.questionIds = pt.questionIds.filter((qId: any) => String(qId) !== deletedIdStr);
+        modified = true;
+      }
+      if (Array.isArray(pt.questionsSnapshot)) {
+        const origLen = pt.questionsSnapshot.length;
+        pt.questionsSnapshot = pt.questionsSnapshot.filter((q: any) => {
+          const qId = String(q.id || q._id || q.questionId || '');
+          return qId !== deletedIdStr;
+        });
+        if (pt.questionsSnapshot.length !== origLen) {
+          modified = true;
+        }
+      }
+      if (modified) {
+        pt.markModified('questionsSnapshot');
+        await pt.save();
+      }
+    }
+
+    // 4. Safely remove the deleted question from PublishHistoryModel snapshots & IDs
+    const matchingHistories = await PublishHistoryModel.find({
+      $or: [
+        { questionIds: deletedIdStr },
+        { 'questionsSnapshot.id': deletedIdStr },
+        { 'questionsSnapshot._id': deletedIdStr },
+        { 'questionsSnapshot.questionId': deletedIdStr },
+      ],
+    });
+    for (const ph of matchingHistories) {
+      let modified = false;
+      if (Array.isArray(ph.questionIds) && ph.questionIds.includes(deletedIdStr)) {
+        ph.questionIds = ph.questionIds.filter((qId: any) => String(qId) !== deletedIdStr);
+        modified = true;
+      }
+      if (Array.isArray(ph.questionsSnapshot)) {
+        const origLen = ph.questionsSnapshot.length;
+        ph.questionsSnapshot = ph.questionsSnapshot.filter((q: any) => {
+          const qId = String(q.id || q._id || q.questionId || '');
+          return qId !== deletedIdStr;
+        });
+        if (ph.questionsSnapshot.length !== origLen) {
+          modified = true;
+        }
+      }
+      if (modified) {
+        ph.markModified('questionsSnapshot');
+        await ph.save();
       }
     }
 
@@ -4278,13 +4400,27 @@ router.get('/publish-history', authenticate, requireRole('super_admin'), async (
 router.get('/publish-history/:publishId', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
   try {
     const { publishId } = req.params;
-    const historyDoc = await PublishHistoryModel.findOne({ publishId });
+    let historyDoc = await PublishHistoryModel.findOne({
+      $or: [
+        { publishId },
+        ...(mongoose.Types.ObjectId.isValid(publishId) ? [{ _id: new mongoose.Types.ObjectId(publishId) }] : []),
+      ],
+    });
     if (!historyDoc) return res.status(404).json({ error: 'Publish history record not found' });
 
-    const pubTest = await PublishedTestModel.findById(publishId).lean();
+    const resolvedPubId = historyDoc.publishId || publishId;
+    let pubTest = await PublishedTestModel.findById(resolvedPubId).lean();
+    if (!pubTest && mongoose.Types.ObjectId.isValid(publishId)) {
+      pubTest = await PublishedTestModel.findById(publishId).lean();
+    }
 
     // Fetch live assignments from MongoDB collection studenttestassignments
-    const liveAssignments = await StudentTestAssignmentModel.find({ publishedTestId: publishId });
+    const liveAssignments = await StudentTestAssignmentModel.find({
+      $or: [
+        { publishedTestId: resolvedPubId },
+        { publishedTestId: publishId },
+      ],
+    });
     const assignMap = new Map<string, any>();
     for (const a of liveAssignments) {
       assignMap.set(a.studentId, a);
@@ -4572,7 +4708,8 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       });
     }
 
-    const historicalQuestions = Array.from(questionMap.values());
+    // Filter out deleted questions so only remaining valid questions appear in history & preview
+    const historicalQuestions = Array.from(questionMap.values()).filter((q) => !q.isQuestionDeleted);
 
     // Build question summary breakdown: Group -> Difficulty -> count
     const questionSummaryMap = new Map<string, { diffMap: Map<string, number>; isGroupDeleted: boolean }>();

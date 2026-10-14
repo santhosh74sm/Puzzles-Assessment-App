@@ -746,16 +746,42 @@ html.light .targets-filter-all-badge {
   color: #ffffff !important;
 }
 
-/* 3. Next Question button in Light Theme */
+/* 3. Next Question button styling */
 html.light .next-question-btn,
-html.light button.next-question-btn {
-  background-image: linear-gradient(to right, #4f46e5, #7c3aed) !important;
+html.light button.next-question-btn,
+html.dark .next-question-btn,
+html.dark button.next-question-btn {
+  background-image: none !important;
   background-color: #4f46e5 !important;
   color: #ffffff !important;
 }
+html.light .next-question-btn:hover,
+html.light button.next-question-btn:hover,
+html.dark .next-question-btn:hover,
+html.dark button.next-question-btn:hover {
+  background-color: #4338ca !important;
+}
+html.light .next-question-btn:focus-visible,
+html.light button.next-question-btn:focus-visible,
+html.dark .next-question-btn:focus-visible,
+html.dark button.next-question-btn:focus-visible {
+  outline: 2px solid #818cf8 !important;
+  outline-offset: 2px !important;
+}
+html.light .next-question-btn:disabled,
+html.light button.next-question-btn:disabled,
+html.dark .next-question-btn:disabled,
+html.dark button.next-question-btn:disabled {
+  opacity: 0.5 !important;
+}
 html.light .next-question-btn .next-question-btn-text,
 html.light button.next-question-btn span,
-html.light button.next-question-btn span:first-child {
+html.light button.next-question-btn span:first-child,
+html.light button.next-question-btn svg,
+html.dark .next-question-btn .next-question-btn-text,
+html.dark button.next-question-btn span,
+html.dark button.next-question-btn span:first-child,
+html.dark button.next-question-btn svg {
   background-color: transparent !important;
   color: #ffffff !important;
 }

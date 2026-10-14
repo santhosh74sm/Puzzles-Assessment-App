@@ -113,6 +113,9 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
   const loadHistoryDetail = React.useCallback(async (publishId: string) => {
     try {
       const res = await fetch(`/api/publish-history/${publishId}`, { headers });
+      if (!res.ok) {
+        throw new Error(`Failed to load history detail: ${res.status} ${res.statusText}`);
+      }
       const data = await res.json();
       setSelectedHistoryDetail(data);
     } catch (e) {
@@ -163,6 +166,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         publishMode: data.publishMode || 'Selected Questions',
         targets: formattedTargets,
         selectedQuestionsForPublish: data.questionIds || [],
+        questionsSnapshot: Array.isArray(data.questionsSnapshot) ? data.questionsSnapshot : [],
         randomSelectedDifficulties: Array.isArray(data.randomSelectedDifficulties) ? data.randomSelectedDifficulties : [],
         shuffleQuestions: Boolean(data.shuffle),
         randomCount: data.randomCount != null && data.randomCount !== '' ? data.randomCount : '',
