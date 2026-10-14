@@ -691,10 +691,10 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               })}
             </div>
           ) : (
-            <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-center py-12">
-              <Building2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <h4 className="text-base font-semibold text-slate-300">No schools added yet</h4>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <div className="p-8 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 text-center py-12 shadow-xs">
+              <Building2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
+              <h4 className="text-base font-semibold text-slate-800 dark:text-slate-300">No schools added yet</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1 max-w-sm mx-auto">
                 Use the form on the left to add your first school.
               </p>
             </div>
