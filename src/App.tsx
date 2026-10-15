@@ -56,7 +56,6 @@ function AppContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginFormKey, setLoginFormKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [setupMode, setSetupMode] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
@@ -102,7 +101,6 @@ function AppContent() {
   const handleLoginOrSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMsg(null);
     setLoading(true);
 
     try {
@@ -128,7 +126,6 @@ function AppContent() {
       setPassword('');
       setShowPassword(false);
       setError(null);
-      setSuccessMsg(null);
       setLoginFormKey((k) => k + 1);
     } catch (err: any) {
       const msg = err.message || '';
@@ -213,7 +210,6 @@ function AppContent() {
     setPassword('');
     setShowPassword(false);
     setError(null);
-    setSuccessMsg(null);
     setLoginFormKey((k) => k + 1);
   };
 

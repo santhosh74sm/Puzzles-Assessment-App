@@ -4,9 +4,7 @@ import {
   CheckCircle2,
   AlertOctagon,
   ArrowRight,
-  Sparkles,
   Trophy,
-  History,
   Calendar,
   Lock,
 } from 'lucide-react';

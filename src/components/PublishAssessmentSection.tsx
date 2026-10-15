@@ -21,10 +21,8 @@ import {
   Search,
   Bookmark,
   BookmarkPlus,
-  Sparkles,
   FolderDown,
 } from 'lucide-react';
-import { FlameMiniGameCanvas } from './FlameMiniGameCanvas.tsx';
 import { Time12HourPicker } from './Time12HourPicker.tsx';
 import {
   StudentAssessmentPreviewModal,
@@ -39,21 +37,6 @@ import {
   getLocalCurrentTime12H,
   formatAvailabilityWindow,
 } from '../utils/dateTime.ts';
-
-const VALID_CLASSES = [
-  'Class 1',
-  'Class 2',
-  'Class 3',
-  'Class 4',
-  'Class 5',
-  'Class 6',
-  'Class 7',
-  'Class 8',
-  'Class 9',
-  'Class 10',
-  'Class 11',
-  'Class 12',
-] as const;
 
 export interface TargetItem {
   id: string;
@@ -1196,7 +1179,7 @@ function StudentMultiSelectDropdown({
 function TargetCard({
   target,
   index,
-  totalTargets,
+  totalTargets: _totalTargets,
   schools,
   token,
   onUpdate,

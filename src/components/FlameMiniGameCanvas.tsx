@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Sparkles, Trophy, RotateCcw, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 interface FlameMiniGameProps {
@@ -18,7 +18,6 @@ interface FlameMiniGameProps {
 export function FlameMiniGameCanvas({
   content,
   points,
-  timeRemaining,
   options = [],
   answerType = 'single',
   pairs = [],
@@ -226,14 +225,6 @@ export function FlameMiniGameCanvas({
     : typeof selectedAnswer === 'string' && selectedAnswer
     ? [selectedAnswer]
     : [];
-
-  const handleGridCenterSelect = (val: string) => {
-    if (disabled) return;
-    const copy = [...gridCells];
-    copy[4] = val;
-    setGridCells(copy);
-    onAnswerSubmit(val);
-  };
 
   return (
     <div className="relative w-full rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-7 text-slate-900 dark:text-white">

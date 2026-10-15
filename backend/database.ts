@@ -1,15 +1,18 @@
 import mongoose from 'mongoose';
-import {
-  UserModel,
-  SchoolModel,
-  QuestionGroupModel,
-  QuestionModel,
-  PublishedTestModel,
-  StudentTestAssignmentModel,
-  PublishHistoryModel,
-  AssessmentTemplateModel,
-} from '../database/models.ts';
+import { UserModel } from '../database/models.ts';
 import bcrypt from 'bcryptjs';
+
+export function getTargetDatabaseName(): string {
+  const isTest = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test' || process.env.TARGET_DB_MODE === 'test';
+  if (isTest) {
+    const testDb = (process.env.TEST_DB_NAME || 'puzzles_assessment_test').trim();
+    if (testDb !== 'puzzles_assessment_test') {
+      throw new Error(`[Database Security] Refusing connection: test database must be strictly 'puzzles_assessment_test', received '${testDb}'`);
+    }
+    return 'puzzles_assessment_test';
+  }
+  return (process.env.MONGO_DB_NAME || 'puzzles_assessment_dev').trim();
+}
 
 export async function connectMongoDB(): Promise<{ isConnected: boolean; dbName: string }> {
   try {
@@ -21,35 +24,66 @@ export async function connectMongoDB(): Promise<{ isConnected: boolean; dbName: 
       );
     }
 
-    // Enforce target database puzzles_assessment_dev
+    const targetDb = getTargetDatabaseName();
+    const isTestMode = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test' || process.env.TARGET_DB_MODE === 'test';
+
+    // Strict Safeguard 1: Test mode must NEVER point to development database
+    if (isTestMode && targetDb === 'puzzles_assessment_dev') {
+      throw new Error(
+        '[Database Security] FATAL: Test mode is active but target database is puzzles_assessment_dev. Aborting immediately to protect development data.'
+      );
+    }
+
+    // Build final URI ensuring target database is applied
     let finalUri = rawUri;
-    if (!finalUri.includes('/puzzles_assessment_dev')) {
-      if (finalUri.includes('/?')) {
-        finalUri = finalUri.replace('/?', '/puzzles_assessment_dev?');
-      } else if (finalUri.endsWith('/')) {
-        finalUri = finalUri + 'puzzles_assessment_dev';
-      } else if (!finalUri.split('?')[0].split('/').pop()) {
-        finalUri = finalUri + '/puzzles_assessment_dev';
+    if (finalUri.includes('/?')) {
+      finalUri = finalUri.replace(/\/[^/?]*\?/, `/${targetDb}?`);
+    } else if (finalUri.endsWith('/')) {
+      finalUri = finalUri + targetDb;
+    } else {
+      const parts = finalUri.split('?');
+      const basePath = parts[0];
+      const lastSlashIdx = basePath.lastIndexOf('/');
+      const queryString = parts[1] ? `?${parts[1]}` : '';
+      if (lastSlashIdx > 0 && !basePath.slice(lastSlashIdx + 1).includes(':')) {
+        finalUri = `${basePath.substring(0, lastSlashIdx)}/${targetDb}${queryString}`;
+      } else {
+        finalUri = `${basePath}/${targetDb}${queryString}`;
       }
     }
 
-    console.log('[Database] Connecting to configured MongoDB deployment (target database: puzzles_assessment_dev).');
+    console.log(`[Database] Connecting to configured MongoDB deployment (target database: ${targetDb}).`);
 
     await mongoose.connect(finalUri, {
-      dbName: 'puzzles_assessment_dev',
+      dbName: targetDb,
       serverSelectionTimeoutMS: 5000,
       autoIndex: true,
     });
 
-    console.log(`[Database] Successfully connected to dedicated database: ${mongoose.connection.name}`);
+    const connectedDbName = mongoose.connection.name;
 
-    // Ensure required collection and schema structures exist in puzzles_assessment_dev without inserting sample data
+    // Strict Safeguard 2: Verify actual connected Mongoose database name
+    if (isTestMode) {
+      if (connectedDbName !== 'puzzles_assessment_test') {
+        await mongoose.disconnect();
+        throw new Error(
+          `[Database Security] Verification failed: Expected connected database 'puzzles_assessment_test', but actual connection is '${connectedDbName}'. Aborting immediately!`
+        );
+      }
+    }
+
+    console.log(`[Database] Successfully connected to dedicated database: ${connectedDbName}`);
+
+    // Ensure required collection and schema structures exist in the database without inserting sample data
     await ensureCollectionStructures();
 
-    // Ensure initial Super Admin ('san' / 'san' with mustChangePassword: true) in Atlas if not existing
-    await ensureInitialSuperAdmin();
+    // Strict Safeguard 3: Only run initial Super Admin check in development/production mode
+    // In test mode, we do NOT touch 'san'. Dedicated synthetic test accounts are seeded independently.
+    if (!isTestMode) {
+      await ensureInitialSuperAdmin();
+    }
 
-    return { isConnected: true, dbName: mongoose.connection.name };
+    return { isConnected: true, dbName: connectedDbName };
   } catch (err: any) {
     const errorName = typeof err?.name === 'string' ? err.name : 'UnknownError';
     const errorCode = typeof err?.code === 'string' || typeof err?.code === 'number' ? `, code: ${err.code}` : '';

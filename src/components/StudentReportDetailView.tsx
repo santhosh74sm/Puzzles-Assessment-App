@@ -1,15 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Calendar,
   Clock,
   User,
-  GraduationCap,
   Building2,
-  FileBarChart,
   RotateCcw,
-  CheckCircle2,
-  XCircle,
   AlertCircle,
   HelpCircle,
 } from 'lucide-react';
@@ -20,35 +16,6 @@ export interface StudentReportDetailViewProps {
   student?: any;
   schoolName?: string;
   onBack: () => void;
-}
-
-// Helper to format date and time as DD-MM-YYYY | hh:mm A in user's local timezone
-function formatStudentAssessmentDateTime(item: any): string {
-  const isCompleted = item?.status === 'COMPLETED';
-  const rawDate = isCompleted
-    ? (item?.completedAt || item?.updatedAt || item?.createdAt)
-    : (item?.lockedAt || item?.startedAt || item?.updatedAt || item?.createdAt || item?.date);
-
-  if (!rawDate) return '—';
-
-  const d = new Date(rawDate);
-  if (isNaN(d.getTime())) {
-    return String(rawDate);
-  }
-
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const day = pad(d.getDate());
-  const month = pad(d.getMonth() + 1);
-  const year = d.getFullYear();
-
-  let hours = d.getHours();
-  const minutes = pad(d.getMinutes());
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const hoursStr = pad(hours);
-
-  return `${day}-${month}-${year} | ${hoursStr}:${minutes} ${ampm}`;
 }
 
 // Helper to format published/created date and time as DD-MM-YYYY • hh:mm A in user's local timezone

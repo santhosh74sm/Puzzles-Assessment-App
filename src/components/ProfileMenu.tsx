@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  User, 
   Moon, 
   Sun, 
   Monitor, 
@@ -13,7 +12,7 @@ import {
   GraduationCap, 
   AlertTriangle 
 } from 'lucide-react';
-import { useTheme, ThemeMode } from '../context/ThemeContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface ProfileMenuProps {
   user: any;

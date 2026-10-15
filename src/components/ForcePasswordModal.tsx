@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, AlertCircle, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 
 interface ForcePasswordModalProps {
   username: string;

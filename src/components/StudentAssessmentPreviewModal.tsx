@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Clock,
   ArrowRight,
   ArrowLeft,
   X,
-  Eye,
   Trophy,
   AlertTriangle,
 } from 'lucide-react';

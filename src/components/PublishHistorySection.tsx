@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   History,
   ChevronDown,
@@ -21,15 +21,8 @@ import {
   AlertTriangle,
   Eye,
   HelpCircle,
-  Clock,
-  Award,
 } from 'lucide-react';
-import {
-  to12Hour,
-  formatDateDDMMYYYY,
-  formatDateTime12H,
-  formatAvailabilityWindow,
-} from '../utils/dateTime.ts';
+import { formatAvailabilityWindow } from '../utils/dateTime.ts';
 import { StudentAssessmentPreviewModal } from './StudentAssessmentPreviewModal.tsx';
 
 interface PublishHistorySectionProps {
@@ -1045,44 +1038,6 @@ function HistoricalAuditDrillDown({
         pairs: q.pairs || q.metadata?.pairs || [],
         isQuestionDeleted: false,
       }));
-  }, [detail?.questions]);
-
-  // Hierarchical question grouping for View-Only Preview Modal (Group -> Difficulty -> Questions)
-  const previewGroupedHierarchy = useMemo(() => {
-    const rawQuestions = Array.isArray(detail?.questions) ? detail.questions : [];
-    if (rawQuestions.length === 0) return [];
-
-    const groupMap = new Map<string, { diffMap: Map<string, any[]>; isGroupDeleted: boolean }>();
-    for (const q of rawQuestions) {
-      if (q.isQuestionDeleted) continue;
-      const g = (q.groupName || 'General').trim();
-      const d = (q.difficulty || 'Medium').trim();
-      if (!groupMap.has(g)) groupMap.set(g, { diffMap: new Map(), isGroupDeleted: false });
-      const entry = groupMap.get(g)!;
-      if (q.isGroupDeleted) entry.isGroupDeleted = true;
-      if (!entry.diffMap.has(d)) entry.diffMap.set(d, []);
-      entry.diffMap.get(d)!.push(q);
-    }
-
-    const standardOrder = ['Easy', 'Medium', 'Hard'];
-    return Array.from(groupMap.entries()).map(([groupName, entry]) => {
-      const diffKeys = Array.from(entry.diffMap.keys());
-      const sortedKeys = [
-        ...standardOrder.filter((d) => diffKeys.includes(d)),
-        ...diffKeys.filter((d) => !standardOrder.includes(d)),
-      ];
-      const diffs = sortedKeys.map((diffName) => ({
-        difficulty: diffName,
-        questions: entry.diffMap.get(diffName) || [],
-      }));
-      const totalCount = diffs.reduce((sum, d) => sum + d.questions.length, 0);
-      return {
-        groupName,
-        isGroupDeleted: entry.isGroupDeleted,
-        difficulties: diffs,
-        totalCount,
-      };
-    });
   }, [detail?.questions]);
 
   // Target Configuration(s) stored for this publish

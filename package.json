@@ -9,7 +9,10 @@
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:server": "NODE_ENV=test TEST_DB_NAME=puzzles_assessment_test PORT=3001 tsx server.ts",
+    "test:db:seed": "tsx scripts/test_db_manager.ts seed",
+    "test:db:clean": "tsx scripts/test_db_manager.ts clean"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

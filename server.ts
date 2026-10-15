@@ -16,7 +16,7 @@ async function startServer() {
   //   deployment health checks to that port. The server must bind to process.env.PORT.
   const isDevCommand = process.env.npm_lifecycle_event === 'dev';
   const targetPort = isDevCommand
-    ? (Number(process.env.DEFAULT_APP_PORT) || 3000)
+    ? (Number(process.env.PORT) || Number(process.env.DEFAULT_APP_PORT) || 3000)
     : (Number(process.env.PORT) || Number(process.env.DEFAULT_APP_PORT) || 8080);
   const fallbackPort = 3000;
   const HOST = '0.0.0.0';

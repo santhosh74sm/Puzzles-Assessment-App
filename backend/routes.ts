@@ -184,7 +184,7 @@ function isRequestAssessmentExpired(req: Request, pubTest: any): boolean {
 // ==========================================
 
 // Check if system has any users
-router.get('/auth/setup-status', async (req: Request, res: Response) => {
+router.get('/auth/setup-status', async (_req: Request, res: Response) => {
   try {
     const usersCount = await UserModel.countDocuments();
     return res.json({ hasUsers: usersCount > 0, totalUsers: usersCount });
@@ -2355,7 +2355,7 @@ async function validatePublishTargets(rawTargets: any[]) {
 export function isStudentTargetedByPublishedTest(
   student: any,
   pubTest: any,
-  totalSchoolsCount?: number
+  _totalSchoolsCount?: number
 ): boolean {
   if (!pubTest || !student) return false;
 
@@ -3160,7 +3160,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
 });
 
 // List All Published Tests
-router.get('/published-tests', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+router.get('/published-tests', authenticate, requireRole('super_admin'), async (_req: Request, res: Response) => {
   try {
     const list = await PublishedTestModel.find().sort({ createdAt: -1 });
     return res.json(formatDocs(list));
@@ -4377,7 +4377,7 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
 // ==========================================
 
 // Get All Publish History
-router.get('/publish-history', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+router.get('/publish-history', authenticate, requireRole('super_admin'), async (_req: Request, res: Response) => {
   try {
     const history = await PublishHistoryModel.find({}, { questionsSnapshot: 0, studentsStatus: 0 }).sort({ updatedAt: -1, publishedAt: -1, createdAt: -1 });
 
@@ -5274,7 +5274,7 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
 // ==========================================
 
 // List all templates
-router.get('/templates', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
+router.get('/templates', authenticate, requireRole('super_admin'), async (_req: Request, res: Response) => {
   try {
     const templates = await AssessmentTemplateModel.find().sort({ createdAt: -1 });
     return res.json(formatDocs(templates));

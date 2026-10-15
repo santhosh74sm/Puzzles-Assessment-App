@@ -1,5 +1,4 @@
 import Redis from 'ioredis';
-import type { Request } from 'express';
 import jwt from 'jsonwebtoken';
 import dns from 'dns';
 import { URL } from 'url';

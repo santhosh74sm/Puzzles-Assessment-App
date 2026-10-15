@@ -1,4 +1,4 @@
-import { School, ShieldCheck, CheckCircle2, User, Building2 } from 'lucide-react';
+import { School, ShieldCheck, CheckCircle2, User } from 'lucide-react';
 import { ProfileMenu } from './ProfileMenu';
 
 interface SchoolAdminDashboardProps {
