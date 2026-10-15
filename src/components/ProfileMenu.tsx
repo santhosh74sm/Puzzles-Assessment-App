@@ -255,16 +255,16 @@ export function ProfileMenu({
             </div>
 
             {/* Exactly 3 Theme Options */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80">
               {/* 1. Dark */}
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
                 aria-pressed={theme === 'dark'}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   theme === 'dark'
-                    ? 'bg-indigo-600 text-white shadow-md font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
+                    ? 'bg-indigo-600 text-white shadow-xs font-semibold'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
                 }`}
                 title="Dark"
               >
@@ -278,10 +278,10 @@ export function ProfileMenu({
                 type="button"
                 onClick={() => setTheme('light')}
                 aria-pressed={theme === 'light'}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   theme === 'light'
-                    ? 'bg-indigo-600 text-white shadow-md font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
+                    ? 'bg-indigo-600 text-white shadow-xs font-semibold'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
                 }`}
                 title="Light"
               >
@@ -295,10 +295,10 @@ export function ProfileMenu({
                 type="button"
                 onClick={() => setTheme('system')}
                 aria-pressed={theme === 'system'}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   theme === 'system'
-                    ? 'bg-indigo-600 text-white shadow-md font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
+                    ? 'bg-indigo-600 text-white shadow-xs font-semibold'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700/50'
                 }`}
                 title="Match device setting"
               >
@@ -314,13 +314,13 @@ export function ProfileMenu({
             <button
               type="button"
               onClick={handleLogoutClick}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white hover:bg-rose-50/80 text-rose-600 border border-rose-300 hover:border-rose-400 dark:bg-transparent dark:hover:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20 transition-all cursor-pointer shadow-xs"
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50/80 hover:bg-rose-100/80 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/40 transition-colors cursor-pointer shadow-2xs"
             >
               <div className="flex items-center gap-2">
                 <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                <span className="text-rose-600 dark:text-rose-400 font-semibold">Log Out</span>
+                <span className="font-semibold">Log Out</span>
               </div>
-              <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">Sign out</span>
+              <span className="text-[11px] font-medium">Sign out</span>
             </button>
           </div>
         </div>,
@@ -330,7 +330,7 @@ export function ProfileMenu({
       {/* Viewport-level Logout Confirmation Modal rendered in document.body via Portal */}
       {showConfirmModal && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-[9999] bg-slate-950/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-[9999] bg-slate-950/70 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
           role="dialog"
           aria-modal="true"
           aria-labelledby="logout-dialog-title"
@@ -340,22 +340,22 @@ export function ProfileMenu({
           }}
         >
           <div 
-            className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-6 shadow-2xl transition-all my-auto"
+            className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-xl transition-all my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center shrink-0">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 flex items-center justify-center shrink-0">
                 {isAssessmentActive ? (
-                  <AlertTriangle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+                  <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 ) : (
-                  <LogOut className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+                  <LogOut className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 )}
               </div>
-              <div className="space-y-1.5 flex-1 min-w-0">
-                <h3 id="logout-dialog-title" className="text-lg font-bold text-slate-900 dark:text-white leading-snug">
+              <div className="space-y-1 flex-1 min-w-0">
+                <h3 id="logout-dialog-title" className="text-base font-bold text-slate-900 dark:text-white leading-snug">
                   {isAssessmentActive ? 'Leave Test Early?' : 'Are you sure you want to log out?'}
                 </h3>
-                <p id="logout-dialog-desc" className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p id="logout-dialog-desc" className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   {confirmMessage || (
                     isAssessmentActive
                       ? 'You are taking a test right now. If you log out, your test will end immediately and you will not be able to restart or resume it.'
@@ -365,18 +365,18 @@ export function ProfileMenu({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-semibold transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="px-3.5 py-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-medium transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmLogout}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-rose-600/25 cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
               >
                 Log Out
               </button>

@@ -332,7 +332,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
               onClick={() => setActiveTab('schools')}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'schools'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-400 font-semibold shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
@@ -346,7 +346,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
               onClick={() => setActiveTab('question_bank')}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'question_bank'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-400 font-semibold shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
@@ -360,7 +360,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
               onClick={() => setActiveTab('publish')}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'publish'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-400 font-semibold shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
@@ -377,7 +377,7 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 activeTab === 'history'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-semibold'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-400 font-semibold shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
@@ -388,12 +388,9 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </div>
 
         {/* Sidebar Footer */}
-        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1 hidden md:block">
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-slate-700 dark:text-slate-300">Super Admin</span>
-            <span className="font-mono text-[10px] text-slate-400">v1.0</span>
-          </div>
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">Academic Assessment Engine</p>
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5 hidden md:block">
+          <p className="font-semibold text-slate-700 dark:text-slate-300">Super Administrator</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Assessment Management</p>
         </div>
       </aside>
 

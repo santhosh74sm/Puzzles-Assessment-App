@@ -197,23 +197,23 @@ export function StudentReportDetailView({
 
               {/* Identity & Reference Codes */}
               <div className="flex flex-wrap items-center gap-3 font-mono text-xs">
-                <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-sans">Student ID</span>
-                  <span className="text-indigo-600 dark:text-indigo-300 font-bold text-sm">
+                <div className="px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-slate-600 dark:text-slate-400 block text-[11px] font-sans font-medium mb-0.5">Student ID</span>
+                  <span className="text-indigo-700 dark:text-indigo-400 font-bold text-sm">
                     {activeStudent.uniqueStudentId || studentId}
                   </span>
                 </div>
 
-                <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-sans">Admission Number</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-bold text-sm">
+                <div className="px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-slate-600 dark:text-slate-400 block text-[11px] font-sans font-medium mb-0.5">Admission Number</span>
+                  <span className="text-slate-900 dark:text-slate-100 font-bold text-sm">
                     {activeStudent.schoolAdmissionNumber || '—'}
                   </span>
                 </div>
 
-                <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700">
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-sans">Tests Taken</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                <div className="px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-slate-600 dark:text-slate-400 block text-[11px] font-sans font-medium mb-0.5">Tests Taken</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">
                     {timeline.length}
                   </span>
                 </div>
@@ -223,7 +223,7 @@ export function StudentReportDetailView({
             {/* Chronological Test History Timeline */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   <span>Test History ({timeline.length})</span>
                 </h4>
@@ -233,7 +233,7 @@ export function StudentReportDetailView({
                 timeline.map((item: any, idx: number) => (
                   <div
                     key={item.assignmentId || idx}
-                    className="p-5 rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-4 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-2xs"
+                    className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs"
                   >
                     {/* Test Header */}
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -245,7 +245,7 @@ export function StudentReportDetailView({
                             return (/^\d+\./.test(baseTitle) || baseTitle.startsWith('Assessment -')) ? baseTitle : `${num}. ${baseTitle}`;
                           })()}
                         </h5>
-                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-mono">
                           <span>{item.publishMode || 'Selected Questions'}</span>
                           <span className="text-slate-300 dark:text-slate-600">&bull;</span>
                           <span>{formatPublishedDateTime(item.publishedCreatedAt || item.createdAt)}</span>

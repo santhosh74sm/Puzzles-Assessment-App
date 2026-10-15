@@ -379,8 +379,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       if (res.ok) {
         setTestResult(data);
         setActiveTest(null);
-        activeTestRef.current = null;
-        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        const prefersReducedMotion =
+          typeof window !== 'undefined' && window.matchMedia
+            ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            : false;
+        if (!prefersReducedMotion) {
+          confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+        }
         loadStudentTests();
       } else {
         const errorDetail = data.error || 'Unable to submit test. Please try again.';
@@ -433,7 +438,11 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       {/* Main Body */}
       <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-5xl mx-auto w-full">
         {errorMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between gap-2">
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/50 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between gap-2"
+          >
             <div className="flex items-center gap-2">
               <AlertOctagon className="w-5 h-5 shrink-0" />
               <span>{errorMsg}</span>
@@ -450,7 +459,11 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
         {/* 1. TEST RESULT SUMMARY BANNER */}
         {testResult && (
-          <div className="mb-8 p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center shadow-xs space-y-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-8 p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center shadow-xs space-y-4"
+          >
             <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center shadow-xs">
               <Trophy className="w-6 h-6" />
             </div>
@@ -458,15 +471,15 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Assessment Completed
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                 Your responses have been successfully recorded and submitted to your institution.
               </p>
             </div>
 
             <div className="max-w-xs mx-auto pt-1">
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-semibold uppercase tracking-wider">Submission Status</span>
-                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 block font-semibold mb-0.5">Submission Status</span>
+                <span className="text-base font-bold text-emerald-700 dark:text-emerald-400 font-mono">
                   Submitted & Scored
                 </span>
               </div>
@@ -474,7 +487,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
             <button
               onClick={() => setTestResult(null)}
-              className="mt-4 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-semibold text-xs text-white shadow-xs transition-colors cursor-pointer"
+              className="mt-4 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 font-semibold text-xs text-white shadow-xs transition-all cursor-pointer"
             >
               Back to Assessments
             </button>
@@ -541,7 +554,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
             {/* Written Explanation (Optional) - Shown only when enabled */}
             {Boolean(currentQ.enableWrittenExplanation) && (
               <div className="space-y-1.5 pt-2">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Your Explanation (Optional)
                 </label>
                 <textarea
@@ -553,14 +566,14 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                     currentWrittenExplanationRef.current = val;
                   }}
                   placeholder="Write your reason here..."
-                  className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all resize-y min-h-[80px]"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-y min-h-[80px] shadow-xs"
                 />
               </div>
             )}
 
             {/* Next / Submit Question Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4">
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-600 dark:text-slate-400">
                 * Your answer will be saved when you move forward.
               </span>
 
@@ -568,7 +581,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 type="button"
                 onClick={() => recordAndAdvance(currentSelectedAnswerRef.current)}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white shadow-xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-colors cursor-pointer next-question-btn shrink-0"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white shadow-xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-all cursor-pointer next-question-btn shrink-0"
               >
                 <span className="next-question-btn-text text-white">
                   {isSubmitting
@@ -590,7 +603,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Assigned Assessments
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                 Evaluations provisioned for your grade. Each assessment must be completed in a single continuous session.
               </p>
             </div>
@@ -625,7 +638,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                     >
                       <div className="space-y-2.5">
                         <div className="flex items-center justify-between text-xs font-medium">
-                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                             <span className="font-mono tabular-nums text-slate-700 dark:text-slate-300 font-semibold">
                               {card.totalQuestions} Questions
                             </span>
@@ -633,16 +646,16 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                             <span
                               className={`font-semibold ${
                                 isCompleted
-                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  ? 'text-emerald-700 dark:text-emerald-400'
                                   : isIncomplete
-                                  ? 'text-rose-600 dark:text-rose-400'
+                                  ? 'text-rose-700 dark:text-rose-400'
                                   : card.isPaused
-                                  ? 'text-amber-600 dark:text-amber-400'
+                                  ? 'text-amber-700 dark:text-amber-400'
                                   : isExpired
-                                  ? 'text-slate-400 dark:text-slate-500'
+                                  ? 'text-slate-500 dark:text-slate-500'
                                   : isUpcoming
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-indigo-600 dark:text-indigo-400'
+                                  ? 'text-amber-700 dark:text-amber-400'
+                                  : 'text-indigo-700 dark:text-indigo-400'
                               }`}
                             >
                               {isCompleted
@@ -664,7 +677,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                           {card.publishName}
                         </h3>
 
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-mono">
                           <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>Window: {formatAvailabilityWindow(card.startDate, card.startTime, card.endDate, card.endTime)}</span>
                         </div>
@@ -673,20 +686,20 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                       {/* Action status */}
                       <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         {isCompleted && (
-                          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
                             <CheckCircle2 className="w-4 h-4 shrink-0" />
                             <span>Completed. Answers recorded.</span>
                           </div>
                         )}
 
                         {isIncomplete && (
-                          <div className="flex flex-col gap-0.5 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                          <div className="flex flex-col gap-0.5 text-xs text-rose-700 dark:text-rose-400 font-medium">
                             <div className="flex items-center gap-1.5">
                               <Lock className="w-3.5 h-3.5 shrink-0" />
                               <span>Ended early. Attempt closed.</span>
                             </div>
                             {card.exitType && (card.exitType === 'EXIT' || card.exitType === 'LOGOUT') && (
-                              <span className="font-mono text-[10px] text-slate-400 ml-5">
+                              <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400 ml-5">
                                 Reason: {card.exitType}
                               </span>
                             )}
@@ -694,7 +707,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                         )}
 
                         {!isCompleted && !isIncomplete && card.isPaused && (
-                          <div className="w-full py-2 px-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs text-center font-medium">
+                          <div className="w-full py-2 px-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs text-center font-medium">
                             Temporarily Paused by Administrator
                           </div>
                         )}
@@ -702,13 +715,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                         {!isCompleted && !isIncomplete && !card.isPaused && card.status === 'NOT_STARTED' && (
                           <div className="space-y-2 w-full">
                             {isUpcoming && (
-                              <div className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-1.5">
+                              <div className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-1.5">
                                 <Clock className="w-3.5 h-3.5 shrink-0" />
                                 <span>Assessment opens at the scheduled start time.</span>
                               </div>
                             )}
                             {isExpired && (
-                              <div className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-1.5">
+                              <div className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-1.5">
                                 <AlertOctagon className="w-3.5 h-3.5 shrink-0" />
                                 <span>Assessment window has closed.</span>
                               </div>
@@ -717,7 +730,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                               type="button"
                               onClick={() => handleStartTest(assignmentId)}
                               disabled={!canStart}
-                              className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-xs sm:text-sm transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                              className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-xs sm:text-sm transition-all shadow-xs cursor-pointer disabled:cursor-not-allowed"
                             >
                               {isUpcoming
                                 ? 'Upcoming Assessment'
@@ -756,7 +769,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                   <Calendar className="w-5 h-5" />
                 </div>
                 <h4 className="font-bold text-base text-slate-900 dark:text-white">No Assessments Scheduled</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                   There are no active tests assigned to your roster at this time. Please check back when a new testing window opens.
                 </p>
               </div>
@@ -766,29 +779,29 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
 
         {/* In-app Exit / Abandon Confirmation Modal */}
         {showExitConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-200 dark:border-rose-500/30">
-                <AlertOctagon className="w-6 h-6" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 dark:bg-black/80 backdrop-blur-xs p-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
+              <div className="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-200 dark:border-rose-800/60 shadow-2xs">
+                <AlertOctagon className="w-5 h-5" />
               </div>
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Exit Test?</h3>
-                <p className="text-xs text-rose-700 dark:text-rose-300">
-                  You can only take this test once. If you exit now, your test will end immediately and be marked as <strong>Incomplete</strong>. You will not be able to restart it.
+              <div className="text-center space-y-1.5">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Exit Test?</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  You can only take this test once. If you exit now, your test will end immediately and be marked as <strong className="text-rose-600 dark:text-rose-400">Incomplete</strong>. You will not be able to restart it.
                 </p>
               </div>
-              <div className="flex gap-3 pt-2">
+              <div className="flex items-center gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowExitConfirmModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold text-xs transition-all cursor-pointer"
+                  className="flex-1 py-2 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-medium text-xs transition-colors cursor-pointer shadow-xs"
                 >
                   Continue Test
                 </button>
                 <button
                   type="button"
                   onClick={executeAbandonTest}
-                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all shadow-lg shadow-rose-600/30 cursor-pointer"
+                  className="flex-1 py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer"
                 >
                   Yes, Exit Test
                 </button>

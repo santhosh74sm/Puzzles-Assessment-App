@@ -14,7 +14,7 @@ export function SchoolAdminDashboard({ user, onLogout }: SchoolAdminDashboardPro
       {/* Top Navbar */}
       <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 sm:px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shadow-xs font-bold shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs font-bold shrink-0">
             <School className="w-4 h-4" />
           </div>
           <div>
@@ -35,29 +35,29 @@ export function SchoolAdminDashboard({ user, onLogout }: SchoolAdminDashboardPro
         {/* School Hero Banner */}
         <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center shadow-xs shrink-0">
-              <School className="w-7 h-7" />
+            <div className="w-13 h-13 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-center shadow-xs shrink-0">
+              <School className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium mb-1">
                 <span>Educational Institution</span>
                 <span className="text-slate-300 dark:text-slate-700">·</span>
-                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Verified School
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 {schoolName}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                 Authorized administrative portal for student assessment tracking and school participation.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-xs font-mono">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs font-mono">
             <User className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-500 dark:text-slate-400">Admin:</span>
+            <span className="text-slate-600 dark:text-slate-400">Admin:</span>
             <span className="font-semibold text-slate-900 dark:text-white">{user.username}</span>
           </div>
         </div>
@@ -66,45 +66,45 @@ export function SchoolAdminDashboard({ user, onLogout }: SchoolAdminDashboardPro
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Status</span>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Status</span>
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Active
               </span>
             </div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">Enrolled & Active</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               School credentials and students are synchronized with the central assessment system.
             </p>
           </div>
 
           <div className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Security</span>
-              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Security</span>
+              <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" /> Isolated
               </span>
             </div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">Tenant Isolation</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               Assessment results and student rosters are cryptographically isolated to this school.
             </p>
           </div>
 
           <div className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">System Role</span>
-              <span className="font-mono text-xs text-slate-700 dark:text-slate-300">school_admin</span>
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">System Role</span>
+              <span className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">school_admin</span>
             </div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">School Administrator</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               Central Super Admins schedule assessments and publish scores directly for your students.
             </p>
           </div>
         </div>
 
         {/* Quiet Notice */}
-        <div className="p-4 rounded-xl bg-slate-100/80 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 text-center">
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+        <div className="p-4 rounded-xl bg-slate-100/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center">
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             For student registration updates or custom assessment schedule requests, please coordinate with your platform Super Administrator.
           </p>
         </div>

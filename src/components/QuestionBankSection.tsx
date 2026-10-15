@@ -702,6 +702,8 @@ export function QuestionBankSection({
 
       {feedbackMessage && (
         <div
+          role={feedbackMessage.type === 'error' ? 'alert' : 'status'}
+          aria-live={feedbackMessage.type === 'error' ? 'assertive' : 'polite'}
           className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between shadow-2xs ${
             feedbackMessage.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300'

@@ -488,6 +488,8 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {feedbackMessage && (
         <div
+          role={feedbackMessage.type === 'error' ? 'alert' : 'status'}
+          aria-live={feedbackMessage.type === 'error' ? 'assertive' : 'polite'}
           className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between ${
             feedbackMessage.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/50 text-emerald-800 dark:text-emerald-300'
@@ -503,7 +505,11 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Admin Credential Banner */}
       {createdAdminResult && (
-        <div className="p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-500/60 shadow-xs space-y-2">
+        <div
+          role="status"
+          aria-live="polite"
+          className="p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-500/60 shadow-xs space-y-2"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono uppercase text-indigo-700 dark:text-indigo-400 font-bold flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -541,7 +547,11 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Student Credential Banner */}
       {createdStudentResult && (
-        <div className="p-5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/60 shadow-xs space-y-2">
+        <div
+          role="status"
+          aria-live="polite"
+          className="p-5 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/60 shadow-xs space-y-2"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-mono uppercase text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5">
               <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -1095,7 +1105,12 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Edit Student Modal */}
       {editingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-edit-student-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm"
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1103,7 +1118,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                   <Edit className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white text-base">Edit Student</h3>
+                  <h3 id="modal-edit-student-title" className="font-semibold text-slate-900 dark:text-white text-base">Edit Student</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                     Student ID: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{editingStudent.uniqueStudentId}</span>
                   </p>
@@ -1211,14 +1226,19 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Delete Confirmation Modal */}
       {deletingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-delete-student-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm"
+        >
           <div className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Delete Student</h3>
+                <h3 id="modal-delete-student-title" className="text-base font-semibold text-slate-900 dark:text-white">Delete Student</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Please confirm</p>
               </div>
             </div>
@@ -1258,14 +1278,19 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Delete School Admin Confirmation Modal */}
       {deletingAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-delete-admin-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm"
+        >
           <div className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-slate-900 dark:text-white">Delete School Admin</h3>
+                <h3 id="modal-delete-admin-title" className="text-base font-semibold text-slate-900 dark:text-white">Delete School Admin</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Please confirm</p>
               </div>
             </div>
@@ -1317,14 +1342,19 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Delete School Workspace Confirmation Modal */}
       {deletingSchool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-delete-school-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm"
+        >
           <div className="bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete School</h3>
+                <h3 id="modal-delete-school-title" className="text-base font-bold text-slate-900 dark:text-white">Delete School</h3>
                 <p className="text-xs text-rose-600 dark:text-rose-400/90 font-medium">This action cannot be undone</p>
               </div>
             </div>
@@ -1381,7 +1411,12 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
 
       {/* Super Admin Reset Password Modal */}
       {resettingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-reset-password-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150 text-slate-900 dark:text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1389,7 +1424,7 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Reset Password</h3>
+                  <h3 id="modal-reset-password-title" className="text-base font-bold text-slate-900 dark:text-white">Reset Password</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {resettingUser.studentName ? `${resettingUser.studentName} (${resettingUser.uniqueStudentId})` : resettingUser.username}
                   </p>
@@ -1410,7 +1445,11 @@ export function SchoolsSection({ token, schools, onRefreshSchools }: SchoolsSect
               </div>
             ) : resetPasswordError ? (
               <div className="space-y-4">
-                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs"
+                >
                   {resetPasswordError}
                 </div>
                 <button

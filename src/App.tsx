@@ -24,10 +24,10 @@ const ForcePasswordModal = lazy(() =>
 function DashboardLoadingFallback() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-900 dark:text-white">
-      <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm mb-3">
+      <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xs mb-3">
         <Layers className="w-5 h-5 animate-pulse text-white" />
       </div>
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 font-mono tracking-wider">
+      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 font-mono tracking-wider">
         Loading workspace...
       </p>
     </div>
@@ -259,14 +259,14 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center p-4 relative antialiased">
       {/* Theme Switcher in Top Right of Login Page */}
-      <div className="absolute top-4 right-4 z-20 flex items-center p-0.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="absolute top-4 right-4 z-20 flex items-center p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <button
           type="button"
           onClick={() => setTheme('light')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
             theme === 'light'
-              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
           title="Light"
           aria-label="Light theme"
@@ -277,10 +277,10 @@ function AppContent() {
         <button
           type="button"
           onClick={() => setTheme('dark')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
             theme === 'dark'
-              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
           title="Dark"
           aria-label="Dark theme"
@@ -291,10 +291,10 @@ function AppContent() {
         <button
           type="button"
           onClick={() => setTheme('system')}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
             theme === 'system'
-              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
           title="System"
           aria-label="System theme"
@@ -329,7 +329,11 @@ function AppContent() {
         </div>
 
         {setupMode && (
-          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
+          <div
+            role="status"
+            aria-live="polite"
+            className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2"
+          >
             <Shield className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span>First-time setup mode active: Configure your master credentials.</span>
           </div>
@@ -339,7 +343,11 @@ function AppContent() {
           /* Forgot Password View */
           <div className="space-y-4">
             {forgotError && (
-              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                 <span>{forgotError}</span>
               </div>
@@ -347,7 +355,11 @@ function AppContent() {
 
             {forgotMessage ? (
               <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-left space-y-2">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="p-4 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-left space-y-2"
+                >
                   <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-semibold text-xs">
                     <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
                     <span>Request Submitted</span>
@@ -384,7 +396,7 @@ function AppContent() {
                       value={forgotUsername}
                       onChange={(e) => setForgotUsername(e.target.value)}
                       placeholder="e.g. STU-10B-1574 or admin"
-                      className="w-full pl-9 pr-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-colors"
+                      className="w-full pl-9 pr-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                     />
                   </div>
                 </div>
@@ -392,7 +404,7 @@ function AppContent() {
                 <button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   <span>{forgotLoading ? 'Submitting request...' : 'Submit Request'}</span>
                   <ArrowRight className="w-3.5 h-3.5 text-white" />
@@ -406,7 +418,7 @@ function AppContent() {
                       setForgotError(null);
                       setForgotMessage(null);
                     }}
-                    className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+                    className="text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
                   >
                     Back to Sign In
                   </button>
@@ -418,7 +430,11 @@ function AppContent() {
           /* Normal Sign In Form */
           <>
             {error && (
-              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
                 <span>{error}</span>
               </div>
@@ -438,7 +454,7 @@ function AppContent() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder={setupMode ? 'e.g. admin' : 'Username or Student ID'}
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-colors"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   />
                 </div>
               </div>
@@ -456,7 +472,7 @@ function AppContent() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={setupMode ? 'Choose a secure password' : 'Enter your password'}
-                    className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-colors"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   />
                   <button
                     type="button"
@@ -494,7 +510,7 @@ function AppContent() {
               <button
                 type="submit"
                 disabled={loading || checkingSetup}
-                className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs login-submit-btn"
+                className="w-full py-2.5 px-4 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs sm:text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs login-submit-btn"
               >
                 <span className="login-submit-text">
                   {loading ? 'Authenticating...' : setupMode ? 'Create Administrator Account' : 'Sign In'}
