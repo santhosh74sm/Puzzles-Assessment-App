@@ -826,7 +826,6 @@ function DrillDownStudentMultiSelect({
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
             <input
               type="text"
-              autoFocus
               placeholder="Search student name, ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -929,6 +928,172 @@ function DrillDownStudentMultiSelect({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// Loading Skeleton Component for Inline Drill-Down
+// -------------------------------------------------------------
+function HistoricalAuditLoadingSkeleton({
+  publishName,
+  publishMode,
+}: {
+  publishName?: string;
+  publishMode?: string;
+}) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={`Loading assessment details for ${publishName || 'assessment'}`}
+      className="border-t border-indigo-200 dark:border-indigo-500/30 bg-slate-50/50 dark:bg-slate-950/80 p-4 sm:p-6 space-y-5 sm:space-y-6 drilldown-panel-container"
+    >
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 gap-2">
+        <div className="space-y-1">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-semibold block">
+            Test Details
+          </span>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin shrink-0" />
+            <h3 className="font-semibold text-sm sm:text-base text-slate-800 dark:text-slate-200">
+              Loading assessment details...
+            </h3>
+          </div>
+        </div>
+        <span className="text-xs text-slate-400 dark:text-slate-500 font-mono hidden sm:inline">
+          Fetching targets & student roster
+        </span>
+      </div>
+
+      {/* Shimmer Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-2xs">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-2 animate-pulse">
+            <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+            <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
+          </div>
+        ))}
+      </div>
+
+      {/* Step 1: Targets Skeleton */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="h-3.5 w-44 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-2xs animate-pulse"
+            >
+              <div className="flex justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+              </div>
+              <div className="space-y-2 pt-1">
+                <div className="h-3 w-3/4 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-3 w-1/2 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-3 w-2/3 bg-slate-200 dark:bg-slate-800 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Step 2: Questions Skeleton */}
+      <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800 animate-pulse">
+        <div className="h-3.5 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
+        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 shadow-2xs">
+          <div className="h-4 w-40 bg-slate-200 dark:bg-slate-800 rounded" />
+          <div className="h-3 w-56 bg-slate-200 dark:bg-slate-800 rounded" />
+        </div>
+      </div>
+
+      {/* Step 3: Filters & Roster Skeleton */}
+      <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800 animate-pulse">
+        <div className="h-3.5 w-36 bg-slate-200 dark:bg-slate-800 rounded" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-9 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+          ))}
+        </div>
+
+        {/* Tab shimmers */}
+        <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-xl mt-3" />
+
+        {/* Student row shimmers */}
+        <div className="space-y-2 pt-1">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 shadow-2xs"
+            >
+              <div className="flex justify-between">
+                <div className="h-4 w-36 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
+              </div>
+              <div className="h-3 w-48 bg-slate-200 dark:bg-slate-800 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// Error View Component for Inline Drill-Down
+// -------------------------------------------------------------
+function HistoricalAuditErrorView({
+  publishName,
+  errorMessage,
+  onRetry,
+  onClose,
+}: {
+  publishName?: string;
+  errorMessage?: string;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="border-t border-rose-200 dark:border-rose-900/50 bg-rose-50/40 dark:bg-rose-950/20 p-4 sm:p-6 space-y-4 drilldown-panel-container"
+    >
+      <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Unable to load details for {publishName || 'assessment'}
+            </h4>
+            <p className="text-xs text-rose-700 dark:text-rose-300">
+              {errorMessage || 'A network error or unexpected response occurred while loading the test data.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs cursor-pointer transition-colors flex items-center gap-1.5"
+          >
+            <span>Retry Loading Details</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1069,7 +1234,7 @@ function HistoricalAuditDrillDown({
     return map;
   }, [schools]);
 
-  // 1. Available Schools from assigned students
+  // 1. Available Schools from assigned students (or target metadata fallback if roster is empty)
   const availableSchools = useMemo(() => {
     const schoolSet = new Map<string, string>();
     for (const st of allAssignedStudents) {
@@ -1077,8 +1242,17 @@ function HistoricalAuditDrillDown({
       const id = st.schoolId || name;
       schoolSet.set(name, id);
     }
+    if (schoolSet.size === 0) {
+      if (Array.isArray(detail?.schoolNames) && detail.schoolNames.length > 0) {
+        for (const name of detail.schoolNames) {
+          schoolSet.set(name, name);
+        }
+      } else if (detail?.schoolName) {
+        schoolSet.set(detail.schoolName, detail.schoolId || detail.schoolName);
+      }
+    }
     return Array.from(schoolSet.entries()).map(([name, id]) => ({ id, name }));
-  }, [allAssignedStudents, detail?.schoolName, schoolMap]);
+  }, [allAssignedStudents, detail?.schoolName, detail?.schoolNames, detail?.schoolId, schoolMap]);
 
   // Step 1: Filter students by School
   const isAllSchools =
@@ -1267,7 +1441,10 @@ function HistoricalAuditDrillDown({
   );
 
   return (
-    <div className="border-t border-indigo-200 dark:border-indigo-500/30 bg-slate-50/50 dark:bg-slate-950/80 p-4 sm:p-6 space-y-5 sm:space-y-6">
+    <div
+      id={`drilldown-${detail?.publishId || 'panel'}`}
+      className="border-t border-indigo-200 dark:border-indigo-500/30 bg-slate-50/50 dark:bg-slate-950/80 p-4 sm:p-6 space-y-5 sm:space-y-6 drilldown-panel-container"
+    >
       {/* Top Header of Drill-Down */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 gap-2">
         <div>
@@ -1281,9 +1458,16 @@ function HistoricalAuditDrillDown({
         </div>
         <button
           type="button"
+          aria-label="Close Test Details"
           onClick={(e) => {
             e.stopPropagation();
             onClose();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+              onClose();
+            }
           }}
           className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-pointer shrink-0"
         >
@@ -1399,35 +1583,44 @@ function HistoricalAuditDrillDown({
             // 4. Student Count for this Target
             let targetStudentCount = tgt.assignedCount;
             if (targetStudentCount == null) {
-              // Calculate matching students from allAssignedStudents
-              targetStudentCount = allAssignedStudents.filter((st: any) => {
-                const matchSchool =
-                  isTargetAllSchools ||
-                  !tgt.schoolIds ||
-                  tgt.schoolIds.length === 0 ||
-                  tgt.schoolIds.includes(st.schoolId) ||
-                  (Array.isArray(tgt.schoolNames) && tgt.schoolNames.includes(st.schoolName));
+              if (
+                targetsList.length === 1 &&
+                allAssignedStudents.length === 0 &&
+                detail?.totalRecipients != null &&
+                detail.totalRecipients > 0
+              ) {
+                targetStudentCount = detail.totalRecipients;
+              } else {
+                // Calculate matching students from allAssignedStudents
+                targetStudentCount = allAssignedStudents.filter((st: any) => {
+                  const matchSchool =
+                    isTargetAllSchools ||
+                    !tgt.schoolIds ||
+                    tgt.schoolIds.length === 0 ||
+                    tgt.schoolIds.includes(st.schoolId) ||
+                    (Array.isArray(tgt.schoolNames) && tgt.schoolNames.includes(st.schoolName));
 
-                const matchClass =
-                  classDisplay === 'All Classes' ||
-                  (Array.isArray(tgt.classes) &&
-                    tgt.classes.some((c: string) => c.toLowerCase() === (st.className || '').toLowerCase())) ||
-                  (tgt.className && tgt.className.toLowerCase() === (st.className || '').toLowerCase());
+                  const matchClass =
+                    classDisplay === 'All Classes' ||
+                    (Array.isArray(tgt.classes) &&
+                      tgt.classes.some((c: string) => c.toLowerCase() === (st.className || '').toLowerCase())) ||
+                    (tgt.className && tgt.className.toLowerCase() === (st.className || '').toLowerCase());
 
-                const matchSection =
-                  sectionDisplay === 'All Sections' ||
-                  (Array.isArray(tgt.sections) &&
-                    tgt.sections.some((sec: string) => sec.toUpperCase() === (st.section || '').toUpperCase()));
+                  const matchSection =
+                    sectionDisplay === 'All Sections' ||
+                    (Array.isArray(tgt.sections) &&
+                      tgt.sections.some((sec: string) => sec.toUpperCase() === (st.section || '').toUpperCase()));
 
-                const matchStudent =
-                  !tgt.studentIds ||
-                  tgt.studentIds.length === 0 ||
-                  tgt.studentIds.includes('ALL') ||
-                  tgt.studentIds.includes(st.studentId) ||
-                  tgt.studentIds.includes(st.uniqueStudentId);
+                  const matchStudent =
+                    !tgt.studentIds ||
+                    tgt.studentIds.length === 0 ||
+                    tgt.studentIds.includes('ALL') ||
+                    tgt.studentIds.includes(st.studentId) ||
+                    tgt.studentIds.includes(st.uniqueStudentId);
 
-                return matchSchool && matchClass && matchSection && matchStudent;
-              }).length;
+                  return matchSchool && matchClass && matchSection && matchStudent;
+                }).length;
+              }
             }
 
             return (
@@ -1843,12 +2036,133 @@ export function PublishHistorySection({
   // All assessment cards must be CLOSED by default when visiting/returning to Publish History
   const [selectedPublishId, setSelectedPublishId] = useState<string | null>(null);
 
+  // Loading & Error states for async card detail fetching
+  const [loadingPublishId, setLoadingPublishId] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<{ publishId: string; message: string } | null>(null);
+  const [detailsCache, setDetailsCache] = useState<Record<string, any>>({});
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const activeRequestIdRef = useRef<string | null>(null);
+
+  // Synchronize incoming selectedHistoryDetail prop with local cache
+  useEffect(() => {
+    if (selectedHistoryDetail && (selectedHistoryDetail.publishId || selectedHistoryDetail.id)) {
+      const pid = selectedHistoryDetail.publishId || selectedHistoryDetail.id;
+      setDetailsCache((prev) => ({ ...prev, [pid]: selectedHistoryDetail }));
+      if (loadingPublishId === pid) {
+        setLoadingPublishId(null);
+      }
+    }
+  }, [selectedHistoryDetail, loadingPublishId]);
+
+  // Scroll position stabilization effect:
+  // When a card expands or when its async data loads, ensure the browser does NOT
+  // auto-scroll or jump down to the bottom of the roster.
+  useEffect(() => {
+    if (!selectedPublishId) return;
+
+    const cardEl = cardRefs.current.get(selectedPublishId);
+    if (!cardEl) return;
+
+    // Check where the card header is positioned relative to viewport
+    const rect = cardEl.getBoundingClientRect();
+
+    // If the card header was pushed above the top of the viewport (rect.top < 0),
+    // smoothly bring the top of the card header back into view
+    if (rect.top < 0) {
+      cardEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+  }, [selectedPublishId, loadingPublishId]);
+
   // Management action states
   const [pauseTarget, setPauseTarget] = useState<any | null>(null);
   const [resumeTarget, setResumeTarget] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const fetchCardDetail = async (publishId: string) => {
+    activeRequestIdRef.current = publishId;
+    setLoadingPublishId(publishId);
+    setDetailError(null);
+
+    try {
+      const res = await fetch(`/api/publish-history/${encodeURIComponent(publishId)}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to load details (${res.status} ${res.statusText})`);
+      }
+
+      const data = await res.json();
+
+      // Ensure response matches currently active requested card
+      if (activeRequestIdRef.current === publishId) {
+        setDetailsCache((prev) => ({ ...prev, [publishId]: data }));
+        setLoadingPublishId(null);
+        setDetailError(null);
+      } else {
+        // Cache anyway for subsequent clicks
+        setDetailsCache((prev) => ({ ...prev, [publishId]: data }));
+      }
+
+      if (onSelectHistory) {
+        onSelectHistory(publishId).catch(() => {});
+      }
+    } catch (err: any) {
+      if (activeRequestIdRef.current === publishId) {
+        setLoadingPublishId(null);
+        setDetailError({
+          publishId,
+          message: err.message || 'Unable to load assessment details. Please check your network and try again.',
+        });
+      }
+    }
+  };
+
+  const handleItemClick = (publishId: string) => {
+    if (selectedPublishId === publishId) {
+      // Toggle collapse
+      setSelectedPublishId(null);
+      setLoadingPublishId(null);
+      setDetailError(null);
+      activeRequestIdRef.current = null;
+      return;
+    }
+
+    // Expanding a different card
+    setSelectedPublishId(publishId);
+    setDetailError(null);
+
+    // If detail is already cached, show immediately
+    if (detailsCache[publishId]) {
+      setLoadingPublishId(null);
+      activeRequestIdRef.current = publishId;
+      return;
+    }
+
+    // If selectedHistoryDetail matches, cache and show immediately
+    if (
+      selectedHistoryDetail &&
+      (selectedHistoryDetail.publishId === publishId || selectedHistoryDetail.id === publishId)
+    ) {
+      setDetailsCache((prev) => ({ ...prev, [publishId]: selectedHistoryDetail }));
+      setLoadingPublishId(null);
+      activeRequestIdRef.current = publishId;
+      return;
+    }
+
+    // Trigger asynchronous fetch with loading state
+    fetchCardDetail(publishId);
+  };
+
+  const handleRetry = (publishId: string) => {
+    fetchCardDetail(publishId);
+  };
 
   const handleConfirmPause = async () => {
     if (!pauseTarget) return;
@@ -1948,15 +2262,6 @@ export function PublishHistorySection({
       hist.publishMode?.toLowerCase().includes(q)
     );
   });
-
-  const handleItemClick = (publishId: string) => {
-    if (selectedPublishId === publishId) {
-      setSelectedPublishId(null);
-    } else {
-      setSelectedPublishId(publishId);
-      onSelectHistory(publishId);
-    }
-  };
 
   // Helper to extract school-wise student counts for card summary
   const getSchoolSummaries = (hist: any): Array<{ schoolName: string; count: number }> => {
@@ -2063,20 +2368,42 @@ export function PublishHistorySection({
             const isPaused = hist.status === 'PAUSED' || hist.isPaused === true;
             const incompleteCount = (hist.totalRecipients || 0) - (hist.completedCount || 0);
             const schoolSummaries = getSchoolSummaries(hist);
+            const activeDetail =
+              detailsCache[hist.publishId] ||
+              (selectedHistoryDetail &&
+              (selectedHistoryDetail.publishId === hist.publishId || selectedHistoryDetail.id === hist.publishId)
+                ? selectedHistoryDetail
+                : null);
+            const isLoadingCurrent = loadingPublishId === hist.publishId;
+            const hasErrorCurrent = Boolean(detailError && detailError.publishId === hist.publishId);
 
             return (
               <div
                 key={hist.id || hist.publishId}
-                className={`rounded-xl border transition-all shadow-2xs ${
+                ref={(el) => {
+                  if (el) cardRefs.current.set(hist.publishId, el);
+                  else cardRefs.current.delete(hist.publishId);
+                }}
+                className={`assessment-card-wrapper rounded-xl border transition-all shadow-2xs ${
                   isSelected
                     ? 'bg-white dark:bg-slate-900 border-indigo-500 dark:border-indigo-500/80 shadow-md ring-1 ring-indigo-500/30 dark:ring-indigo-500/50 overflow-visible'
                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 overflow-hidden'
                 }`}
               >
-                {/* Clickable Card Summary */}
+                {/* Clickable & Keyboard Accessible Card Summary */}
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isSelected}
+                  aria-controls={`drilldown-${hist.publishId}`}
                   onClick={() => handleItemClick(hist.publishId)}
-                  className="p-4 sm:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between transition-colors gap-3.5 sm:gap-4"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleItemClick(hist.publishId);
+                    }
+                  }}
+                  className="p-4 sm:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between transition-colors gap-3.5 sm:gap-4 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-xl"
                 >
                   <div className="flex items-start justify-between gap-3 w-full sm:w-auto">
                     <div className="space-y-1.5 flex-1 min-w-0">
@@ -2144,6 +2471,7 @@ export function PublishHistorySection({
                     <div
                       className="flex items-center gap-1.5 pl-3 border-l border-slate-200 dark:border-slate-800"
                       onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
                     >
                       <button
                         type="button"
@@ -2197,6 +2525,7 @@ export function PublishHistorySection({
                   <div
                     className="sm:hidden flex items-center gap-2 pt-2.5 border-t border-slate-200 dark:border-slate-800/80 w-full"
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
                   >
                     <button
                       type="button"
@@ -2242,15 +2571,32 @@ export function PublishHistorySection({
 
                 {/* Inline Expanded Drill-Down Section Directly Below Clicked Card */}
                 {isSelected && (
-                  <HistoricalAuditDrillDown
-                    detail={
-                      selectedHistoryDetail && selectedHistoryDetail.publishId === hist.publishId
-                        ? selectedHistoryDetail
-                        : hist
-                    }
-                    schools={schools}
-                    onClose={() => setSelectedPublishId(null)}
-                  />
+                  <div id={`drilldown-${hist.publishId}`}>
+                    {isLoadingCurrent ? (
+                      <HistoricalAuditLoadingSkeleton
+                        publishName={hist.publishName}
+                        publishMode={hist.publishMode}
+                      />
+                    ) : hasErrorCurrent ? (
+                      <HistoricalAuditErrorView
+                        publishName={hist.publishName}
+                        errorMessage={detailError?.message}
+                        onRetry={() => handleRetry(hist.publishId)}
+                        onClose={() => setSelectedPublishId(null)}
+                      />
+                    ) : activeDetail ? (
+                      <HistoricalAuditDrillDown
+                        detail={activeDetail}
+                        schools={schools}
+                        onClose={() => setSelectedPublishId(null)}
+                      />
+                    ) : (
+                      <HistoricalAuditLoadingSkeleton
+                        publishName={hist.publishName}
+                        publishMode={hist.publishMode}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
             );

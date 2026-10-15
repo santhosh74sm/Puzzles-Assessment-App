@@ -424,3 +424,18 @@ html.dark .saas-table tbody tr:hover {
   }
 }
 
+/* 
+ * ------------------------------------------------------------
+ * 7. LAYOUT & SCROLL STABILITY PRESERVATION
+ * Prevents erratic browser scroll anchoring jumps when cards
+ * expand or when dynamic rosters load asynchronously.
+ * ------------------------------------------------------------
+ */
+main,
+.test-history-scroll-container,
+.assessment-card-wrapper,
+.drilldown-panel-container {
+  overflow-anchor: none;
+}
+
+

@@ -112,14 +112,16 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
 
   const loadHistoryDetail = React.useCallback(async (publishId: string) => {
     try {
-      const res = await fetch(`/api/publish-history/${publishId}`, { headers });
+      const res = await fetch(`/api/publish-history/${encodeURIComponent(publishId)}`, { headers });
       if (!res.ok) {
         throw new Error(`Failed to load history detail: ${res.status} ${res.statusText}`);
       }
       const data = await res.json();
       setSelectedHistoryDetail(data);
+      return data;
     } catch (e) {
       console.error('Failed to load history detail', e);
+      throw e;
     }
   }, [headers]);
 
@@ -417,7 +419,10 @@ export function SuperAdminDashboard({ token, currentUser, onLogout }: SuperAdmin
         </header>
 
         {/* Main Content Area - Renders ONLY the selected section */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+        <main
+          className="test-history-scroll-container flex-1 p-4 sm:p-6 md:p-8 pb-20 md:pb-8 overflow-y-auto bg-slate-50 dark:bg-slate-950"
+          style={{ overflowAnchor: 'none' }}
+        >
           <Suspense fallback={<SectionLoadingFallback />}>
             {activeTab === 'schools' && (
               <SchoolsSection
