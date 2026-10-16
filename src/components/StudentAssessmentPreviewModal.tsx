@@ -21,6 +21,7 @@ export interface AssessmentPreviewQuestion {
   timeAllowedSeconds?: number | null;
   options?: string[];
   answerType?: 'single' | 'multiple';
+  rankingQuestion?: boolean;
   enableWrittenExplanation?: boolean;
   metadata?: any;
   pairs?: { left: string; right: string }[];
@@ -88,6 +89,8 @@ export function StudentAssessmentPreviewModal({
     const existingAns =
       previewAnswers[currentIndex] !== undefined
         ? previewAnswers[currentIndex]
+        : currentQ.rankingQuestion
+        ? (Array.isArray(currentQ.options) ? [...currentQ.options] : [])
         : currentQ.answerType === 'multiple'
         ? []
         : null;
@@ -322,6 +325,7 @@ export function StudentAssessmentPreviewModal({
                 timeRemaining={timeRemaining > 0 ? timeRemaining : undefined}
                 options={currentQ.options || []}
                 answerType={currentQ.answerType || 'single'}
+                rankingQuestion={Boolean(currentQ.rankingQuestion)}
                 pairs={currentQ.metadata?.pairs || currentQ.pairs || []}
                 onAnswerSubmit={(ans) => {
                   currentSelectedAnswerRef.current = ans;

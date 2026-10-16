@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { Check } from 'lucide-react';
+import { Check, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 interface FlameMiniGameProps {
@@ -9,6 +9,7 @@ interface FlameMiniGameProps {
   timeRemaining?: number;
   options?: string[];
   answerType?: 'single' | 'multiple';
+  rankingQuestion?: boolean;
   pairs?: { left: string; right: string }[];
   onAnswerSubmit: (answer: any) => void;
   selectedAnswer: any;
@@ -20,6 +21,7 @@ export function FlameMiniGameCanvas({
   points,
   options = [],
   answerType = 'single',
+  rankingQuestion = false,
   pairs = [],
   onAnswerSubmit,
   selectedAnswer,
@@ -226,6 +228,107 @@ export function FlameMiniGameCanvas({
     ? [selectedAnswer]
     : [];
 
+  // Ranking question state
+  const [rankingItems, setRankingItems] = useState<string[]>(() => {
+    if (Array.isArray(selectedAnswer) && selectedAnswer.length > 0) {
+      const base = selectedAnswer.filter((s) => typeof s === 'string');
+      const missing = (options || []).filter((opt) => !base.includes(opt));
+      return [...base, ...missing];
+    }
+    return Array.isArray(options) ? [...options] : [];
+  });
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Sync ranking items when selectedAnswer or options or question changes
+  useEffect(() => {
+    if (!rankingQuestion) return;
+    if (Array.isArray(selectedAnswer) && selectedAnswer.length > 0) {
+      const base = selectedAnswer.filter((s) => typeof s === 'string');
+      const missing = (options || []).filter((opt) => !base.includes(opt));
+      const reconciled = [...base, ...missing];
+      setRankingItems(reconciled);
+    } else if (Array.isArray(options) && options.length > 0) {
+      setRankingItems([...options]);
+      if (!selectedAnswer) {
+        onAnswerSubmit([...options]);
+      }
+    } else {
+      setRankingItems([]);
+    }
+  }, [rankingQuestion, selectedAnswer, options]);
+
+  const handleMoveUp = (index: number) => {
+    if (disabled || index <= 0) return;
+    const newItems = [...rankingItems];
+    const [moved] = newItems.splice(index, 1);
+    newItems.splice(index - 1, 0, moved);
+    setRankingItems(newItems);
+    onAnswerSubmit(newItems);
+    if (!checkReducedMotion()) {
+      confetti({ particleCount: 15, spread: 35, origin: { y: 0.8 } });
+    }
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (disabled || index >= rankingItems.length - 1) return;
+    const newItems = [...rankingItems];
+    const [moved] = newItems.splice(index, 1);
+    newItems.splice(index + 1, 0, moved);
+    setRankingItems(newItems);
+    onAnswerSubmit(newItems);
+    if (!checkReducedMotion()) {
+      confetti({ particleCount: 15, spread: 35, origin: { y: 0.8 } });
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (disabled) return;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    if (disabled) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    if (disabled) return;
+    e.preventDefault();
+    const sourceIdxStr = e.dataTransfer.getData('text/plain');
+    const sourceIndex = sourceIdxStr !== '' ? Number(sourceIdxStr) : draggedIndex;
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    if (sourceIndex === null || sourceIndex === undefined || isNaN(sourceIndex) || sourceIndex === targetIndex) {
+      return;
+    }
+
+    const newItems = [...rankingItems];
+    const [moved] = newItems.splice(sourceIndex, 1);
+    newItems.splice(targetIndex, 0, moved);
+    setRankingItems(newItems);
+    onAnswerSubmit(newItems);
+    if (!checkReducedMotion()) {
+      confetti({ particleCount: 20, spread: 40, origin: { y: 0.8 } });
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   return (
     <div className="relative w-full rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-7 text-slate-900 dark:text-white">
       {/* Background Animated Canvas (Subtle focus field) */}
@@ -241,7 +344,15 @@ export function FlameMiniGameCanvas({
         <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
           <span className="font-semibold text-indigo-600 dark:text-indigo-400">Assessment Challenge</span>
           <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
-          <span>{answerType === 'multiple' ? 'Multiple Selection' : pairs && pairs.length > 0 ? 'Match Pairs' : 'Single Choice'}</span>
+          <span>
+            {rankingQuestion
+              ? 'Ranking Question'
+              : answerType === 'multiple'
+              ? 'Multiple Selection'
+              : pairs && pairs.length > 0
+              ? 'Match Pairs'
+              : 'Single Choice'}
+          </span>
         </div>
         {points != null && points > 0 ? (
           <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
@@ -252,8 +363,93 @@ export function FlameMiniGameCanvas({
 
       {/* Main Interactive Gameplay Area */}
       <div className="relative z-10 min-h-[220px] flex flex-col justify-center">
-        {/* Match Puzzle if pairs configured */}
-        {pairs && pairs.length > 0 ? (
+        {rankingQuestion ? (
+          /* Ranking Question Interface */
+          <div className="space-y-5 max-w-2xl mx-auto w-full">
+            <div className="text-center py-1">
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2 leading-relaxed text-balance">
+                {content}
+              </h3>
+              <p className="text-xs sm:text-sm text-indigo-700 dark:text-indigo-400 font-medium">
+                Arrange the items into your preferred ranking order using drag & drop or the Up/Down buttons:
+              </p>
+            </div>
+
+            <div
+              role="list"
+              aria-label="Reorderable ranking items"
+              className="space-y-2.5"
+            >
+              {rankingItems.map((item, idx) => {
+                const isDragging = draggedIndex === idx;
+                const isDragOver = dragOverIndex === idx && draggedIndex !== idx;
+
+                return (
+                  <div
+                    key={`${item}-${idx}`}
+                    role="listitem"
+                    draggable={!disabled}
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex items-center gap-3 p-3 sm:p-3.5 rounded-xl border transition-all select-none ${
+                      isDragging
+                        ? 'opacity-40 border-dashed border-indigo-400 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20'
+                        : isDragOver
+                        ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/70 dark:bg-indigo-950/40 shadow-sm'
+                        : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 shadow-xs'
+                    }`}
+                  >
+                    {/* Drag Handle */}
+                    <div
+                      className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing p-1 -ml-1 shrink-0"
+                      title="Drag to reorder"
+                      aria-hidden="true"
+                    >
+                      <GripVertical className="w-4 h-4" />
+                    </div>
+
+                    {/* Rank Position Badge */}
+                    <span className="shrink-0 px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-mono font-bold text-xs tabular-nums">
+                      Rank {idx + 1}
+                    </span>
+
+                    {/* Statement Text */}
+                    <span className="flex-1 text-sm sm:text-base font-medium text-slate-900 dark:text-slate-100 break-words min-w-0">
+                      {item}
+                    </span>
+
+                    {/* Up / Down Accessibility Buttons */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveUp(idx)}
+                        disabled={disabled || idx === 0}
+                        aria-label={`Move "${item}" up to Rank ${idx}`}
+                        title={`Move up to Rank ${idx}`}
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveDown(idx)}
+                        disabled={disabled || idx === rankingItems.length - 1}
+                        aria-label={`Move "${item}" down to Rank ${idx + 2}`}
+                        title={`Move down to Rank ${idx + 2}`}
+                        className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : pairs && pairs.length > 0 ? (
           <div className="space-y-4">
             <div className="text-center py-1">
               <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2 text-balance leading-relaxed">

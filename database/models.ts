@@ -171,6 +171,7 @@ export interface IQuestionDocument extends Document {
   options: string[];
   correctAnswer?: any;
   correctAnswers?: string[];
+  rankingQuestion?: boolean;
   enableWrittenExplanation?: boolean;
   metadata?: Record<string, any>;
   createdAt: Date;
@@ -184,6 +185,7 @@ export const QuestionSchema = new Schema<IQuestionDocument>(
     difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'], index: true },
     questionType: { type: String, required: false },
     answerType: { type: String, enum: ['single', 'multiple'], default: 'single' },
+    rankingQuestion: { type: Boolean, default: false },
     content: { type: String, required: true },
     timeSeconds: { type: Number, required: false, default: null },
     points: { type: Number, required: false, default: null },

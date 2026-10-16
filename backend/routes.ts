@@ -1590,6 +1590,22 @@ function evaluateQuestionCorrectness(qItem: any, studentAnswer: any): boolean | 
     return false;
   }
 
+  // Ranking Question Evaluation
+  if (qItem.rankingQuestion) {
+    if (!Array.isArray(studentAnswer) || studentAnswer.length === 0) return false;
+    let expectedItems: string[] = [];
+    if (Array.isArray(qItem.correctAnswers) && qItem.correctAnswers.length > 0) {
+      expectedItems = qItem.correctAnswers.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (Array.isArray(qItem.correctAnswer)) {
+      expectedItems = qItem.correctAnswer.map((s: any) => String(s).trim()).filter(Boolean);
+    } else if (typeof qItem.correctAnswer === 'string' && qItem.correctAnswer.trim()) {
+      expectedItems = qItem.correctAnswer.split(',').map((s: any) => s.trim()).filter(Boolean);
+    }
+    if (expectedItems.length === 0) return true;
+    if (expectedItems.length !== studentAnswer.length) return false;
+    return expectedItems.every((item, idx) => item.toLowerCase() === String(studentAnswer[idx]).trim().toLowerCase());
+  }
+
   const isMultiple = (qItem.answerType || 'single') === 'multiple';
   const options = Array.isArray(qItem.options) ? qItem.options : [];
 
@@ -1656,6 +1672,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       points,
       options,
       answerType,
+      rankingQuestion,
       correctAnswer,
       correctAnswers,
       enableWrittenExplanation,
@@ -1717,6 +1734,7 @@ router.post('/questions', authenticate, requireRole('super_admin'), async (req: 
       points: parsedPoints,
       options: parsedOptions,
       answerType: normalizedAnswerType,
+      rankingQuestion: Boolean(rankingQuestion),
       correctAnswer: finalCorrectAnswer,
       correctAnswers: finalCorrectAnswers,
       enableWrittenExplanation: Boolean(enableWrittenExplanation),
@@ -1741,6 +1759,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
       points,
       options,
       answerType,
+      rankingQuestion,
       correctAnswer,
       correctAnswers,
       enableWrittenExplanation,
@@ -1787,6 +1806,10 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
     const normalizedAnswerType: 'single' | 'multiple' =
       answerType ? (answerType === 'multiple' ? 'multiple' : 'single') : (question.answerType || 'single');
     question.answerType = normalizedAnswerType;
+
+    if (rankingQuestion !== undefined) {
+      question.rankingQuestion = Boolean(rankingQuestion);
+    }
 
     if (normalizedAnswerType === 'multiple') {
       let finalCorrectAnswers: string[] = [];
@@ -1855,6 +1878,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             q.groupName = question.groupName;
             q.groupId = question.groupId;
             q.answerType = question.answerType || 'single';
+            q.rankingQuestion = Boolean(question.rankingQuestion);
             q.points = question.points != null ? Number(question.points) : null;
             q.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             q.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
@@ -1900,6 +1924,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.answerType = question.answerType || 'single';
+            snap.rankingQuestion = Boolean(question.rankingQuestion);
             snap.enableWrittenExplanation = Boolean(question.enableWrittenExplanation);
             snap.correctAnswer = question.correctAnswer ?? null;
             snap.correctAnswers = Array.isArray(question.correctAnswers)
@@ -1944,6 +1969,7 @@ router.put('/questions/:id', authenticate, requireRole('super_admin'), async (re
             snap.timeAllowedSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.timeSeconds = question.timeSeconds != null ? Number(question.timeSeconds) : null;
             snap.answerType = question.answerType || 'single';
+            snap.rankingQuestion = Boolean(question.rankingQuestion);
             snap.enableWrittenExplanation = Boolean(question.enableWrittenExplanation);
             snap.correctAnswer = question.correctAnswer ?? null;
             snap.correctAnswers = Array.isArray(question.correctAnswers)
@@ -2866,6 +2892,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         timeSeconds: q.timeSeconds != null ? Number(q.timeSeconds) : null,
         options: q.options || [],
         answerType: q.answerType || 'single',
+        rankingQuestion: Boolean(q.rankingQuestion),
         correctAnswer: q.correctAnswer ?? null,
         correctAnswers: Array.isArray(q.correctAnswers)
           ? q.correctAnswers
@@ -2929,6 +2956,7 @@ router.post('/publish', authenticate, requireRole('super_admin'), async (req: Re
         difficulty: q.difficulty,
         questionType: q.questionType,
         answerType: q.answerType || 'single',
+        rankingQuestion: Boolean(q.rankingQuestion),
         content: q.content,
         points: q.points != null ? Number(q.points) : null,
         studentAnswer: null,
@@ -3867,6 +3895,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
           timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
           options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
           answerType: q.answerType || fullQ?.answerType || 'single',
+          rankingQuestion: q.rankingQuestion !== undefined ? q.rankingQuestion : fullQ?.rankingQuestion,
           enableWrittenExplanation: q.enableWrittenExplanation !== undefined ? q.enableWrittenExplanation : fullQ?.enableWrittenExplanation,
           writtenExplanation: q.writtenExplanation !== undefined ? q.writtenExplanation : '',
           metadata: q.metadata || fullQ?.metadata || {},
@@ -3941,6 +3970,7 @@ router.post('/student/tests/:assignmentId/start', authenticate, async (req: Requ
         timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (fullQ?.timeSeconds != null ? Number(fullQ.timeSeconds) : null),
         options: (q.options && q.options.length > 0) ? q.options : (fullQ?.options || []),
         answerType: q.answerType || fullQ?.answerType || 'single',
+        rankingQuestion: q.rankingQuestion !== undefined ? q.rankingQuestion : fullQ?.rankingQuestion,
         enableWrittenExplanation: q.enableWrittenExplanation !== undefined ? q.enableWrittenExplanation : fullQ?.enableWrittenExplanation,
         writtenExplanation: q.writtenExplanation !== undefined ? q.writtenExplanation : '',
         metadata: q.metadata || fullQ?.metadata || {},
@@ -4171,8 +4201,9 @@ router.post('/student/tests/:assignmentId/answer', authenticate, answerRateLimit
 
     const qItem = assignment.questions[questionIndex];
 
-    // SEC-CRIT-03: Once a question answer is accepted, it must not be changed through repeated answer requests
-    const alreadyAnswered = qItem.studentAnswer !== undefined && qItem.studentAnswer !== null;
+    // SEC-CRIT-03: Once a single/multiple question answer is accepted, it must not be changed through repeated answer requests.
+    // Ranking questions allow reordering and updating their ranking order per requirements.
+    const alreadyAnswered = !qItem.rankingQuestion && qItem.studentAnswer !== undefined && qItem.studentAnswer !== null;
     if (alreadyAnswered) {
       return res.status(400).json({ error: 'Answer for this question has already been submitted and cannot be changed.' });
     }
@@ -4260,8 +4291,8 @@ router.post('/student/tests/:assignmentId/submit', authenticate, async (req: Req
         const qIdx = assignment.questions.findIndex((q: any) => q.questionId === ansItem.questionId);
         if (qIdx !== -1) {
           const qItem = assignment.questions[qIdx];
-          const alreadyAnswered = qItem.studentAnswer !== undefined && qItem.studentAnswer !== null;
-          const answerToUse = alreadyAnswered ? qItem.studentAnswer : ansItem.answer;
+          const alreadyAnswered = !qItem.rankingQuestion && qItem.studentAnswer !== undefined && qItem.studentAnswer !== null;
+          const answerToUse = alreadyAnswered ? qItem.studentAnswer : (ansItem.answer !== undefined ? ansItem.answer : qItem.studentAnswer);
           const timeToUse = alreadyAnswered ? qItem.timeTakenSeconds : Math.max(0, Number(ansItem.timeTakenSeconds) || 0);
 
           const hasCorrectAnswer = hasAutomaticallyScorableAnswer(qItem);

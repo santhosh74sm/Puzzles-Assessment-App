@@ -344,7 +344,11 @@ export function StudentReportDetailView({
                                   <span>
                                     Student's Answer:{' '}
                                     <strong className="text-slate-900 dark:text-white">
-                                      {Array.isArray(q.studentAnswer)
+                                      {q.rankingQuestion && Array.isArray(q.studentAnswer)
+                                        ? (q.studentAnswer.length > 0
+                                            ? q.studentAnswer.map((item: string, rIdx: number) => `Rank ${rIdx + 1}: ${item}`).join(', ')
+                                            : 'None')
+                                        : Array.isArray(q.studentAnswer)
                                         ? (q.studentAnswer.length > 0 ? q.studentAnswer.join(', ') : 'None')
                                         : typeof q.studentAnswer === 'object' && q.studentAnswer !== null
                                         ? JSON.stringify(q.studentAnswer)

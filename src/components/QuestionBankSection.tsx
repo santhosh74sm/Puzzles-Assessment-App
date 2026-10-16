@@ -114,6 +114,14 @@ function ReadOnlyQuestionDetailCard({
               </span>
             </>
           )}
+          {Boolean(q.rankingQuestion) && (
+            <>
+              <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
+              <span className="text-purple-700 dark:text-purple-400 font-medium">
+                Ranking Question
+              </span>
+            </>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs font-mono tabular-nums">
@@ -263,6 +271,7 @@ export function QuestionBankSection({
     points: string;
     options: string;
     multipleSelection: boolean;
+    rankingQuestion: boolean;
     enableWrittenExplanation: boolean;
     correctAnswer: string;
   }>({
@@ -273,6 +282,7 @@ export function QuestionBankSection({
     points: '',
     options: '',
     multipleSelection: false,
+    rankingQuestion: false,
     enableWrittenExplanation: false,
     correctAnswer: '',
   });
@@ -335,6 +345,7 @@ export function QuestionBankSection({
             points: '',
             options: '',
             multipleSelection: false,
+            rankingQuestion: false,
             enableWrittenExplanation: false,
             correctAnswer: '',
           });
@@ -495,6 +506,7 @@ export function QuestionBankSection({
       points: q.points != null ? String(q.points) : '',
       options: optsStr,
       multipleSelection: isMultiple,
+      rankingQuestion: Boolean(q.rankingQuestion),
       enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
       correctAnswer: corrAnsStr,
     });
@@ -521,6 +533,7 @@ export function QuestionBankSection({
       points: '',
       options: '',
       multipleSelection: false,
+      rankingQuestion: false,
       enableWrittenExplanation: false,
       correctAnswer: '',
     });
@@ -555,6 +568,7 @@ export function QuestionBankSection({
             correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
             options: opts,
             answerType: questionForm.multipleSelection ? 'multiple' : 'single',
+            rankingQuestion: questionForm.rankingQuestion,
             enableWrittenExplanation: questionForm.enableWrittenExplanation,
           }),
         });
@@ -580,6 +594,7 @@ export function QuestionBankSection({
             correctAnswer: questionForm.correctAnswer.trim() ? questionForm.correctAnswer.trim() : null,
             options: opts,
             answerType: questionForm.multipleSelection ? 'multiple' : 'single',
+            rankingQuestion: questionForm.rankingQuestion,
             enableWrittenExplanation: questionForm.enableWrittenExplanation,
           }),
         });
@@ -592,6 +607,7 @@ export function QuestionBankSection({
             points: '',
             options: '',
             multipleSelection: false,
+            rankingQuestion: false,
             enableWrittenExplanation: false,
             correctAnswer: '',
           }));
@@ -903,6 +919,17 @@ export function QuestionBankSection({
                   />
                   <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Multiple Selection
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={questionForm.rankingQuestion}
+                    onChange={(e) => setQuestionForm({ ...questionForm, rankingQuestion: e.target.checked })}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Ranking Question
                   </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer select-none">

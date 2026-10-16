@@ -1914,6 +1914,7 @@ export function PublishAssessmentSection({
               timeAllowedSeconds: liveQ.timeSeconds,
               options: liveQ.options || [],
               answerType: liveQ.answerType || 'single',
+              rankingQuestion: Boolean(liveQ.rankingQuestion),
               enableWrittenExplanation: Boolean(
                 liveQ.enableWrittenExplanation !== undefined
                   ? liveQ.enableWrittenExplanation
@@ -1963,6 +1964,7 @@ export function PublishAssessmentSection({
         timeAllowedSeconds: q.timeSeconds,
         options: q.options || [],
         answerType: q.answerType || 'single',
+        rankingQuestion: Boolean(q.rankingQuestion),
         enableWrittenExplanation: Boolean(
           q.enableWrittenExplanation !== undefined
             ? q.enableWrittenExplanation

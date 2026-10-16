@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   AlertOctagon,
   ArrowRight,
+  ArrowLeft,
   Trophy,
   Calendar,
   Lock,
@@ -205,7 +206,11 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       const firstQ = testData.questions?.[startIndex];
       const initialAns =
         initialAnswers[firstQ?.questionId]?.answer ??
-        (firstQ?.answerType === 'multiple' ? [] : null);
+        (firstQ?.rankingQuestion
+          ? (Array.isArray(firstQ?.options) ? [...firstQ.options] : [])
+          : firstQ?.answerType === 'multiple'
+          ? []
+          : null);
       const initialExplanation =
         initialAnswers[firstQ?.questionId]?.writtenExplanation ??
         (firstQ?.writtenExplanation || '');
@@ -227,6 +232,41 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
   };
 
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+
+  // Save progress and exit without terminating attempt (status remains IN_PROGRESS so student can resume)
+  const handleSaveAndExit = async () => {
+    const test = activeTestRef.current || activeTest;
+    const qIndex = currentQuestionIndexRef.current ?? currentQuestionIndex;
+    if (test) {
+      const currentQ = test.questions[qIndex];
+      if (currentQ) {
+        const elapsedSeconds = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
+        const answerToRecord = currentSelectedAnswerRef.current !== undefined && currentSelectedAnswerRef.current !== null
+          ? currentSelectedAnswerRef.current
+          : currentQ.rankingQuestion
+          ? (Array.isArray(currentQ.options) ? [...currentQ.options] : [])
+          : null;
+        const testId = test.assignmentId || test._id || test.id;
+        try {
+          await fetch(`/api/student/tests/${testId}/answer`, {
+            method: 'POST',
+            headers: getClientHeaders(),
+            body: JSON.stringify({
+              questionId: currentQ.questionId,
+              answer: answerToRecord,
+              writtenExplanation: currentWrittenExplanationRef.current || '',
+              timeTakenSeconds: elapsedSeconds || 1,
+            }),
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    setShowExitConfirmModal(false);
+    setActiveTest(null);
+    loadStudentTests();
+  };
 
   // Exit / Abandon Test -> Transitions to INCOMPLETE with Exit Type: EXIT
   const executeAbandonTest = async () => {
@@ -275,6 +315,67 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
     }
   };
 
+  // Save current answer and advance to previous question
+  const handlePreviousQuestion = () => {
+    const test = activeTestRef.current || activeTest;
+    const qIndex = currentQuestionIndexRef.current ?? currentQuestionIndex;
+    if (!test || isSubmittingRef.current || qIndex <= 0) return;
+    const currentQ = test.questions[qIndex];
+    if (!currentQ) return;
+
+    const elapsedSeconds = Math.max(1, Math.round((Date.now() - questionStartTimeRef.current) / 1000));
+    const timeSpent = (currentQ.timeAllowedSeconds != null && currentQ.timeAllowedSeconds > 0)
+      ? Math.min(currentQ.timeAllowedSeconds, elapsedSeconds)
+      : elapsedSeconds;
+
+    const answerToRecord = currentSelectedAnswerRef.current !== undefined && currentSelectedAnswerRef.current !== null
+      ? currentSelectedAnswerRef.current
+      : currentQ.rankingQuestion
+      ? (Array.isArray(currentQ.options) ? [...currentQ.options] : [])
+      : null;
+    const explanationToRecord = currentWrittenExplanationRef.current || '';
+
+    const updatedAnswers: Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }> = {
+      ...answersMapRef.current,
+      [currentQ.questionId]: {
+        answer: answerToRecord,
+        writtenExplanation: explanationToRecord,
+        timeTaken: timeSpent || 1,
+      },
+    };
+    answersMapRef.current = updatedAnswers;
+    setAnswersMap(updatedAnswers);
+
+    const testId = test.assignmentId || test._id || test.id;
+    pendingAnswerSaveRef.current = fetch(`/api/student/tests/${testId}/answer`, {
+      method: 'POST',
+      headers: getClientHeaders(),
+      body: JSON.stringify({
+        questionId: currentQ.questionId,
+        answer: answerToRecord,
+        writtenExplanation: explanationToRecord,
+        timeTakenSeconds: timeSpent || 1,
+      }),
+    }).catch(console.error);
+
+    const prevIndex = qIndex - 1;
+    currentQuestionIndexRef.current = prevIndex;
+    setCurrentQuestionIndex(prevIndex);
+    const prevQ = test.questions[prevIndex];
+    const prevAns =
+      updatedAnswers[prevQ?.questionId]?.answer ??
+      (prevQ?.rankingQuestion
+        ? (Array.isArray(prevQ?.options) ? [...prevQ.options] : [])
+        : (prevQ?.answerType === 'multiple' ? [] : null));
+    const prevExplanation =
+      updatedAnswers[prevQ?.questionId]?.writtenExplanation ??
+      (prevQ?.writtenExplanation || '');
+    currentSelectedAnswerRef.current = prevAns;
+    setCurrentSelectedAnswer(prevAns);
+    currentWrittenExplanationRef.current = prevExplanation;
+    setCurrentWrittenExplanation(prevExplanation);
+  };
+
   // Save current answer and advance
   const recordAndAdvance = (answer?: any) => {
     const test = activeTestRef.current || activeTest;
@@ -288,7 +389,13 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       ? Math.min(currentQ.timeAllowedSeconds, elapsedSeconds)
       : elapsedSeconds;
 
-    const answerToRecord = answer !== undefined ? answer : currentSelectedAnswerRef.current;
+    const answerToRecord = answer !== undefined
+      ? answer
+      : currentSelectedAnswerRef.current !== null && currentSelectedAnswerRef.current !== undefined
+      ? currentSelectedAnswerRef.current
+      : currentQ.rankingQuestion
+      ? (Array.isArray(currentQ.options) ? [...currentQ.options] : [])
+      : null;
     const explanationToRecord = currentWrittenExplanationRef.current || '';
     const updatedAnswers: Record<string, { answer: any; writtenExplanation?: string; timeTaken: number }> = {
       ...answersMapRef.current,
@@ -325,7 +432,9 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
       const nextQ = test.questions[nextIndex];
       const nextAns =
         updatedAnswers[nextQ?.questionId]?.answer ??
-        (nextQ?.answerType === 'multiple' ? [] : null);
+        (nextQ?.rankingQuestion
+          ? (Array.isArray(nextQ?.options) ? [...nextQ.options] : [])
+          : (nextQ?.answerType === 'multiple' ? [] : null));
       const nextExplanation =
         updatedAnswers[nextQ?.questionId]?.writtenExplanation ??
         (nextQ?.writtenExplanation || '');
@@ -521,6 +630,16 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                   </div>
                 )}
 
+                {/* Save & Exit Button (Keeps assessment in progress so student can resume) */}
+                <button
+                  type="button"
+                  onClick={handleSaveAndExit}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+                  title="Save answers and exit to resume later"
+                >
+                  Save & Exit
+                </button>
+
                 {/* Exit / Abandon Button */}
                 <button
                   type="button"
@@ -540,6 +659,7 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
               timeRemaining={timeRemaining}
               options={currentQ.options}
               answerType={currentQ.answerType || 'single'}
+              rankingQuestion={Boolean(currentQ.rankingQuestion)}
               pairs={currentQ.metadata?.pairs || currentQ.pairs}
               onAnswerSubmit={(ans) => {
                 currentSelectedAnswerRef.current = ans;
@@ -572,24 +692,38 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
             {/* Next / Submit Question Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4">
               <span className="text-xs text-slate-600 dark:text-slate-400">
-                * Your answer will be saved when you move forward.
+                * Your answer will be saved when you move forward or exit.
               </span>
 
-              <button
-                type="button"
-                onClick={() => recordAndAdvance(currentSelectedAnswerRef.current)}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white shadow-xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-all cursor-pointer next-question-btn shrink-0"
-              >
-                <span className="next-question-btn-text text-white">
-                  {isSubmitting
-                    ? 'Submitting Test...'
-                    : currentQuestionIndex < activeTest.questions.length - 1
-                    ? 'Next Question'
-                    : 'Submit Test'}
-                </span>
-                <ArrowRight className="w-4 h-4 text-white" />
-              </button>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                {currentQuestionIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={handlePreviousQuestion}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-lg font-semibold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 disabled:opacity-50 text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Previous Question</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => recordAndAdvance(currentSelectedAnswerRef.current)}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white shadow-xs flex items-center justify-center gap-2 text-xs sm:text-sm transition-all cursor-pointer next-question-btn shrink-0"
+                >
+                  <span className="next-question-btn-text text-white">
+                    {isSubmitting
+                      ? 'Submitting Test...'
+                      : currentQuestionIndex < activeTest.questions.length - 1
+                      ? 'Next Question'
+                      : 'Submit Test'}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -783,26 +917,35 @@ export function StudentPortal({ token, user, onLogout }: StudentPortalProps) {
                 <AlertOctagon className="w-5 h-5" />
               </div>
               <div className="text-center space-y-1.5">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Exit Test?</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Exit Assessment</h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  You can only take this test once. If you exit now, your test will end immediately and be marked as <strong className="text-rose-600 dark:text-rose-400">Incomplete</strong>. You will not be able to restart it.
+                  Choose <strong className="text-indigo-600 dark:text-indigo-400">Save &amp; Exit</strong> to pause and resume this attempt later, or <strong className="text-rose-600 dark:text-rose-400">Abandon Test</strong> to close this attempt permanently as Incomplete.
                 </p>
               </div>
-              <div className="flex items-center gap-2.5 pt-2">
+              <div className="flex flex-col gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowExitConfirmModal(false)}
-                  className="flex-1 py-2 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-medium text-xs transition-colors cursor-pointer shadow-xs"
+                  onClick={handleSaveAndExit}
+                  className="w-full py-2.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Continue Test
+                  Save &amp; Exit (Resume Later)
                 </button>
-                <button
-                  type="button"
-                  onClick={executeAbandonTest}
-                  className="flex-1 py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer"
-                >
-                  Yes, Exit Test
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowExitConfirmModal(false)}
+                    className="flex-1 py-2 px-3 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-medium text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    Continue Test
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeAbandonTest}
+                    className="flex-1 py-2 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+                  >
+                    Abandon Test
+                  </button>
+                </div>
               </div>
             </div>
           </div>

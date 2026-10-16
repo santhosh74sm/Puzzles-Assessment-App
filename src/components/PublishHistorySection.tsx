@@ -1194,6 +1194,7 @@ function HistoricalAuditDrillDown({
         timeAllowedSeconds: q.timeAllowedSeconds ?? q.timeSeconds,
         options: q.options || [],
         answerType: q.answerType || 'single',
+        rankingQuestion: Boolean(q.rankingQuestion),
         enableWrittenExplanation: Boolean(
           q.enableWrittenExplanation !== undefined
             ? q.enableWrittenExplanation
