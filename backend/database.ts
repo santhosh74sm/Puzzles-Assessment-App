@@ -2,6 +2,9 @@ import mongoose from 'mongoose';
 import { UserModel } from '../database/models.ts';
 import bcrypt from 'bcryptjs';
 
+// CRITICAL: fail fast, do not hang on buffered commands when MongoDB is not connected
+mongoose.set('bufferCommands', false);
+
 export function getTargetDatabaseName(): string {
   const isTest = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test' || process.env.TARGET_DB_MODE === 'test';
   if (isTest) {
@@ -87,7 +90,7 @@ export async function connectMongoDB(): Promise<{ isConnected: boolean; dbName: 
   } catch (err: any) {
     const errorName = typeof err?.name === 'string' ? err.name : 'UnknownError';
     const errorCode = typeof err?.code === 'string' || typeof err?.code === 'number' ? `, code: ${err.code}` : '';
-    console.error(`[Database] MongoDB connection failed (${errorName}${errorCode}).`);
+    console.error(`[Database] MongoDB Atlas connection failed (${errorName}${errorCode}):`, err.message || err);
     throw err;
   }
 }

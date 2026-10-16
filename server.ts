@@ -78,6 +78,26 @@ async function startServer() {
   // Mount API endpoints
   app.use('/api', routes);
 
+  // Database connection error handler: Return clear error if MongoDB Atlas is unavailable
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (
+      err?.name === 'MongooseError' ||
+      err?.name === 'MongoNetworkError' ||
+      err?.name === 'MongoServerSelectionError' ||
+      (typeof err?.message === 'string' &&
+        (err.message.includes('buffering timed out') ||
+         err.message.includes('not connected') ||
+         err.message.includes('connect ECONNREFUSED')))
+    ) {
+      console.error('[Database Error] MongoDB Atlas unavailable:', err.message || err);
+      return res.status(503).json({
+        error: 'Database connection error: MongoDB Atlas is currently unavailable. Please verify your MongoDB connection string and network configuration.',
+        details: err.message,
+      });
+    }
+    next(err);
+  });
+
   // Determine whether running in production mode
   const distPath = path.resolve(process.cwd(), 'dist');
   const hasDist = fs.existsSync(path.resolve(distPath, 'index.html'));

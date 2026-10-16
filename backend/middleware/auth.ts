@@ -48,6 +48,7 @@ export interface AuthUserPayload {
   schoolId?: string;
   schoolName?: string;
   studentId?: string;
+  studentName?: string;
   jti?: string;
 }
 

@@ -189,7 +189,7 @@ router.get('/auth/setup-status', async (_req: Request, res: Response) => {
     const usersCount = await UserModel.countDocuments();
     return res.json({ hasUsers: usersCount > 0, totalUsers: usersCount });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Failed to check setup status' });
+    return res.status(500).json({ error: 'Failed to check setup status. Database error: ' + (err.message || 'MongoDB connection unavailable') });
   }
 });
 
@@ -231,7 +231,7 @@ router.post('/auth/setup-first-admin', async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Unable to create administrator account. Please try again.' });
+    return res.status(500).json({ error: 'Unable to create administrator account. Database error: ' + (err.message || 'MongoDB unavailable') });
   }
 });
 
