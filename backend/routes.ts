@@ -4826,7 +4826,11 @@ router.get('/publish-history/:publishId', authenticate, requireRole('super_admin
       difficulties: Array<{ difficulty: string; count: number }>;
     }> = [];
 
-    for (const [g, entry] of questionSummaryMap.entries()) {
+    const sortedGroupEntries = Array.from(questionSummaryMap.entries()).sort(([gA], [gB]) =>
+      gA.localeCompare(gB, undefined, { sensitivity: 'base' })
+    );
+
+    for (const [g, entry] of sortedGroupEntries) {
       const standardOrder = ['Easy', 'Medium', 'Hard'];
       const diffKeys = Array.from(entry.diffMap.keys());
       const sortedKeys = [

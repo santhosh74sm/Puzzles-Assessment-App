@@ -1127,7 +1127,9 @@ function HistoricalAuditDrillDown({
   // Grouped question summary breakdown: Group -> Difficulty -> Count
   const questionSummaryData = useMemo(() => {
     if (Array.isArray(detail?.questionSummary) && detail.questionSummary.length > 0) {
-      return detail.questionSummary;
+      return [...detail.questionSummary].sort((a: any, b: any) =>
+        String(a.groupName || '').localeCompare(String(b.groupName || ''), undefined, { sensitivity: 'base' })
+      );
     }
     if (Array.isArray(detail?.questions) && detail.questions.length > 0) {
       const map = new Map<string, { diffMap: Map<string, number>; isGroupDeleted: boolean }>();
@@ -1141,21 +1143,23 @@ function HistoricalAuditDrillDown({
         entry.diffMap.set(d, (entry.diffMap.get(d) || 0) + 1);
       }
       const standardOrder = ['Easy', 'Medium', 'Hard'];
-      return Array.from(map.entries()).map(([g, entry]) => {
-        const diffKeys = Array.from(entry.diffMap.keys());
-        const sortedKeys = [
-          ...standardOrder.filter((d) => diffKeys.includes(d)),
-          ...diffKeys.filter((d) => !standardOrder.includes(d)),
-        ];
-        return {
-          groupName: g,
-          isGroupDeleted: entry.isGroupDeleted,
-          difficulties: sortedKeys.map((d) => ({
-            difficulty: d,
-            count: entry.diffMap.get(d) || 0,
-          })),
-        };
-      });
+      return Array.from(map.entries())
+        .sort(([gA], [gB]) => gA.localeCompare(gB, undefined, { sensitivity: 'base' }))
+        .map(([g, entry]) => {
+          const diffKeys = Array.from(entry.diffMap.keys());
+          const sortedKeys = [
+            ...standardOrder.filter((d) => diffKeys.includes(d)),
+            ...diffKeys.filter((d) => !standardOrder.includes(d)),
+          ];
+          return {
+            groupName: g,
+            isGroupDeleted: entry.isGroupDeleted,
+            difficulties: sortedKeys.map((d) => ({
+              difficulty: d,
+              count: entry.diffMap.get(d) || 0,
+            })),
+          };
+        });
     }
     return [];
   }, [detail]);
