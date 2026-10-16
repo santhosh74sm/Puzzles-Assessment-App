@@ -802,8 +802,8 @@ export function QuestionBankSection({
               </span>
             )}
           </div>
-          <form onSubmit={handleCreateQuestion} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
+          <form onSubmit={handleCreateQuestion} className="grid grid-cols-1 sm:grid-cols-6 gap-4">
+            <div className="sm:col-span-3">
               <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Group
               </label>
@@ -828,7 +828,7 @@ export function QuestionBankSection({
               </select>
             </div>
 
-            <div>
+            <div className="sm:col-span-3">
               <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Difficulty
               </label>
@@ -843,35 +843,7 @@ export function QuestionBankSection({
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
-                Time Limit <span className="text-slate-400 normal-case">(Seconds, Optional)</span>
-              </label>
-              <input
-                type="number"
-                min={1}
-                placeholder="e.g. 30"
-                value={questionForm.timeSeconds}
-                onChange={(e) => setQuestionForm({ ...questionForm, timeSeconds: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors font-mono"
-              />
-            </div>
-
-            <div className="sm:col-span-2 md:col-span-3">
-              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
-                Question Text
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Decode the hidden word puzzle from emojis: ☀️ + 👓 = ?"
-                value={questionForm.content}
-                onChange={(e) => setQuestionForm({ ...questionForm, content: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
-              />
-            </div>
-
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Points <span className="text-slate-400 normal-case">(Optional)</span>
               </label>
@@ -885,7 +857,7 @@ export function QuestionBankSection({
               />
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Correct Answer <span className="text-slate-400 normal-case">(Optional)</span>
               </label>
@@ -898,7 +870,35 @@ export function QuestionBankSection({
               />
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
+                Time Limit <span className="text-slate-400 normal-case">(Seconds, Optional)</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                placeholder="e.g. 30"
+                value={questionForm.timeSeconds}
+                onChange={(e) => setQuestionForm({ ...questionForm, timeSeconds: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors font-mono"
+              />
+            </div>
+
+            <div className="sm:col-span-6">
+              <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
+                Question Text
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Decode the hidden word puzzle from emojis: ☀️ + 👓 = ?"
+                value={questionForm.content}
+                onChange={(e) => setQuestionForm({ ...questionForm, content: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
+              />
+            </div>
+
+            <div className="sm:col-span-6">
               <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1.5 tracking-wider">
                 Answer Choices <span className="text-slate-400 normal-case">(Comma-separated)</span>
               </label>
@@ -909,7 +909,10 @@ export function QuestionBankSection({
                 onChange={(e) => setQuestionForm({ ...questionForm, options: e.target.value })}
                 className="w-full px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-colors"
               />
-              <div className="flex flex-col sm:flex-row gap-3 mt-2.5">
+            </div>
+
+            <div className="sm:col-span-6">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-0.5">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -946,7 +949,7 @@ export function QuestionBankSection({
               </div>
             </div>
 
-            <div className="sm:col-span-2 md:col-span-3 flex items-center justify-end gap-3 pt-2">
+            <div className="sm:col-span-6 flex items-center justify-end gap-3 pt-2">
               {editingQuestionItem && (
                 <button
                   type="button"
