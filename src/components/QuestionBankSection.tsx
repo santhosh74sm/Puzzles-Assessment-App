@@ -496,7 +496,8 @@ export function QuestionBankSection({
       corrAnsStr = typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer);
     }
 
-    const isMultiple = q.answerType === 'multiple' || Boolean(q.multipleSelection);
+    const isRanking = Boolean(q.rankingQuestion);
+    const isMultiple = !isRanking && (q.answerType === 'multiple' || Boolean(q.multipleSelection));
 
     setQuestionForm({
       groupId: q.groupId || (sortedQuestionGroups.length > 0 ? sortedQuestionGroups[0].id : ''),
@@ -506,7 +507,7 @@ export function QuestionBankSection({
       points: q.points != null ? String(q.points) : '',
       options: optsStr,
       multipleSelection: isMultiple,
-      rankingQuestion: Boolean(q.rankingQuestion),
+      rankingQuestion: isRanking,
       enableWrittenExplanation: Boolean(q.enableWrittenExplanation),
       correctAnswer: corrAnsStr,
     });
@@ -917,7 +918,14 @@ export function QuestionBankSection({
                   <input
                     type="checkbox"
                     checked={questionForm.multipleSelection}
-                    onChange={(e) => setQuestionForm({ ...questionForm, multipleSelection: e.target.checked })}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        multipleSelection: checked,
+                        rankingQuestion: checked ? false : prev.rankingQuestion,
+                      }));
+                    }}
                     className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
                   <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -928,7 +936,14 @@ export function QuestionBankSection({
                   <input
                     type="checkbox"
                     checked={questionForm.rankingQuestion}
-                    onChange={(e) => setQuestionForm({ ...questionForm, rankingQuestion: e.target.checked })}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        rankingQuestion: checked,
+                        multipleSelection: checked ? false : prev.multipleSelection,
+                      }));
+                    }}
                     className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                   />
                   <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
