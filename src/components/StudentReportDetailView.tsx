@@ -36,6 +36,37 @@ function formatPublishedDateTime(rawDateVal?: Date | string | null): string {
   return `${day}-${month}-${year} • ${hoursStr}:${minutes} ${ampm}`;
 }
 
+// Helper to parse student's ranking answer into items preserving original submission order
+function parseRankingStudentAnswer(rawAnswer: any): string[] {
+  if (Array.isArray(rawAnswer)) {
+    return rawAnswer
+      .map((item) => String(item ?? '').replace(/^Rank\s+\d+:\s*/i, '').trim())
+      .filter((s) => s.length > 0);
+  }
+  if (typeof rawAnswer === 'string') {
+    const trimmed = rawAnswer.trim();
+    if (!trimmed || trimmed === 'None') return [];
+    if (trimmed.includes(',')) {
+      return trimmed
+        .split(',')
+        .map((s) => s.replace(/^Rank\s+\d+:\s*/i, '').trim())
+        .filter((s) => s.length > 0);
+    }
+    if (trimmed.includes('\n')) {
+      return trimmed
+        .split('\n')
+        .map((s) => s.replace(/^Rank\s+\d+:\s*/i, '').trim())
+        .filter((s) => s.length > 0);
+    }
+    return [trimmed.replace(/^Rank\s+\d+:\s*/i, '').trim()].filter((s) => s.length > 0);
+  }
+  if (rawAnswer !== undefined && rawAnswer !== null) {
+    const cleaned = String(rawAnswer).replace(/^Rank\s+\d+:\s*/i, '').trim();
+    return cleaned ? [cleaned] : [];
+  }
+  return [];
+}
+
 export function StudentReportDetailView({
   token,
   studentId,
@@ -267,7 +298,16 @@ export function StudentReportDetailView({
 
                       <div className="space-y-2">
                         {item.questions && item.questions.length > 0 ? (
-                          item.questions.map((q: any, qIdx: number) => (
+                          item.questions.map((q: any, qIdx: number) => {
+                            const isRanking = Boolean(
+                              q.rankingQuestion ||
+                              q.questionType === 'Ranking' ||
+                              q.questionType === 'Ranking Question' ||
+                              String(q.questionType || '').toLowerCase().includes('rank') ||
+                              String(q.answerType || '').toLowerCase().includes('rank')
+                            );
+
+                            return (
                             <div
                               key={qIdx}
                               className="p-3.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-slate-700/80 transition-colors shadow-2xs"
@@ -293,7 +333,7 @@ export function StudentReportDetailView({
                                       {q.difficulty || 'Medium'}
                                     </span>
                                   </span>
-                                  {Array.isArray(q.options) && q.options.length > 0 && (
+                                  {Array.isArray(q.options) && q.options.length > 0 && !isRanking && (
                                     <>
                                       <span className="text-slate-300 dark:text-slate-600">&bull;</span>
                                       <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
@@ -311,8 +351,8 @@ export function StudentReportDetailView({
                                   <p className="font-medium text-slate-800 dark:text-slate-200 leading-relaxed">{q.content}</p>
                                 </div>
 
-                                {/* Historical Answer Choices / Options snapshot */}
-                                {Array.isArray(q.options) && q.options.length > 0 && (
+                                {/* Historical Answer Choices / Options snapshot - Hidden for Ranking Questions */}
+                                {Array.isArray(q.options) && q.options.length > 0 && !isRanking && (
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-6 sm:pl-7 pt-1">
                                     {q.options.map((opt: string, optIdx: number) => {
                                       const optLetter = String.fromCharCode(65 + optIdx);
@@ -340,25 +380,24 @@ export function StudentReportDetailView({
                                   </div>
                                 )}
 
-                                <div className="flex flex-wrap items-center gap-2 text-slate-500 dark:text-slate-400 pl-6 sm:pl-7">
-                                  <span>
-                                    Student's Answer:{' '}
-                                    <strong className="text-slate-900 dark:text-white">
-                                      {q.rankingQuestion && Array.isArray(q.studentAnswer)
-                                        ? (q.studentAnswer.length > 0
-                                            ? q.studentAnswer.map((item: string, rIdx: number) => `Rank ${rIdx + 1}: ${item}`).join(', ')
-                                            : 'None')
-                                        : Array.isArray(q.studentAnswer)
-                                        ? (q.studentAnswer.length > 0 ? q.studentAnswer.join(', ') : 'None')
-                                        : typeof q.studentAnswer === 'object' && q.studentAnswer !== null
-                                        ? JSON.stringify(q.studentAnswer)
-                                        : String(q.studentAnswer || 'None')}
-                                    </strong>
-                                  </span>
-                                  {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
-                                    <>
-                                      <span>&bull;</span>
-                                      <span>
+                                {isRanking ? (
+                                  <div className="text-slate-500 dark:text-slate-400 pl-6 sm:pl-7 space-y-1">
+                                    <span className="block text-slate-500 dark:text-slate-400">Student's Answer:</span>
+                                    <div className="space-y-0.5">
+                                      {(() => {
+                                        const items = parseRankingStudentAnswer(q.studentAnswer);
+                                        if (items.length === 0) {
+                                          return <div className="text-slate-900 dark:text-white font-medium">None</div>;
+                                        }
+                                        return items.map((item: string, rIdx: number) => (
+                                          <div key={rIdx} className="text-slate-900 dark:text-white font-medium">
+                                            {item}
+                                          </div>
+                                        ));
+                                      })()}
+                                    </div>
+                                    {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
+                                      <div className="pt-1 text-xs">
                                         Correct Answer:{' '}
                                         <strong className="text-emerald-600 dark:text-emerald-400">
                                           {Array.isArray(q.correctAnswer)
@@ -367,10 +406,38 @@ export function StudentReportDetailView({
                                             ? JSON.stringify(q.correctAnswer)
                                             : String(q.correctAnswer)}
                                         </strong>
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-wrap items-center gap-2 text-slate-500 dark:text-slate-400 pl-6 sm:pl-7">
+                                    <span>
+                                      Student's Answer:{' '}
+                                      <strong className="text-slate-900 dark:text-white">
+                                        {Array.isArray(q.studentAnswer)
+                                          ? (q.studentAnswer.length > 0 ? q.studentAnswer.join(', ') : 'None')
+                                          : typeof q.studentAnswer === 'object' && q.studentAnswer !== null
+                                          ? JSON.stringify(q.studentAnswer)
+                                          : String(q.studentAnswer || 'None')}
+                                      </strong>
+                                    </span>
+                                    {q.correctAnswer != null && String(q.correctAnswer).trim() !== '' && (
+                                      <>
+                                        <span>&bull;</span>
+                                        <span>
+                                          Correct Answer:{' '}
+                                          <strong className="text-emerald-600 dark:text-emerald-400">
+                                            {Array.isArray(q.correctAnswer)
+                                              ? q.correctAnswer.join(', ')
+                                              : typeof q.correctAnswer === 'object' && q.correctAnswer !== null
+                                              ? JSON.stringify(q.correctAnswer)
+                                              : String(q.correctAnswer)}
+                                          </strong>
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
 
                                 {q.writtenExplanation && (
                                   <div className="text-xs text-slate-700 dark:text-slate-300 pl-6 sm:pl-7 pt-0.5">
@@ -406,7 +473,8 @@ export function StudentReportDetailView({
                                 )}
                               </div>
                             </div>
-                          ))
+                          );
+                        })
                         ) : (
                           <p className="text-xs text-slate-500 italic p-2">No question details recorded.</p>
                         )}

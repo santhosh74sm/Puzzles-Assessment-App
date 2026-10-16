@@ -5212,21 +5212,31 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
         wrongCount: a.wrongCount,
         totalTimeTakenSeconds: a.totalTimeTakenSeconds,
         questions: (a.questions || []).map((q: any) => {
+          const fullQ = q.questionId ? qMap.get(String(q.questionId)) : null;
+          const isRanking = Boolean(
+            q.rankingQuestion ||
+            fullQ?.rankingQuestion ||
+            q.questionType === 'Ranking' ||
+            fullQ?.questionType === 'Ranking' ||
+            q.metadata?.rankingQuestion ||
+            fullQ?.metadata?.rankingQuestion
+          );
           if (a.status === 'COMPLETED') {
             // For a COMPLETED assessment, preserve exactly the immutable historical snapshot used for that assessment.
             // Do NOT dynamically resolve the completed student's question from the current Question Bank.
             const reportQuestion = {
               ...q,
               questionId: q.questionId || q.id || q._id,
-              groupName: q.groupName || 'General',
-              difficulty: q.difficulty || 'Medium',
-              questionType: q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection'),
-              answerType: q.answerType || 'single',
-              content: q.content || 'Question',
-              points: q.points != null ? Number(q.points) : null,
+              groupName: q.groupName || fullQ?.groupName || 'General',
+              difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
+              questionType: isRanking ? 'Ranking' : (q.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection')),
+              answerType: isRanking ? 'ranking' : (q.answerType || 'single'),
+              rankingQuestion: isRanking,
+              content: q.content || fullQ?.content || 'Question',
+              points: q.points != null ? Number(q.points) : (fullQ?.points != null ? Number(fullQ.points) : null),
               timeAllowedSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
               timeSeconds: q.timeAllowedSeconds != null ? Number(q.timeAllowedSeconds) : (q.timeSeconds != null ? Number(q.timeSeconds) : null),
-              options: Array.isArray(q.options) ? q.options : [],
+              options: Array.isArray(q.options) ? q.options : (Array.isArray(fullQ?.options) ? fullQ.options : []),
               correctAnswer: q.correctAnswer ?? null,
               correctAnswers: Array.isArray(q.correctAnswers)
                 ? q.correctAnswers
@@ -5248,15 +5258,15 @@ router.get('/reports/students/:studentId', authenticate, async (req: Request, re
           delete qCopy.correctAnswer;
           delete qCopy.correctAnswers;
 
-          const fullQ = q.questionId ? qMap.get(String(q.questionId)) : null;
           const groupFromId = q.groupId ? gMap.get(String(q.groupId))?.name : (fullQ?.groupId ? gMap.get(String(fullQ.groupId))?.name : null);
           const reportQuestion = {
             ...qCopy,
             questionId: q.questionId || q.id || q._id,
             groupName: q.groupName || groupFromId || fullQ?.groupName || 'General',
             difficulty: q.difficulty || fullQ?.difficulty || 'Medium',
-            questionType: q.questionType || fullQ?.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection'),
-            answerType: q.answerType || fullQ?.answerType || 'single',
+            questionType: isRanking ? 'Ranking' : (q.questionType || fullQ?.questionType || (q.answerType === 'multiple' ? 'Multiple Selection' : 'Single Selection')),
+            answerType: isRanking ? 'ranking' : (q.answerType || fullQ?.answerType || 'single'),
+            rankingQuestion: isRanking,
             content: q.content || fullQ?.content || 'Question',
             points: q.points != null ? q.points : (fullQ?.points != null ? fullQ.points : null),
             timeAllowedSeconds: q.timeAllowedSeconds != null ? q.timeAllowedSeconds : (fullQ?.timeSeconds != null ? fullQ.timeSeconds : null),
